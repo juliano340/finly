@@ -1,0 +1,118 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Plan {
+  FREE
+  PRO
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+model User {
+  id                 String        @id @default(cuid())
+  name               String?
+  email              String        @unique
+  emailVerified      DateTime?
+  image              String?
+  passwordHash       String?
+  plan               Plan          @default(FREE)
+  stripeCustomerId   String?       @unique
+  stripeSubscriptionId String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  categories    Category[]
+  transactions  Transaction[]
+  budgets       Budget[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Category {
+  id     String          @id @default(cuid())
+  name   String
+  icon   String          @default("wallet")
+  color  String          @default("#0EA882")
+  type   TransactionType @default(EXPENSE)
+  userId String
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  budgets      Budget[]
+
+  @@unique([name, userId])
+}
+
+model Transaction {
+  id          String          @id @default(cuid())
+  amount      Decimal         @db.Decimal(10, 2)
+  type        TransactionType
+  description String?
+  date        DateTime        @default(now())
+  categoryId  String
+  userId      String
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  category Category @relation(fields: [categoryId], references: [id])
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Budget {
+  id         String   @id @default(cuid())
+  amount     Decimal  @db.Decimal(10, 2)
+  month      String
+  categoryId String
+  userId     String
+
+  category Category @relation(fields: [categoryId], references: [id])
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, month, userId])
+}
