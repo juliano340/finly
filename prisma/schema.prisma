@@ -4,8 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
 }
 
 enum Plan {
@@ -19,23 +18,23 @@ enum TransactionType {
 }
 
 model User {
-  id                 String        @id @default(cuid())
-  name               String?
-  email              String        @unique
-  emailVerified      DateTime?
-  image              String?
-  passwordHash       String?
-  plan               Plan          @default(FREE)
-  stripeCustomerId   String?       @unique
+  id                   String    @id @default(cuid())
+  name                 String?
+  email                String    @unique
+  emailVerified        DateTime?
+  image                String?
+  passwordHash         String?
+  plan                 Plan      @default(FREE)
+  stripeCustomerId     String?   @unique
   stripeSubscriptionId String?
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  accounts      Account[]
-  sessions      Session[]
-  categories    Category[]
-  transactions  Transaction[]
-  budgets       Budget[]
+  accounts     Account[]
+  sessions     Session[]
+  categories   Category[]
+  transactions Transaction[]
+  budgets      Budget[]
 }
 
 model Account {
@@ -44,12 +43,12 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -91,7 +90,7 @@ model Category {
 
 model Transaction {
   id          String          @id @default(cuid())
-  amount      Decimal         @db.Decimal(10, 2)
+  amount      Float
   type        TransactionType
   description String?
   date        DateTime        @default(now())
@@ -105,8 +104,8 @@ model Transaction {
 }
 
 model Budget {
-  id         String   @id @default(cuid())
-  amount     Decimal  @db.Decimal(10, 2)
+  id         String @id @default(cuid())
+  amount     Float
   month      String
   categoryId String
   userId     String
