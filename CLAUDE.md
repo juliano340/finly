@@ -1,7 +1,7 @@
 # Finly — SaaS de Controle Financeiro Pessoal
 
 > **Documento canônico do projeto.** Leia antes de qualquer alteração.
-> Fase atual: **0 (Fundação)**
+> Fase atual: **1 (Schema + Seed) concluída** — próxima: **2 (Auth + Multi-tenant)**
 
 ---
 
