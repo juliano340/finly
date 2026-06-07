@@ -7,10 +7,20 @@ test.describe("Autenticação", () => {
   test("registro → login → dashboard → logout", async ({ page }) => {
     await page.goto("/register")
 
-    await page.fill('input[id="name"]', "Maria E2E")
+    // Step 1: Nome e email
+    await page.fill('input[id="firstName"]', "Maria")
+    await page.fill('input[id="lastName"]', "E2E")
     await page.fill('input[id="email"]', testEmail)
+    await page.click('button:has-text("Continuar")')
+
+    // Step 2: Senha
     await page.fill('input[id="password"]', testPassword)
-    await page.click('button[type="submit"]')
+    await page.fill('input[id="confirmPassword"]', testPassword)
+    await page.click('button:has-text("Continuar")')
+
+    // Step 3: Termos
+    await page.click('input[type="checkbox"]')
+    await page.click('button:has-text("Criar minha conta")')
 
     await page.waitForURL("**/login**", { timeout: 15000 })
 

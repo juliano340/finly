@@ -13,6 +13,6 @@ test("a página tem layout responsivo", async ({ page }) => {
 test("links de navegação existem", async ({ page }) => {
   await page.goto("/")
 
-  await expect(page.getByRole("link", { name: "Entrar" })).toBeVisible()
-  await expect(page.getByRole("link", { name: "Criar conta grátis" })).toBeVisible()
+  await expect(page.getByRole("link", { name: "Entrar" }).first()).toBeVisible()
+  await expect(page.getByRole("link", { name: "Criar conta grátis" }).first()).toBeVisible()
 })

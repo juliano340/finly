@@ -7,16 +7,14 @@ import { Eye, EyeOff, Mail, Lock, LogIn } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
-import { RedirectIfLogged } from "@/features/auth/redirect-if-logged"
 
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const [remember, setRemember] = useState(true)
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
@@ -41,56 +39,51 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-[#1E3B4A] via-[#1a3340] to-[#0EA882]/20 p-4">
-      <a
-        href="/"
-        className="absolute left-1/2 top-0 flex -translate-x-1/2 items-center gap-2 px-6 py-5 text-sm font-medium text-white/70 transition-colors hover:text-white"
-      >
-        <div className="flex h-6 w-6 items-center justify-center rounded bg-primary">
-          <span className="text-[10px] font-bold text-primary-foreground">F</span>
-        </div>
-        Finly
-      </a>
-        <Card className="w-full max-w-md border-0 shadow-2xl">
-        <CardHeader className="space-y-1 pt-8">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
-            <span className="text-xl font-bold text-primary-foreground">F</span>
-          </div>
-          <h1 className="text-center text-2xl font-bold tracking-tight">
-            Bem-vindo de volta
-          </h1>
-          <p className="text-center text-sm text-muted-foreground">
-            Entre na sua conta para continuar
+    <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
+      {/* Left - Form */}
+      <div className="flex items-center justify-center p-10">
+        <div className="w-full max-w-md">
+          <a href="/" className="mb-10 flex items-center gap-2.5">
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary font-extrabold text-white">
+              F
+            </div>
+            <span className="text-xl font-bold">Finly</span>
+          </a>
+
+          <h1 className="mb-2 text-3xl font-bold tracking-tight">Bem-vindo de volta</h1>
+          <p className="mb-8 text-muted-foreground">
+            Entre na sua conta para continuar gerenciando suas finanças.
           </p>
-        </CardHeader>
-        <CardContent className="pb-8">
+
+          <div className="mb-6 flex items-center gap-4 text-sm text-muted-foreground">
+            <div className="h-px flex-1 bg-border" />
+            ou entre com e-mail
+            <div className="h-px flex-1 bg-border" />
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="voce@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
-                  required
-                />
-              </div>
+              <Label htmlFor="email">E-mail</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="••••••"
+                  placeholder="Sua senha"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 pr-10"
+                  className="pr-10"
                   required
                 />
                 <button
@@ -99,14 +92,26 @@ export default function LoginPage() {
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   tabIndex={-1}
                 >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
+
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                  className="h-4 w-4 rounded border-border"
+                />
+                Lembrar de mim
+              </label>
+              <a href="#" className="text-sm text-primary hover:underline">
+                Esqueci a senha
+              </a>
+            </div>
+
             <Button type="submit" disabled={loading} className="w-full" size="lg">
               {loading ? (
                 <span className="flex items-center gap-2">
@@ -121,20 +126,27 @@ export default function LoginPage() {
               )}
             </Button>
           </form>
-          <div className="mt-6">
-            <Separator />
-          </div>
+
           <p className="mt-6 text-center text-sm text-muted-foreground">
-            Não tem uma conta?{" "}
-            <a
-              href="/register"
-              className="font-medium text-primary hover:underline"
-            >
-              Criar conta gratuita
+            Não tem conta?{" "}
+            <a href="/register" className="text-primary hover:underline">
+              Criar conta grátis
             </a>
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+
+      {/* Right - Visual */}
+      <div className="relative hidden items-center justify-center overflow-hidden bg-[#134E4A] p-10 lg:flex">
+        <div className="absolute -right-30 -top-50 h-[600px] w-[600px] rounded-full bg-primary/15" />
+        <div className="absolute -bottom-30 -left-20 h-[400px] w-[400px] rounded-full bg-primary/10" />
+        <div className="relative z-10 max-w-md text-white">
+          <h2 className="mb-4 text-3xl font-bold">Organize suas finanças com inteligência</h2>
+          <p className="text-lg leading-relaxed text-white/70">
+            Acompanhe receitas, despesas e investimentos em um painel simples e visual. Tome decisões melhores com relatórios em tempo real.
+          </p>
+        </div>
+      </div>
     </div>
   )
 }

@@ -7,7 +7,7 @@ test("página inicial carrega sem erro", async ({ page }) => {
 
 test("hero e CTAs renderizam na home", async ({ page }) => {
   await page.goto("/")
-  await expect(page.locator("h1")).toContainText("Suas finanças")
+  await expect(page.locator("h1")).toContainText("Seu dinheiro sob")
   await expect(page.getByRole("link", { name: "Entrar" }).first()).toBeVisible()
-  await expect(page.getByRole("link", { name: "Criar conta grátis" })).toBeVisible()
+  await expect(page.getByRole("link", { name: "Criar conta grátis" }).first()).toBeVisible()
 })
