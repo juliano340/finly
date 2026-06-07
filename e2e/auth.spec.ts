@@ -26,9 +26,12 @@ test.describe("Autenticação", () => {
   })
 
   test("visitante acessa /dashboard → redirecionado para login", async ({
-    page,
+    browser,
   }) => {
+    const context = await browser.newContext()
+    const page = await context.newPage()
     await page.goto("/dashboard")
     await expect(page).toHaveURL("/login")
+    await context.close()
   })
 })
