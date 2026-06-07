@@ -46,17 +46,16 @@ export default function RegisterPage() {
   }
 
   return (
-    <RedirectIfLogged>
-      <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-[#1E3B4A] via-[#1a3340] to-[#0EA882]/20 p-4">
-        <a
-          href="/"
-          className="absolute left-1/2 top-0 flex -translate-x-1/2 items-center gap-2 px-6 py-5 text-sm font-medium text-white/70 transition-colors hover:text-white"
-        >
-          <div className="flex h-6 w-6 items-center justify-center rounded bg-primary">
-            <span className="text-[10px] font-bold text-primary-foreground">F</span>
-          </div>
-          Finly
-        </a>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-[#1E3B4A] via-[#1a3340] to-[#0EA882]/20 p-4">
+      <a
+        href="/"
+        className="absolute left-1/2 top-0 flex -translate-x-1/2 items-center gap-2 px-6 py-5 text-sm font-medium text-white/70 transition-colors hover:text-white"
+      >
+        <div className="flex h-6 w-6 items-center justify-center rounded bg-primary">
+          <span className="text-[10px] font-bold text-primary-foreground">F</span>
+        </div>
+        Finly
+      </a>
         <Card className="w-full max-w-md border-0 shadow-2xl">
         <CardHeader className="space-y-1 pt-8">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
@@ -160,6 +159,5 @@ export default function RegisterPage() {
         </CardContent>
       </Card>
     </div>
-    </RedirectIfLogged>
   )
 }
