@@ -1,0 +1,955 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FinançasPro — Controle Financeiro Pessoal</title>
+  <style>
+    :root {
+      --bg: #080B14;
+      --surface: #111827;
+      --fg: #F1F5F9;
+      --fg-secondary: #CBD5E1;
+      --muted: #64748B;
+      --border: #1E293B;
+      --accent: #22C55E;
+      --accent-bg: rgba(34,197,94,0.08);
+      --accent-border: rgba(34,197,94,0.25);
+      --accent-glow: rgba(34,197,94,0.15);
+      --accent-dark: #16A34A;
+      --danger: #EF4444;
+      --radius-xs: 8px;
+      --radius-sm: 12px;
+      --radius-md: 20px;
+      --radius-lg: 40px;
+      --radius-pill: 100px;
+      --font-display: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      --font-body: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+      --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    [data-theme="light"] {
+      --bg: #F8FAFC;
+      --surface: #FFFFFF;
+      --fg: #1E293B;
+      --fg-secondary: #475569;
+      --muted: #64748B;
+      --border: #E2E8F0;
+      --accent: #16A34A;
+      --accent-bg: rgba(22,163,74,0.07);
+      --accent-border: rgba(22,163,74,0.2);
+      --accent-glow: rgba(22,163,74,0.1);
+      --accent-dark: #15803D;
+    }
+    html.transitioning * { transition: background 0.35s ease, border-color 0.35s ease, color 0.35s ease; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; background: var(--bg); }
+    body {
+      font: 16px/1.6 var(--font-body);
+      color: var(--fg);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+    }
+
+    /* ─── Film Grain ─── */
+    .grain-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      pointer-events: none; opacity: 0.035;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-repeat: repeat; background-size: 256px 256px;
+    }
+
+    /* ─── Reveal Animations ─── */
+    .reveal {
+      opacity: 0; transform: translateY(40px);
+      transition: opacity 0.8s var(--ease-out), transform 0.8s var(--ease-out);
+    }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+    .reveal-delay-4 { transition-delay: 0.4s; }
+
+    a { color: var(--accent); text-decoration: none; transition: color 0.2s; }
+    a:hover { color: var(--accent-dark); }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+    /* ─── Header ─── */
+    .header {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(8,11,20,0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      transition: all 0.3s;
+    }
+    .header.scrolled {
+      background: rgba(8,11,20,0.95);
+      border-bottom-color: var(--border);
+    }
+    .header-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 64px;
+    }
+    .logo {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 700; font-size: 18px; color: var(--fg);
+      letter-spacing: -0.01em;
+    }
+    .logo-icon {
+      width: 28px; height: 28px;
+      border-radius: 6px;
+      display: grid; place-items: center;
+      font-weight: 800; font-size: 13px;
+      position: relative;
+    }
+    .logo-icon::before {
+      content: 'F';
+      position: relative; z-index: 2; color: #fff;
+    }
+    .logo-icon::after {
+      content: ''; position: absolute; inset: 0;
+      background: var(--accent);
+      border-radius: inherit;
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+    .nav { display: flex; align-items: center; gap: 28px; }
+    .nav a { color: var(--muted); font-size: 14px; font-weight: 500; }
+    .nav a:hover { color: var(--fg); }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px 24px; border-radius: var(--radius-pill);
+      font: 600 14px/1 var(--font-body);
+      cursor: pointer; border: 1px solid transparent;
+      transition: all 0.25s var(--ease-out);
+    }
+    .btn-primary {
+      background: var(--accent); color: #080B14; border-color: var(--accent);
+    }
+    .btn-primary:hover {
+      background: var(--accent-dark); border-color: var(--accent-dark);
+      box-shadow: 0 0 30px var(--accent-glow);
+    }
+    .btn-outline {
+      background: transparent; color: var(--fg); border-color: var(--border);
+    }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-lg { padding: 14px 32px; font-size: 15px; }
+
+    /* ─── Hero ─── */
+    .hero {
+      min-height: 100vh;
+      display: flex; align-items: center;
+      position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      width: 900px; height: 900px;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 65%);
+      top: 45%; left: 35%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      width: 1400px; height: 1400px;
+      background: radial-gradient(circle, rgba(255,255,255,0.02) 0%, transparent 60%);
+      top: 30%; left: 60%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+    .hero-grid {
+      position: relative; z-index: 2;
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 60px; align-items: center;
+      padding: 100px 0 0;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 16px; border-radius: var(--radius-pill);
+      background: var(--accent-bg);
+      border: 1px solid var(--accent-border);
+      color: var(--accent);
+      font: 600 12px/1 var(--font-body);
+      text-transform: uppercase; letter-spacing: 0.08em;
+      margin-bottom: 24px;
+    }
+    .hero-badge::before {
+      content: '';
+      width: 5px; height: 5px;
+      background: var(--accent); border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent);
+    }
+    .hero h1 {
+      font: 700 56px/1.1 var(--font-display);
+      letter-spacing: -0.03em;
+      color: var(--fg);
+      margin-bottom: 20px;
+    }
+    .hero h1 .highlight {
+      background: linear-gradient(135deg, var(--accent) 0%, #4ADE80 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero p {
+      font-size: 17px; color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 36px;
+      max-width: 440px;
+    }
+    .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+    .hero-meta {
+      display: flex; align-items: center; gap: 20px;
+      margin-top: 32px; font-size: 13px; color: var(--muted);
+    }
+    .hero-meta-item { display: flex; align-items: center; gap: 6px; }
+    .hero-meta-item svg { width: 14px; height: 14px; stroke: var(--accent); fill: none; stroke-width: 2; }
+
+    /* Hero Visual */
+    .hero-visual {
+      position: relative;
+    }
+    .hero-dashboard-mockup {
+      background: rgba(17,24,39,0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      box-shadow: 0 40px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03) inset;
+      position: relative;
+    }
+    .hero-mockup-sidebar {
+      position: absolute; left: 0; top: 0; bottom: 0;
+      width: 56px; padding: 16px 10px;
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+    }
+    .hero-mockup-sbar-icon {
+      width: 32px; height: 32px; border-radius: var(--radius-xs);
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+    }
+    .hero-mockup-sbar-icon.active {
+      background: var(--accent-bg);
+      border-color: var(--accent-border);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+    .hero-mockup-main {
+      margin-left: 56px;
+    }
+    .hero-mockup-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 16px;
+    }
+    .hero-mockup-greeting { font: 600 12px/1 var(--font-body); color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .hero-mockup-amount { font: 700 24px/1 var(--font-display); letter-spacing: -0.02em; margin-top: 4px; }
+    .hero-mockup-change {
+      font: 600 12px/1 var(--font-body); color: var(--accent);
+      display: flex; align-items: center; gap: 4px;
+    }
+    .mockup-cards {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-top: 12px;
+    }
+    .mockup-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+    }
+    .mockup-card-label { font: 500 10px/1 var(--font-body); color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+    .mockup-card-value { font: 700 16px/1 var(--font-display); }
+    .mockup-card-value.green { color: var(--accent); }
+    .mockup-card-value.red { color: var(--danger); }
+    .mockup-chart {
+      margin-top: 12px; height: 80px; position: relative; overflow: hidden;
+      border-radius: var(--radius-xs);
+    }
+    .mockup-chart svg { width: 100%; height: 100%; }
+    .mockup-bars {
+      display: flex; align-items: flex-end; gap: 3px;
+      height: 100%; padding: 0 2px;
+    }
+    .mockup-bar {
+      flex: 1; border-radius: 2px 2px 0 0;
+      background: linear-gradient(to top, var(--accent), rgba(34,197,94,0.3));
+      min-height: 4px;
+      transition: height 0.6s var(--ease-out);
+    }
+    .mockup-transactions {
+      margin-top: 12px; display: flex; flex-direction: column; gap: 6px;
+    }
+    .mockup-tx-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    .mockup-tx-left { display: flex; align-items: center; gap: 8px; }
+    .mockup-tx-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+    }
+    .mockup-tx-label { font: 500 11px/1 var(--font-body); color: var(--muted); }
+    .mockup-tx-value { font: 600 11px/1 var(--font-mono); }
+    .mockup-tx-value.green { color: var(--accent); }
+    .mockup-tx-value.red { color: var(--danger); }
+
+    /* ─── Sections ─── */
+    section { position: relative; }
+    .section-padding { padding: 100px 0; }
+
+    .section-tag {
+      display: inline-flex; padding: 6px 14px; border-radius: var(--radius-pill);
+      background: var(--accent-bg);
+      border: 1px solid var(--accent-border);
+      color: var(--accent);
+      font: 600 11px/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.08em;
+      margin-bottom: 16px;
+    }
+    .section-header { text-align: center; margin-bottom: 56px; }
+    .section-header h2 {
+      font: 700 40px/1.15 var(--font-display);
+      letter-spacing: -0.02em;
+      margin-bottom: 12px;
+    }
+    .section-header p {
+      font-size: 17px; color: var(--muted);
+      max-width: 520px; margin: 0 auto; line-height: 1.7;
+    }
+
+    /* ─── Showcase ─── */
+    .showcase {
+      padding: 80px 0 120px;
+    }
+    .showcase-frame {
+      position: relative;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: 0 40px 100px rgba(0,0,0,0.4);
+    }
+    .showcase-frame iframe {
+      width: 100%; height: 520px;
+      border: none; display: block;
+    }
+    .showcase-caption {
+      text-align: center; margin-top: 24px;
+    }
+    .showcase-caption p {
+      font-size: 15px; color: var(--muted);
+    }
+    .showcase-caption strong { color: var(--fg); }
+
+    /* ─── Features ─── */
+    .features {
+      padding: 120px 0;
+      position: relative;
+    }
+    .features::before {
+      content: '';
+      position: absolute;
+      width: 100%; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent-border), transparent);
+      top: 0; left: 0;
+    }
+    .features-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+    }
+    .feature-card {
+      padding: 32px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      transition: all 0.4s var(--ease-out);
+      position: relative; overflow: hidden;
+    }
+    .feature-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent-border), transparent);
+      opacity: 0; transition: opacity 0.4s;
+    }
+    .feature-card:hover {
+      border-color: rgba(34,197,94,0.2);
+      transform: translateY(-4px);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    }
+    .feature-card:hover::before { opacity: 1; }
+    .feature-icon {
+      width: 44px; height: 44px; border-radius: var(--radius-sm);
+      background: var(--accent-bg);
+      border: 1px solid var(--accent-border);
+      display: grid; place-items: center;
+      margin-bottom: 20px;
+    }
+    .feature-icon svg { width: 22px; height: 22px; stroke: var(--accent); fill: none; stroke-width: 1.5; }
+    .feature-card h3 {
+      font: 600 18px/1.3 var(--font-display);
+      margin-bottom: 8px;
+    }
+    .feature-card p {
+      font-size: 14px; color: var(--muted); line-height: 1.6;
+    }
+    .feature-tag {
+      display: inline-flex;
+      padding: 3px 10px; border-radius: var(--radius-pill);
+      background: var(--accent-bg); border: 1px solid var(--accent-border);
+      color: var(--accent); font: 600 10px/1 var(--font-body);
+      text-transform: uppercase; letter-spacing: 0.06em;
+      margin-top: 14px;
+    }
+
+    /* ─── Stats ─── */
+    .stats {
+      padding: 100px 0;
+      position: relative;
+    }
+    .stats::before, .stats::after {
+      content: '';
+      position: absolute;
+      width: 100%; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent-border), transparent);
+    }
+    .stats::before { top: 0; }
+    .stats::after { bottom: 0; }
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; text-align: center;
+    }
+    .stat-value {
+      font: 700 40px/1 var(--font-display);
+      background: linear-gradient(135deg, var(--accent) 0%, #4ADE80 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+    .stat-label { font: 500 13px/1 var(--font-body); color: var(--muted); }
+
+    /* ─── CTA ─── */
+    .cta {
+      padding: 120px 0 100px;
+    }
+    .cta-box {
+      border-radius: var(--radius-md);
+      padding: 80px 60px;
+      text-align: center;
+      position: relative;
+      background: linear-gradient(135deg, rgba(34,197,94,0.04) 0%, rgba(8,11,20,0.9) 100%);
+      border: 1px solid var(--accent-border);
+      overflow: hidden;
+    }
+    .cta-box::before {
+      content: '';
+      position: absolute;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+    .cta-box h2 {
+      font: 700 36px/1.15 var(--font-display);
+      margin-bottom: 16px;
+      position: relative;
+    }
+    .cta-box p {
+      font-size: 16px; color: var(--muted);
+      margin-bottom: 32px;
+      max-width: 420px; margin-left: auto; margin-right: auto;
+      position: relative;
+    }
+    .cta-box .btn-primary {
+      background: var(--accent); color: #080B14;
+      border-color: var(--accent);
+      position: relative;
+      font-size: 15px; padding: 16px 40px;
+    }
+    .cta-box .btn-primary:hover {
+      box-shadow: 0 0 50px var(--accent-glow);
+    }
+
+    /* ─── Footer ─── */
+    .footer {
+      padding: 60px 0 32px;
+      border-top: 1px solid var(--border);
+    }
+    .footer-grid {
+      display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px;
+      margin-bottom: 40px;
+    }
+    .footer-brand p { font-size: 14px; color: var(--muted); margin-top: 12px; max-width: 280px; line-height: 1.6; }
+    .footer-col h4 { font: 600 14px/1 var(--font-display); margin-bottom: 16px; }
+    .footer-col a { display: block; font-size: 14px; color: var(--muted); margin-bottom: 10px; }
+    .footer-col a:hover { color: var(--fg); }
+    .footer-bottom {
+      display: flex; justify-content: space-between; align-items: center;
+      padding-top: 24px; border-top: 1px solid var(--border);
+      font-size: 13px; color: var(--muted);
+    }
+
+    /* ─── Gradient Divider ─── */
+    .gradient-divider {
+      height: 1px; background: linear-gradient(90deg, transparent, var(--accent-border), transparent);
+      margin: 0;
+    }
+
+    /* ─── Pulsing glow ─── */
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 0.8; }
+    }
+    .pulse-dot {
+      animation: pulseGlow 2s ease-in-out infinite;
+    }
+
+    /* ─── Light mode overrides ─── */
+    [data-theme="light"] .grain-overlay { opacity: 0.015; }
+    [data-theme="light"] .header {
+      background: rgba(248,250,252,0.85);
+      border-bottom-color: var(--border);
+    }
+    [data-theme="light"] .header.scrolled {
+      background: rgba(248,250,252,0.95);
+      border-bottom-color: var(--border);
+    }
+    [data-theme="light"] .hero-visual .hero-dashboard-mockup {
+      background: rgba(255,255,255,0.85);
+      border-color: var(--border);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.04) inset;
+    }
+    [data-theme="light"] .hero-mockup-sbar-icon {
+      background: rgba(0,0,0,0.03);
+      border-color: var(--border);
+    }
+    [data-theme="light"] .hero-mockup-sbar-icon.active {
+      background: var(--accent-bg);
+      border-color: var(--accent-border);
+    }
+    [data-theme="light"] .mockup-card {
+      background: var(--bg);
+    }
+    [data-theme="light"] .mockup-tx-row {
+      border-bottom-color: var(--border);
+    }
+    [data-theme="light"] .feature-card {
+      background: var(--surface);
+    }
+    [data-theme="light"] .feature-card:hover {
+      box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+    }
+    [data-theme="light"] .showcase-frame {
+      border-color: var(--border);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.06);
+    }
+    [data-theme="light"] .cta-box {
+      background: linear-gradient(135deg, rgba(22,163,74,0.04) 0%, var(--surface) 100%);
+    }
+    [data-theme="light"] .btn-primary {
+      color: #fff;
+    }
+    [data-theme="light"] .cta-box .btn-primary {
+      color: #fff;
+    }
+
+    /* ─── Theme Toggle ─── */
+    .theme-toggle {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: transparent; border: 1px solid var(--border);
+      color: var(--muted); cursor: pointer;
+      display: grid; place-items: center;
+      transition: all 0.25s var(--ease-out);
+      font-size: 16px; line-height: 1;
+    }
+    .theme-toggle:hover {
+      border-color: var(--accent-border);
+      color: var(--accent);
+      background: var(--accent-bg);
+    }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 1024px) {
+      .hero-grid { grid-template-columns: 1fr; gap: 40px; }
+      .hero-visual { display: none; }
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+      .section-header h2 { font-size: 32px; }
+    }
+    @media (max-width: 640px) {
+      .hero { min-height: auto; padding: 100px 0 60px; }
+      .hero h1 { font-size: 32px; }
+      .hero p { font-size: 16px; }
+      .nav { display: none; }
+      .features-grid { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: 1fr; gap: 24px; }
+      .cta-box { padding: 40px 24px; }
+      .cta-box h2 { font-size: 28px; }
+      .footer-grid { grid-template-columns: 1fr; }
+      .section-header h2 { font-size: 28px; }
+      .showcase-frame iframe { height: 320px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="grain-overlay"></div>
+
+<header class="header" id="header">
+  <div class="container header-inner">
+    <a href="index.html" class="logo">
+      <span class="logo-icon"></span>
+      FinançasPro
+    </a>
+    <nav class="nav">
+      <a href="#recursos">Recursos</a>
+      <a href="#showcase">Produto</a>
+      <a href="#numeros">Números</a>
+    </nav>
+    <div style="display:flex;align-items:center;gap:12px">
+      <button class="theme-toggle" id="themeToggle" aria-label="Alternar tema">☀️</button>
+      <div class="nav-actions">
+        <a href="login.html" class="btn btn-outline">Entrar</a>
+        <a href="register.html" class="btn btn-primary">Começar grátis</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ─── HERO ─── -->
+<section class="hero" id="hero">
+  <div class="container">
+    <div class="hero-grid">
+      <div>
+        <div class="hero-badge reveal visible">Finanças pessoais</div>
+        <h1 class="reveal visible">
+          Suas finanças.<br>
+          <span class="highlight">Em foco.</span>
+        </h1>
+        <p class="reveal visible reveal-delay-1">Acompanhe gastos, organize receitas e veja exatamente onde seu dinheiro está indo — tudo em um só lugar, do seu jeito.</p>
+        <div class="hero-actions reveal visible reveal-delay-2">
+          <a href="register.html" class="btn btn-primary btn-lg">Criar conta grátis</a>
+          <a href="#showcase" class="btn btn-outline btn-lg">Ver como funciona</a>
+        </div>
+        <div class="hero-meta reveal visible reveal-delay-3">
+          <div class="hero-meta-item">
+            <svg viewBox="0 0 14 14"><path d="M7 1v12M1 7h12"/></svg>
+            Grátis para sempre
+          </div>
+          <div class="hero-meta-item">
+            <svg viewBox="0 0 14 14"><path d="M11 3.5l-5 7L3 7.5"/></svg>
+            Sem cartão de crédito
+          </div>
+        </div>
+      </div>
+      <div class="hero-visual reveal visible reveal-delay-3">
+        <div class="hero-dashboard-mockup">
+          <div class="hero-mockup-sidebar">
+            <div class="hero-mockup-sbar-icon active"></div>
+            <div class="hero-mockup-sbar-icon"></div>
+            <div class="hero-mockup-sbar-icon"></div>
+            <div class="hero-mockup-sbar-icon"></div>
+          </div>
+          <div class="hero-mockup-main">
+            <div class="hero-mockup-header">
+              <div>
+                <div class="hero-mockup-greeting">Saldo total</div>
+                <div class="hero-mockup-amount">R$ 12.480,00</div>
+              </div>
+              <div class="hero-mockup-change">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10V4M4 7l3-3 3 3"/></svg>
+                +12,5% este mês
+              </div>
+            </div>
+            <div class="mockup-chart">
+              <div class="mockup-bars">
+                <div class="mockup-bar" style="height:45%"></div>
+                <div class="mockup-bar" style="height:30%"></div>
+                <div class="mockup-bar" style="height:55%"></div>
+                <div class="mockup-bar" style="height:40%"></div>
+                <div class="mockup-bar" style="height:70%"></div>
+                <div class="mockup-bar" style="height:50%"></div>
+                <div class="mockup-bar" style="height:85%"></div>
+                <div class="mockup-bar" style="height:60%"></div>
+                <div class="mockup-bar" style="height:75%"></div>
+                <div class="mockup-bar" style="height:45%"></div>
+                <div class="mockup-bar" style="height:90%"></div>
+                <div class="mockup-bar" style="height:65%"></div>
+              </div>
+            </div>
+            <div class="mockup-cards">
+              <div class="mockup-card">
+                <div class="mockup-card-label">Receitas</div>
+                <div class="mockup-card-value green">R$ 8.500</div>
+              </div>
+              <div class="mockup-card">
+                <div class="mockup-card-label">Despesas</div>
+                <div class="mockup-card-value red">R$ 3.240</div>
+              </div>
+              <div class="mockup-card">
+                <div class="mockup-card-label">Investido</div>
+                <div class="mockup-card-value green">R$ 24.750</div>
+              </div>
+            </div>
+            <div class="mockup-transactions">
+              <div class="mockup-tx-row">
+                <div class="mockup-tx-left">
+                  <div class="mockup-tx-dot" style="background:var(--accent)"></div>
+                  <span class="mockup-tx-label">Salário</span>
+                </div>
+                <span class="mockup-tx-value green">+R$ 5.200</span>
+              </div>
+              <div class="mockup-tx-row">
+                <div class="mockup-tx-left">
+                  <div class="mockup-tx-dot" style="background:var(--danger)"></div>
+                  <span class="mockup-tx-label">Aluguel</span>
+                </div>
+                <span class="mockup-tx-value red">-R$ 1.400</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="gradient-divider"></div>
+
+<!-- ─── SHOWCASE ─── -->
+<section class="showcase" id="showcase">
+  <div class="container">
+    <div class="section-header reveal">
+      <div class="section-tag">Produto</div>
+      <h2>Veja seu painel financeiro</h2>
+      <p>Dashboard completo com resumo mensal, contas, cartões, investimentos e orçamento por categoria.</p>
+    </div>
+    <div class="showcase-frame reveal reveal-delay-1">
+      <iframe loading="lazy" src="dashboard.html" title="Dashboard FinançasPro"></iframe>
+    </div>
+    <div class="showcase-caption reveal reveal-delay-2">
+      <p>Dashboard interativo — <strong>navegue entre transações, orçamentos e relatórios</strong></p>
+    </div>
+  </div>
+</section>
+
+<div class="gradient-divider"></div>
+
+<!-- ─── FEATURES ─── -->
+<section class="features" id="recursos">
+  <div class="container">
+    <div class="section-header reveal">
+      <div class="section-tag">Recursos</div>
+      <h2>Tudo na palma da mão</h2>
+      <p>Ferramentas pensadas para quem quer cuidar do dinheiro sem perder tempo.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card reveal reveal-delay-1">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 2v20M2 12h20" stroke-linecap="round"/></svg>
+        </div>
+        <h3>Controle total</h3>
+        <p>Conecte contas, cartões e investimentos em um só lugar. Acompanhe tudo sem abrir mil apps.</p>
+      </div>
+      <div class="feature-card reveal reveal-delay-2">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h3>Gráficos claros</h3>
+        <p>Visualize sua evolução financeira com gráficos interativos por mês, categoria e tipo.</p>
+      </div>
+      <div class="feature-card reveal reveal-delay-3">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 2v20M2 7h20M2 17h20" stroke-linecap="round"/></svg>
+        </div>
+        <h3>Orçamento inteligente</h3>
+        <p>Defina limites por categoria e receba alertas quando estiver perto de estourar o orçamento.</p>
+      </div>
+      <div class="feature-card reveal reveal-delay-1">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" stroke-linecap="round"/><path d="M12 6v6l4 2" stroke-linecap="round"/></svg>
+        </div>
+        <h3>Metas e prazos</h3>
+        <p>Acompanhe consórcios, parcelamentos e economias com prazos visuais e progresso em tempo real.</p>
+      </div>
+      <div class="feature-card reveal reveal-delay-2">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z" stroke-linecap="round"/><path d="M9 12h6M12 9v6" stroke-linecap="round"/></svg>
+        </div>
+        <h3>Múltiplas contas</h3>
+        <p>Nubank, Itaú, Caixa, Inter — tenha todos os saldos consolidados e veja seu patrimônio total.</p>
+      </div>
+      <div class="feature-card reveal reveal-delay-3">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round"/><path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h3>100% gratuito</h3>
+        <p>Sem planos escondidos, sem limite de transações. Use de graça para sempre, sem surpresas.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="gradient-divider"></div>
+
+<!-- ─── STATS ─── -->
+<section class="stats" id="numeros">
+  <div class="container">
+    <div class="stats-grid">
+      <div class="reveal">
+        <div class="stat-value" data-count="100">0</div>
+        <div class="stat-label">% gratuito — sem taxas</div>
+      </div>
+      <div class="reveal reveal-delay-1">
+        <div class="stat-value" data-count="12">0</div>
+        <div class="stat-label">Contas consolidadas</div>
+      </div>
+      <div class="reveal reveal-delay-2">
+        <div class="stat-value" data-count="99">0</div>
+        <div class="stat-label">% disponibilidade</div>
+      </div>
+      <div class="reveal reveal-delay-3">
+        <div class="stat-value" data-count="1">0</div>
+        <div class="stat-label">Minuto para começar</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="gradient-divider"></div>
+
+<!-- ─── CTA ─── -->
+<section class="cta" id="cta">
+  <div class="container">
+    <div class="cta-box reveal">
+      <h2>Pronto para colocar suas finanças em foco?</h2>
+      <p>Crie sua conta em menos de 1 minuto. Grátis. Sem compromisso.</p>
+      <a href="register.html" class="btn btn-primary btn-lg">Criar conta grátis →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FOOTER ─── -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand reveal">
+        <a href="index.html" class="logo">
+          <span class="logo-icon"></span>
+          FinançasPro
+        </a>
+        <p>Gerenciador financeiro pessoal simples e poderoso para quem quer cuidar do próprio dinheiro.</p>
+      </div>
+      <div class="footer-col reveal reveal-delay-1">
+        <h4>Produto</h4>
+        <a href="#recursos">Recursos</a>
+        <a href="#showcase">Demo</a>
+        <a href="#">App Mobile</a>
+      </div>
+      <div class="footer-col reveal reveal-delay-2">
+        <h4>Suporte</h4>
+        <a href="#">Central de ajuda</a>
+        <a href="#">Contato</a>
+        <a href="#">Status</a>
+      </div>
+      <div class="footer-col reveal reveal-delay-3">
+        <h4>Legal</h4>
+        <a href="#">Termos de uso</a>
+        <a href="#">Privacidade</a>
+        <a href="#">Segurança</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 FinançasPro. Todos os direitos reservados.</span>
+      <span>Feito com cuidado no Brasil</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  // Scroll reveal
+  var observer = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.reveal').forEach(function (el) {
+    observer.observe(el);
+  });
+
+  // Header scroll effect
+  var header = document.getElementById('header');
+  window.addEventListener('scroll', function () {
+    header.classList.toggle('scrolled', window.scrollY > 40);
+  });
+
+  // Count-up animation
+  var counted = false;
+  var countObserver = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (entry.isIntersecting && !counted) {
+        counted = true;
+        document.querySelectorAll('.stat-value[data-count]').forEach(function (el) {
+          var target = parseInt(el.getAttribute('data-count'), 10);
+          var current = 0;
+          var step = Math.max(1, Math.floor(target / 40));
+          var timer = setInterval(function () {
+            current += step;
+            if (current >= target) {
+              current = target;
+              clearInterval(timer);
+            }
+            el.textContent = current === 100 ? '100' : (target === 1 ? current : current + (target >= 12 ? '+' : '%'));
+          }, 30);
+        });
+      }
+    });
+  }, { threshold: 0.5 });
+
+  document.querySelectorAll('.stats-grid').forEach(function (el) {
+    countObserver.observe(el);
+  });
+
+  // Hero bars animation
+  document.querySelectorAll('.mockup-bar').forEach(function (bar, i) {
+    bar.style.transitionDelay = (0.05 * i) + 's';
+    setTimeout(function () {
+      bar.style.height = bar.style.height; // trigger
+    }, 300);
+  });
+
+  // ─── Theme toggle ───
+  var toggle = document.getElementById('themeToggle');
+  var html = document.documentElement;
+
+  function setTheme(theme) {
+    html.setAttribute('data-theme', theme);
+    html.classList.add('transitioning');
+    setTimeout(function () { html.classList.remove('transitioning'); }, 400);
+    toggle.textContent = theme === 'light' ? '🌙' : '☀️';
+    try { localStorage.setItem('cinema-theme', theme); } catch (_) {}
+  }
+
+  try {
+    var saved = localStorage.getItem('cinema-theme');
+    if (saved === 'light' || saved === 'dark') setTheme(saved);
+    else setTheme('dark');
+  } catch (_) { setTheme('dark'); }
+
+  if (toggle) {
+    toggle.addEventListener('click', function () {
+      var next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      setTheme(next);
+    });
+  }
+})();
+</script>
+</body>
+</html>
