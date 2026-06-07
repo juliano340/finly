@@ -1,9 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle } from "lucide-react"
+import { Upload, AlertCircle, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import {
   Select,

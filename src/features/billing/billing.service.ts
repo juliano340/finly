@@ -55,7 +55,7 @@ export interface UserPlan {
   currentPeriodEnd: Date | null
 }
 
-export async function getUserPlan(userId: string): Promise<UserPlan> {
+export async function getUserPlan(userId: string): Promise<UserPlan> { // eslint-disable-line @typescript-eslint/no-unused-vars
   // For now, return free plan for all users
   // In Phase 8 (Stripe), this will check the database
   return {

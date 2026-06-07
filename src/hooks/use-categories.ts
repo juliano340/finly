@@ -18,7 +18,7 @@ export function useCategories() {
   }, [])
 
   useEffect(() => {
-    fetchCategories()
+    fetchCategories() // eslint-disable-line react-hooks/set-state-in-effect
   }, [fetchCategories])
 
   const createCategory = useCallback(

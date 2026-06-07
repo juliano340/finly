@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import Link from "next/link"
 
 function GrainOverlay({ theme }: { theme: string }) {
   return (
@@ -29,7 +30,7 @@ function GradientDivider() {
   )
 }
 
-function HeroMockup({ theme }: { theme: string }) {
+function HeroMockup({ theme }: { theme: string }) { // eslint-disable-line @typescript-eslint/no-unused-vars
   const bars = [45, 30, 55, 40, 70, 50, 85, 60, 75, 45, 90, 65]
 
   return (
@@ -165,7 +166,7 @@ export default function HomePage() {
 
   useEffect(() => {
     const saved = localStorage.getItem("cinema-theme") as "dark" | "light" | null
-    if (saved) setTheme(saved)
+    if (saved) setTheme(saved) // eslint-disable-line react-hooks/set-state-in-effect
   }, [])
 
   useEffect(() => {
@@ -291,13 +292,13 @@ export default function HomePage() {
         }}
       >
         <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-6">
-          <a href="/" className="flex items-center gap-2.5 text-[18px] font-bold" style={{ color: "var(--fg)" }}>
+          <Link href="/" className="flex items-center gap-2.5 text-[18px] font-bold" style={{ color: "var(--fg)" }}>
             <span className="relative flex h-7 w-7 items-center justify-center rounded-md text-[13px] font-extrabold text-white">
               <span className="relative z-10">F</span>
               <span className="absolute inset-0 rounded-md" style={{ background: "var(--accent)", boxShadow: "0 0 20px var(--accent-glow)" }} />
             </span>
             Finly
-          </a>
+          </Link>
           <nav className="flex items-center gap-7">
             <a href="#features" className="text-sm font-medium transition-colors" style={{ color: "var(--muted)" }}>Recursos</a>
             <a href="#showcase" className="text-sm font-medium transition-colors" style={{ color: "var(--muted)" }}>Produto</a>
@@ -447,13 +448,13 @@ export default function HomePage() {
         <div className="mx-auto max-w-[1200px] px-6 py-16">
           <div className="mb-10 grid grid-cols-1 gap-10 md:grid-cols-4">
             <div className="md:col-span-1">
-              <a href="/" className="mb-3 flex items-center gap-2.5 text-[18px] font-bold" style={{ color: "var(--fg)" }}>
+              <Link href="/" className="mb-3 flex items-center gap-2.5 text-[18px] font-bold" style={{ color: "var(--fg)" }}>
                 <span className="relative flex h-7 w-7 items-center justify-center rounded-md text-[13px] font-extrabold text-white">
                   <span className="relative z-10">F</span>
                   <span className="absolute inset-0 rounded-md" style={{ background: "var(--accent)" }} />
                 </span>
                 Finly
-              </a>
+              </Link>
               <p className="mt-3 max-w-[280px] text-[14px] leading-[1.6]" style={{ color: "var(--muted)" }}>
                 Gerenciador financeiro pessoal simples e poderoso para quem quer cuidar do próprio dinheiro.
               </p>

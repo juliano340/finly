@@ -30,9 +30,7 @@ test.describe("Autenticação", () => {
     await page.fill('input[id="email"]', testEmail)
     await page.fill('input[id="password"]', testPassword)
     await page.click('button[type="submit"]')
-    await page.waitForTimeout(3000)
-
-    await expect(page).toHaveURL("/dashboard")
+    await page.waitForURL("**/dashboard**", { timeout: 20000 })
     await expect(page.locator("h1")).toContainText("Dashboard")
 
     await page.click('button:has-text("Sair")')
@@ -45,7 +43,8 @@ test.describe("Autenticação", () => {
     const context = await browser.newContext()
     const page = await context.newPage()
     await page.goto("/dashboard")
-    await expect(page).toHaveURL("/login")
+    await page.waitForURL("**/login**", { timeout: 20000 })
+    await expect(page).toHaveURL(/login/)
     await context.close()
   })
 })

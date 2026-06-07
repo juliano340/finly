@@ -1,6 +1,3 @@
-import type { PrismaClient } from "@/generated/prisma"
-import type { TransactionInput } from "./transactions.schema"
-
 export type TransactionWithRelations = {
   id: string
   amount: number

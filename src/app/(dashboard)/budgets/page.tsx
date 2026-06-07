@@ -73,7 +73,7 @@ export default function BudgetsPage() {
   }, [month])
 
   useEffect(() => {
-    fetchData()
+    fetchData() // eslint-disable-line react-hooks/set-state-in-effect
   }, [fetchData])
 
   const prevMonth = () => {

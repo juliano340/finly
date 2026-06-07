@@ -1,8 +1,9 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Eye, EyeOff, User, Mail, Lock, Check } from "lucide-react"
+import { Eye, EyeOff, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -97,12 +98,12 @@ export default function RegisterPage() {
       {/* Left - Form */}
       <div className="flex items-center justify-center overflow-y-auto p-10">
         <div className="w-full max-w-md">
-          <a href="/" className="mb-8 flex items-center gap-2.5">
+          <Link href="/" className="mb-8 flex items-center gap-2.5">
             <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary font-extrabold text-white">
               F
             </div>
             <span className="text-xl font-bold">Finly</span>
-          </a>
+          </Link>
 
           <h1 className="mb-2 text-3xl font-bold tracking-tight">Crie sua conta</h1>
           <p className="mb-7 text-muted-foreground">

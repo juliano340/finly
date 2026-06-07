@@ -27,8 +27,7 @@ test.describe("Transações", () => {
     await page.fill('input[id="email"]', seedEmail)
     await page.fill('input[id="password"]', "Finly123")
     await page.click('button[type="submit"]')
-    await page.waitForTimeout(3000)
-    await expect(page).toHaveURL("/dashboard")
+    await page.waitForURL("**/dashboard**", { timeout: 20000 })
 
     await page.goto("/categories")
     await page.click('button:has-text("Nova categoria")')

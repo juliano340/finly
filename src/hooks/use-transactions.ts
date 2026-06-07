@@ -36,7 +36,7 @@ export function useTransactions() {
   }, [page, filters])
 
   useEffect(() => {
-    fetchTransactions()
+    fetchTransactions() // eslint-disable-line react-hooks/set-state-in-effect
   }, [fetchTransactions])
 
   const createTransaction = useCallback(

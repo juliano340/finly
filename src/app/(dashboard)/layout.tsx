@@ -16,7 +16,6 @@ import {
   Bell,
   LogOut,
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
@@ -32,7 +31,7 @@ const navItems = [
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
-  const { data: session, status } = useSession()
+  const { status } = useSession()
   const [collapsed, setCollapsed] = useState(false)
 
   useEffect(() => {

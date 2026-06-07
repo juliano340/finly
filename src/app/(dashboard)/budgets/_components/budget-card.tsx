@@ -18,8 +18,6 @@ interface BudgetCardProps {
 }
 
 export function BudgetCard({
-  id,
-  amount,
   spent,
   remaining,
   percentage,

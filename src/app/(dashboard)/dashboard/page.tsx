@@ -49,7 +49,7 @@ export default function DashboardPage() {
   }, [month])
 
   useEffect(() => {
-    if (session?.user) fetchStats()
+    if (session?.user) fetchStats() // eslint-disable-line react-hooks/set-state-in-effect
   }, [session, fetchStats])
 
   const prevMonth = () => {

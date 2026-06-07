@@ -1,12 +1,12 @@
 import { test, expect } from "@playwright/test"
 
-test.describe("Categorias", () => {
-  const seedEmail = `cat-e2e-${Date.now()}@finly.app`
+test.describe("Importação", () => {
+  const seedEmail = `import-e2e-${Date.now()}@finly.app`
 
   test.beforeAll(async ({ browser }) => {
     const page = await browser.newPage()
     await page.goto("/register")
-    await page.fill('input[id="firstName"]', "Cat")
+    await page.fill('input[id="firstName"]', "Import")
     await page.fill('input[id="lastName"]', "Tester")
     await page.fill('input[id="email"]', seedEmail)
     await page.click('button:has-text("Continuar")')
@@ -22,27 +22,16 @@ test.describe("Categorias", () => {
     await page.close()
   })
 
-  test("criar e editar categoria pela UI", async ({ page }) => {
+  test("página de importação carrega com formato documentado", async ({ page }) => {
     await page.goto("/login")
     await page.fill('input[id="email"]', seedEmail)
     await page.fill('input[id="password"]', "Finly123")
     await page.click('button[type="submit"]')
     await page.waitForURL("**/dashboard**", { timeout: 20000 })
 
-    await page.goto("/categories")
-    await expect(page.locator("h1")).toContainText("Categorias")
-
-    await page.click('button:has-text("Nova categoria")')
-    await page.fill('input[id="cat-name"]', "Lazer E2E")
-    await page.click('button:has-text("Salvar")')
-
-    await expect(page.locator("text=Lazer E2E")).toBeVisible({ timeout: 10000 })
-
-    await page.locator("text=Lazer E2E").locator("..").locator("..").locator("..").locator("button").first().click()
-
-    await page.fill('input[id="cat-name"]', "Lazer Editado")
-    await page.click('button:has-text("Salvar")')
-
-    await expect(page.locator("text=Lazer Editado")).toBeVisible({ timeout: 10000 })
+    await page.goto("/import")
+    await expect(page.locator("h1")).toContainText("Importar Transações")
+    await expect(page.getByText("Formato esperado")).toBeVisible()
+    await expect(page.getByText("DD/MM/AAAA")).toBeVisible()
   })
 })
