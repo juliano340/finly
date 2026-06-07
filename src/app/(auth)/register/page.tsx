@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
+import { RedirectIfLogged } from "@/features/auth/redirect-if-logged"
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -45,7 +46,8 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#1E3B4A] via-[#1a3340] to-[#0EA882]/20 p-4">
+    <RedirectIfLogged>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#1E3B4A] via-[#1a3340] to-[#0EA882]/20 p-4">
       <Card className="w-full max-w-md border-0 shadow-2xl">
         <CardHeader className="space-y-1 pt-8">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
@@ -149,5 +151,6 @@ export default function RegisterPage() {
         </CardContent>
       </Card>
     </div>
+    </RedirectIfLogged>
   )
 }

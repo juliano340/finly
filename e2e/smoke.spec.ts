@@ -5,9 +5,9 @@ test("página inicial carrega sem erro", async ({ page }) => {
   expect(response?.status()).toBe(200)
 })
 
-test("título e CTAs renderizam na home", async ({ page }) => {
+test("hero e CTAs renderizam na home", async ({ page }) => {
   await page.goto("/")
-  await expect(page.locator("h1")).toContainText("Finly")
-  await expect(page.locator("text=Entrar")).toBeVisible()
-  await expect(page.locator("text=Criar conta")).toBeVisible()
+  await expect(page.locator("h1")).toContainText("Suas finanças")
+  await expect(page.getByRole("link", { name: "Entrar" }).first()).toBeVisible()
+  await expect(page.getByRole("link", { name: "Criar conta grátis" })).toBeVisible()
 })
