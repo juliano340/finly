@@ -1,7 +1,7 @@
 # Finly — SaaS de Controle Financeiro Pessoal
 
 > **Documento canônico do projeto.** Leia antes de qualquer alteração.
-> Fase atual: **2 (Auth + Multi-tenant) concluída** — próxima: **3 (Categorias CRUD)**
+> Fase atual: **3 (Categorias CRUD) concluída** — próxima: **4 (Transações CRUD)**
 
 ---
 
