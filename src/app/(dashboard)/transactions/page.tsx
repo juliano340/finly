@@ -193,6 +193,7 @@ export default function TransactionsPage() {
       )}
 
       <TransactionForm
+        key={editing?.id ?? "new"}
         open={formOpen}
         onOpenChange={(open) => {
           setFormOpen(open)

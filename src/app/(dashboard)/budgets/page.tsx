@@ -228,6 +228,7 @@ export default function BudgetsPage() {
       )}
 
       <BudgetForm
+        key={editBudget?.id ?? "new"}
         open={formOpen}
         onOpenChange={(open) => { setFormOpen(open); if (!open) setEditBudget(null) }}
         categories={categories}

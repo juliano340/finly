@@ -1,41 +1,41 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { signIn } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import { Eye, EyeOff, Mail, Lock, LogIn } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { toast } from "sonner"
+import { useState } from "react";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { Eye, EyeOff, Mail, Lock, LogIn } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 export default function LoginPage() {
-  const router = useRouter()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [remember, setRemember] = useState(true)
-  const [loading, setLoading] = useState(false)
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [remember, setRemember] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
+    e.preventDefault();
+    setLoading(true);
 
     const result = await signIn("credentials", {
       email,
       password,
       redirect: false,
-    })
+    });
 
-    setLoading(false)
+    setLoading(false);
 
     if (result?.error) {
-      toast.error("Email ou senha inválidos")
-      return
+      toast.error("Email ou senha inválidos");
+      return;
     }
 
-    router.push("/dashboard")
-    router.refresh()
+    router.push("/dashboard");
+    router.refresh();
   }
 
   return (
@@ -50,14 +50,16 @@ export default function LoginPage() {
             <span className="text-xl font-bold">Finly</span>
           </a>
 
-          <h1 className="mb-2 text-3xl font-bold tracking-tight">Bem-vindo de volta</h1>
+          <h1 className="mb-2 text-3xl font-bold tracking-tight">
+            Bem-vindo de volta
+          </h1>
           <p className="mb-8 text-muted-foreground">
             Entre na sua conta para continuar gerenciando suas finanças.
           </p>
 
           <div className="mb-6 flex items-center gap-4 text-sm text-muted-foreground">
             <div className="h-px flex-1 bg-border" />
-            ou entre com e-mail
+            Entre com e-mail e senha
             <div className="h-px flex-1 bg-border" />
           </div>
 
@@ -92,7 +94,11 @@ export default function LoginPage() {
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   tabIndex={-1}
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </button>
               </div>
             </div>
@@ -112,7 +118,12 @@ export default function LoginPage() {
               </a>
             </div>
 
-            <Button type="submit" disabled={loading} className="w-full" size="lg">
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full"
+              size="lg"
+            >
               {loading ? (
                 <span className="flex items-center gap-2">
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -141,12 +152,15 @@ export default function LoginPage() {
         <div className="absolute -right-30 -top-50 h-[600px] w-[600px] rounded-full bg-primary/15" />
         <div className="absolute -bottom-30 -left-20 h-[400px] w-[400px] rounded-full bg-primary/10" />
         <div className="relative z-10 max-w-md text-white">
-          <h2 className="mb-4 text-3xl font-bold">Organize suas finanças com inteligência</h2>
+          <h2 className="mb-4 text-3xl font-bold">
+            Organize suas finanças com inteligência
+          </h2>
           <p className="text-lg leading-relaxed text-white/70">
-            Acompanhe receitas, despesas e investimentos em um painel simples e visual. Tome decisões melhores com relatórios em tempo real.
+            Acompanhe receitas, despesas e investimentos em um painel simples e
+            visual. Tome decisões melhores com relatórios em tempo real.
           </p>
         </div>
       </div>
     </div>
-  )
+  );
 }
