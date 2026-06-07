@@ -112,20 +112,28 @@ export function TransactionForm({
           </div>
           <div className="space-y-2">
             <Label>Categoria</Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
+            <Select value={categoryId} onValueChange={setCategoryId} disabled={filteredCategories.length === 0}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione...">
                   {categoryId
                     ? categories.find((c) => c.id === categoryId)?.name ?? "Selecione..."
-                    : undefined}
+                    : filteredCategories.length === 0
+                    ? "Nenhuma categoria disponível"
+                    : "Selecione..."}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {filteredCategories.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
+                {filteredCategories.length === 0 ? (
+                  <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                    Crie uma categoria de {type === "INCOME" ? "receita" : "despesa"} primeiro
+                  </div>
+                ) : (
+                  filteredCategories.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
