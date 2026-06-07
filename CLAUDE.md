@@ -1,7 +1,7 @@
 # Finly — SaaS de Controle Financeiro Pessoal
 
 > **Documento canônico do projeto.** Leia antes de qualquer alteração.
-> Fase atual: **4 (Transações CRUD) concluída** — próxima: **5 (Dashboard + Gráficos)**
+> Fase atual: **9 (Landing + Onboarding) concluída** — todas as fases concluídas!
 
 ---
 

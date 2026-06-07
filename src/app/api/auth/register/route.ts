@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
-import { PrismaClient } from "@/generated/prisma"
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3"
+import { prisma } from "@/lib/prisma"
 import { hash } from "bcryptjs"
 import { z } from "zod"
 
@@ -24,15 +23,8 @@ export async function POST(request: Request) {
 
     const { name, email, password } = parsed.data
 
-    const prisma = new PrismaClient({
-      adapter: new PrismaBetterSqlite3({
-        url: process.env.DATABASE_URL ?? "file:./dev.db",
-      }),
-    })
-
     const existing = await prisma.user.findUnique({ where: { email } })
     if (existing) {
-      await prisma.$disconnect()
       return NextResponse.json({ error: "Email já cadastrado" }, { status: 400 })
     }
 
@@ -40,8 +32,6 @@ export async function POST(request: Request) {
     const user = await prisma.user.create({
       data: { name, email, passwordHash },
     })
-
-    await prisma.$disconnect()
 
     return NextResponse.json(
       {
