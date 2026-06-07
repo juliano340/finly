@@ -25,10 +25,10 @@ test.describe("Autenticação", () => {
     await expect(page).toHaveURL("/login")
   })
 
-  test("visitante acessa /dashboard → navega com sucesso", async ({
+  test("visitante acessa /dashboard → redirecionado para login", async ({
     page,
   }) => {
     await page.goto("/dashboard")
-    await expect(page.locator("h1")).toContainText("Dashboard")
+    await expect(page).toHaveURL("/login")
   })
 })

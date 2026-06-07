@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { signOut } from "next-auth/react"
+import { usePathname, useRouter } from "next/navigation"
+import { signOut, useSession } from "next-auth/react"
 import {
   LayoutDashboard,
   ArrowRightLeft,
@@ -29,7 +29,27 @@ const navItems = [
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const router = useRouter()
+  const { data: session, status } = useSession()
   const [collapsed, setCollapsed] = useState(false)
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.replace("/login")
+    }
+  }, [status, router])
+
+  if (status === "loading") {
+    return (
+      <div className="flex h-screen items-center justify-center bg-muted/30">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    )
+  }
+
+  if (status === "unauthenticated") {
+    return null
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-muted/30">
