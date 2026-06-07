@@ -211,6 +211,47 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* How it works */}
+      <section className="py-24">
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="mb-12 text-center">
+            <h2 className="mb-4 text-3xl font-bold tracking-tight">Como funciona</h2>
+            <p className="text-muted-foreground">
+              Três passos simples para organizar suas finanças
+            </p>
+          </div>
+          <div className="grid gap-8 md:grid-cols-3">
+            <div className="text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-xl font-bold text-primary">
+                1
+              </div>
+              <h3 className="mb-2 font-semibold">Crie sua conta</h3>
+              <p className="text-sm text-muted-foreground">
+                Cadastre-se em menos de 1 minuto. Grátis, sem cartão de crédito.
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-xl font-bold text-primary">
+                2
+              </div>
+              <h3 className="mb-2 font-semibold">Registre seus gastos</h3>
+              <p className="text-sm text-muted-foreground">
+                Adicione receitas e despesas manualmente ou importe via CSV.
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-xl font-bold text-primary">
+                3
+              </div>
+              <h3 className="mb-2 font-semibold">Acompanhe seus resultados</h3>
+              <p className="text-sm text-muted-foreground">
+                Veja gráficos, defina orçamentos e tome decisões inteligentes.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section id="cta" className="py-24">
         <div className="mx-auto max-w-7xl px-6">
