@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { signOut, useSession } from "next-auth/react"
 import {
   LayoutDashboard,
+  Tags,
   ArrowRightLeft,
   PiggyBank,
   Upload,
@@ -21,6 +22,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/categories", label: "Categorias", icon: Tags },
   { href: "/transactions", label: "Transações", icon: ArrowRightLeft },
   { href: "/budgets", label: "Orçamentos", icon: PiggyBank },
   { href: "/import", label: "Importar", icon: Upload },
