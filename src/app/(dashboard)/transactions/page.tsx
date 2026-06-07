@@ -106,7 +106,9 @@ export default function TransactionsPage() {
           onValueChange={(v) => setFilters({ ...filters, type: v === "all" ? undefined : (v as typeof filters.type) })}
         >
           <SelectTrigger className="w-40">
-            <SelectValue placeholder="Tipo" />
+            <SelectValue>
+              {filters.type === "INCOME" ? "Receitas" : filters.type === "EXPENSE" ? "Despesas" : "Todos"}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
@@ -119,7 +121,11 @@ export default function TransactionsPage() {
           onValueChange={(v) => setFilters({ ...filters, categoryId: v === "all" ? undefined : v })}
         >
           <SelectTrigger className="w-48">
-            <SelectValue placeholder="Categoria" />
+            <SelectValue>
+              {filters.categoryId
+                ? categories.find((c) => c.id === filters.categoryId)?.name ?? "Todas"
+                : "Todas"}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas</SelectItem>
