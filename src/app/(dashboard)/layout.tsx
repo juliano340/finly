@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { signOut } from "next-auth/react"
 import {
   LayoutDashboard,
   ArrowRightLeft,
@@ -82,15 +83,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
         <div className="p-2">
           <Separator className="bg-white/10" />
-          <Link
-            href="/login"
-            className={`mt-2 flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-white/70 transition-colors hover:bg-white/10 hover:text-white ${
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className={`mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-white/70 transition-colors hover:bg-white/10 hover:text-white ${
               collapsed ? "justify-center px-2" : ""
             }`}
           >
             <LogOut className="h-4 w-4" />
             {!collapsed && "Sair"}
-          </Link>
+          </button>
         </div>
       </aside>
 

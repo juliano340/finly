@@ -21,7 +21,7 @@ test.describe("Autenticação", () => {
     await expect(page).toHaveURL("/dashboard")
     await expect(page.locator("h1")).toContainText("Dashboard")
 
-    await page.click('a[href="/login"]')
+    await page.click('button:has-text("Sair")')
     await expect(page).toHaveURL("/login")
   })
 
