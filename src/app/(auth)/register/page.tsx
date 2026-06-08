@@ -244,7 +244,7 @@ export default function RegisterPage() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="objective">Qual seu objetivo principal?</Label>
-                  <Select value={objective} onValueChange={setObjective}>
+                  <Select value={objective} onValueChange={(value) => setObjective(value ?? "")}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione..." />
                     </SelectTrigger>

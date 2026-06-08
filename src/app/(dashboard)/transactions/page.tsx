@@ -84,7 +84,7 @@ export default function TransactionsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Transações</h1>
           <p className="text-muted-foreground">
-            {total} {total === 1 ? "transação" : "transações"}
+            Avulsas, receitas, ajustes manuais e lançamentos não recorrentes · {total} {total === 1 ? "item" : "itens"}
           </p>
         </div>
         <Button
@@ -95,7 +95,7 @@ export default function TransactionsPage() {
           className="gap-2"
         >
           <Plus className="h-4 w-4" />
-          Nova transação
+          Novo lançamento avulso
         </Button>
       </div>
 
@@ -103,7 +103,10 @@ export default function TransactionsPage() {
       <div className="flex flex-wrap gap-3">
         <Select
           value={filters.type ?? "all"}
-          onValueChange={(v) => setFilters({ ...filters, type: v === "all" ? undefined : (v as typeof filters.type) })}
+          onValueChange={(v) => {
+            const value = v ?? "all"
+            setFilters({ ...filters, type: value === "all" ? undefined : (value as typeof filters.type) })
+          }}
         >
           <SelectTrigger className="w-40">
             <SelectValue>
@@ -118,7 +121,10 @@ export default function TransactionsPage() {
         </Select>
         <Select
           value={filters.categoryId ?? "all"}
-          onValueChange={(v) => setFilters({ ...filters, categoryId: v === "all" ? undefined : v })}
+          onValueChange={(v) => {
+            const value = v ?? "all"
+            setFilters({ ...filters, categoryId: value === "all" ? undefined : value })
+          }}
         >
           <SelectTrigger className="w-48">
             <SelectValue>

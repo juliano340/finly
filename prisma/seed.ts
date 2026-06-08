@@ -56,6 +56,7 @@ async function main() {
     description: string
     date: Date
     categoryId: string
+    userId: string
   }[] = []
 
   const expenseCategories = categories.filter((c) => c.type === "EXPENSE")
@@ -70,6 +71,7 @@ async function main() {
       description: `Gasto ${cat.name} #${i + 1}`,
       date: new Date(2026, 5, day, 12, 0, 0),
       categoryId: cat.id,
+      userId: user.id,
     })
   }
 
@@ -82,6 +84,7 @@ async function main() {
       description: `Receita ${cat.name} #${i + 1}`,
       date: new Date(2026, 5, day, 12, 0, 0),
       categoryId: cat.id,
+      userId: user.id,
     })
   }
 

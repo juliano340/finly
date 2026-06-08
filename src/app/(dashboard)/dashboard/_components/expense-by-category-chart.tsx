@@ -40,8 +40,8 @@ export function ExpenseByCategoryChart({ data }: ExpenseByCategoryChartProps) {
           ))}
         </Pie>
         <Tooltip
-          formatter={(value: number) =>
-            value.toLocaleString("pt-BR", {
+          formatter={(value) =>
+            Number(value ?? 0).toLocaleString("pt-BR", {
               style: "currency",
               currency: "BRL",
             })

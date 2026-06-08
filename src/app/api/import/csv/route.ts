@@ -8,6 +8,7 @@ export async function POST(request: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
+  const userId = session.user.id
 
   const formData = await request.formData()
   const file = formData.get("file") as File | null
@@ -19,6 +20,11 @@ export async function POST(request: Request) {
 
   if (!categoryId) {
     return NextResponse.json({ error: "Categoria não fornecida" }, { status: 400 })
+  }
+
+  const category = await prisma.category.findUnique({ where: { id: categoryId } })
+  if (!category || category.userId !== userId) {
+    return NextResponse.json({ error: "Categoria inválida" }, { status: 400 })
   }
 
   const content = await file.text()
@@ -38,7 +44,7 @@ export async function POST(request: Request) {
       description: tx.description || null,
       date: tx.date,
       categoryId,
-      userId: session.user.id,
+      userId,
     })),
   })
 

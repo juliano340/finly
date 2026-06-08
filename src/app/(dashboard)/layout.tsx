@@ -8,8 +8,11 @@ import {
   LayoutDashboard,
   Tags,
   ArrowRightLeft,
-  PiggyBank,
-  Upload,
+  CalendarCheck,
+  CreditCard,
+  Landmark,
+  Receipt,
+  Repeat,
   Settings,
   ChevronLeft,
   Menu,
@@ -21,10 +24,13 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/categories", label: "Categorias", icon: Tags },
+  { href: "/monthly-closing", label: "Fechamento Mensal", icon: CalendarCheck },
+  { href: "/bank-accounts", label: "Contas Bancárias", icon: Landmark },
+  { href: "/cards", label: "Cartões", icon: CreditCard },
+  { href: "/invoices", label: "Faturas", icon: Receipt },
+  { href: "/fixed-costs", label: "Custos Fixos", icon: Repeat },
   { href: "/transactions", label: "Transações", icon: ArrowRightLeft },
-  { href: "/budgets", label: "Orçamentos", icon: PiggyBank },
-  { href: "/import", label: "Importar", icon: Upload },
+  { href: "/categories", label: "Categorias", icon: Tags },
   { href: "/settings", label: "Configurações", icon: Settings },
 ]
 

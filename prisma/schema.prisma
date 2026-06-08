@@ -17,6 +17,32 @@ enum TransactionType {
   EXPENSE
 }
 
+enum FinancialMonthStatus {
+  OPEN
+  CLOSED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+}
+
+enum FixedCostPaymentMethod {
+  PIX
+  BANK_SLIP
+  DEBIT
+  CREDIT_CARD
+  CASH
+}
+
+enum BankAccountType {
+  CHECKING
+  SAVINGS
+  DIGITAL
+  CASH
+  INVESTMENT
+}
+
 model User {
   id                   String    @id @default(cuid())
   name                 String?
@@ -35,6 +61,13 @@ model User {
   categories   Category[]
   transactions Transaction[]
   budgets      Budget[]
+  financialMonths FinancialMonth[]
+  cards       Card[]
+  cardInvoices CardInvoice[]
+  fixedCosts  FixedCost[]
+  fixedCostOccurrences FixedCostOccurrence[]
+  bankAccounts BankAccount[]
+  bankAccountMovements BankAccountMovement[]
 }
 
 model Account {
@@ -84,6 +117,7 @@ model Category {
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
   budgets      Budget[]
+  fixedCosts   FixedCost[]
 
   @@unique([name, userId])
 }
@@ -101,6 +135,138 @@ model Transaction {
 
   category Category @relation(fields: [categoryId], references: [id])
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model FinancialMonth {
+  id        String               @id @default(cuid())
+  month     String
+  status    FinancialMonthStatus @default(OPEN)
+  userId    String
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cardInvoices         CardInvoice[]
+  fixedCostOccurrences FixedCostOccurrence[]
+
+  @@unique([month, userId])
+}
+
+model Card {
+  id         String   @id @default(cuid())
+  name       String
+  brand      String?
+  color      String   @default("#22C55E")
+  closingDay Int?
+  dueDay     Int?
+  bankAccountId String?
+  userId     String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bankAccount BankAccount? @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+  invoices   CardInvoice[]
+  fixedCosts FixedCost[]
+
+  @@unique([name, userId])
+}
+
+model BankAccount {
+  id             String          @id @default(cuid())
+  name           String
+  institution    String?
+  type           BankAccountType @default(CHECKING)
+  color          String          @default("#22C55E")
+  initialBalance Float           @default(0)
+  active         Boolean         @default(true)
+  userId         String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cards     Card[]
+  fixedCosts FixedCost[]
+  movements BankAccountMovement[]
+
+  @@unique([name, userId])
+}
+
+model BankAccountMovement {
+  id            String          @id @default(cuid())
+  bankAccountId String
+  amount        Float
+  type          TransactionType
+  description   String?
+  date          DateTime        @default(now())
+  userId        String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  bankAccount BankAccount @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CardInvoice {
+  id               String        @id @default(cuid())
+  cardId           String
+  financialMonthId String
+  month            String
+  dueDate          DateTime
+  amount           Float
+  status           PaymentStatus @default(PENDING)
+  paidAt           DateTime?
+  userId           String
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  card           Card           @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  financialMonth FinancialMonth @relation(fields: [financialMonthId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([cardId, month, userId])
+}
+
+model FixedCost {
+  id             String                 @id @default(cuid())
+  name           String
+  defaultAmount  Float
+  categoryId     String
+  paymentMethod  FixedCostPaymentMethod
+  paidInsideCard Boolean                @default(false)
+  cardId         String?
+  bankAccountId  String?
+  active         Boolean                @default(true)
+  userId         String
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category    Category              @relation(fields: [categoryId], references: [id])
+  card        Card?                 @relation(fields: [cardId], references: [id], onDelete: SetNull)
+  bankAccount BankAccount?          @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+  occurrences FixedCostOccurrence[]
+
+  @@unique([name, userId])
+}
+
+model FixedCostOccurrence {
+  id               String        @id @default(cuid())
+  fixedCostId      String
+  financialMonthId String
+  month            String
+  amount           Float
+  status           PaymentStatus @default(PENDING)
+  paidAt           DateTime?
+  userId           String
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  fixedCost      FixedCost      @relation(fields: [fixedCostId], references: [id], onDelete: Cascade)
+  financialMonth FinancialMonth @relation(fields: [financialMonthId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([fixedCostId, month, userId])
 }
 
 model Budget {

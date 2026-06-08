@@ -31,8 +31,8 @@ export function DailyTrendChart({ data }: DailyTrendChartProps) {
         <XAxis dataKey="date" className="text-xs" />
         <YAxis className="text-xs" />
         <Tooltip
-          formatter={(value: number) =>
-            value.toLocaleString("pt-BR", {
+          formatter={(value) =>
+            Number(value ?? 0).toLocaleString("pt-BR", {
               style: "currency",
               currency: "BRL",
             })

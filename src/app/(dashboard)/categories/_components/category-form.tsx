@@ -103,7 +103,7 @@ export function CategoryForm({
           </div>
           <div className="space-y-2">
             <Label>Tipo</Label>
-            <Select value={type} onValueChange={(v) => setType(v as typeof type)}>
+            <Select value={type} onValueChange={(v) => setType((v ?? "EXPENSE") as typeof type)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -115,7 +115,7 @@ export function CategoryForm({
           </div>
           <div className="space-y-2">
             <Label>Ícone</Label>
-            <Select value={icon} onValueChange={setIcon}>
+            <Select value={icon} onValueChange={(value) => setIcon(value ?? "wallet")}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>

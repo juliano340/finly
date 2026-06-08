@@ -7,9 +7,7 @@ export const categorySchema = z.object({
     .max(50, "Nome deve ter no máximo 50 caracteres"),
   icon: z.string().default("wallet"),
   color: z.string().default("#0EA882"),
-  type: z.enum(["INCOME", "EXPENSE"], {
-    required_error: "Tipo é obrigatório",
-  }),
+  type: z.enum(["INCOME", "EXPENSE"]),
 })
 
 export type CategoryInput = z.infer<typeof categorySchema>

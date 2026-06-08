@@ -82,7 +82,7 @@ export function ImportForm({ categories }: { categories: Category[] }) {
 
       <div className="space-y-2">
         <Label>Categoria padrão</Label>
-        <Select value={categoryId} onValueChange={setCategoryId}>
+        <Select value={categoryId} onValueChange={(value) => setCategoryId(value ?? "")}>
           <SelectTrigger>
             <SelectValue placeholder="Selecione a categoria..." />
           </SelectTrigger>

@@ -38,7 +38,7 @@ test.describe("Transações", () => {
     await page.goto("/transactions")
     await expect(page.locator("h1")).toContainText("Transações")
 
-    await page.click('button:has-text("Nova transação")')
+    await page.click('button:has-text("Novo lançamento avulso")')
     await page.waitForSelector('input[type="number"]')
     await page.fill('input[type="number"]', "99.90")
     await page.click('text=Selecione...')

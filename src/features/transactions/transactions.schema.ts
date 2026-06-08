@@ -5,14 +5,12 @@ export const transactionSchema = z.object({
     .number()
     .positive("Valor deve ser maior que zero")
     .max(99999999.99, "Valor muito alto"),
-  type: z.enum(["INCOME", "EXPENSE"], {
-    required_error: "Tipo é obrigatório",
-  }),
+  type: z.enum(["INCOME", "EXPENSE"]),
   description: z
     .string()
     .max(200, "Descrição deve ter no máximo 200 caracteres")
     .optional(),
-  date: z.coerce.date({ required_error: "Data é obrigatória" }),
+  date: z.coerce.date(),
   categoryId: z.string().min(1, "Categoria é obrigatória"),
 })
 

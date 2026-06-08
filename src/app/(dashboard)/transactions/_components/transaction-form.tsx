@@ -98,7 +98,7 @@ export function TransactionForm({
           </div>
           <div className="space-y-2">
             <Label>Tipo</Label>
-            <Select value={type} onValueChange={(v) => { setType(v as typeof type); setCategoryId("") }}>
+            <Select value={type} onValueChange={(v) => { setType((v ?? "EXPENSE") as typeof type); setCategoryId("") }}>
               <SelectTrigger>
                 <SelectValue>
                   {type === "INCOME" ? "Receita" : "Despesa"}
@@ -112,7 +112,7 @@ export function TransactionForm({
           </div>
           <div className="space-y-2">
             <Label>Categoria</Label>
-            <Select value={categoryId} onValueChange={setCategoryId} disabled={filteredCategories.length === 0}>
+            <Select value={categoryId} onValueChange={(value) => setCategoryId(value ?? "")} disabled={filteredCategories.length === 0}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione...">
                   {categoryId
