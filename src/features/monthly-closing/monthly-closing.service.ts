@@ -135,16 +135,17 @@ export async function unpayFixedCostOccurrence(
   return db.$transaction(async (tx) => {
     if (occurrence.fixedCost.bankAccountId) {
       const description = `PAGAMENTO ${occurrence.fixedCost.name}`
-      await tx.bankAccountMovement.deleteMany({
+      const mov = await tx.bankAccountMovement.findFirst({
         where: {
           bankAccountId: occurrence.fixedCost.bankAccountId,
           amount: occurrence.amount,
           type: "EXPENSE",
           description,
-          date: occurrence.paidAt ?? undefined,
           userId,
         },
+        orderBy: { createdAt: "desc" },
       })
+      if (mov) await tx.bankAccountMovement.delete({ where: { id: mov.id } })
     }
 
     return tx.fixedCostOccurrence.update({
