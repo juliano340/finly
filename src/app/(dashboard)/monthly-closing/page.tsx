@@ -6,9 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { formatCurrency, formatDate } from "@/lib/utils"
 
-interface ClosingData {
-  summary: {
-    cardInvoicesTotal: number; fixedCostsTotal: number; fixedCostsInsideCardTotal: number; fixedCostsOutsideCardTotal: number; looseExpensesTotal: number; incomeTotal: number; totalToPay: number; projectedBalance: number
+  interface ClosingData {
+    summary: {
+    cardInvoicesTotal: number; cardInvoicesPaidTotal: number; fixedCostsTotal: number; fixedCostsInsideCardTotal: number; fixedCostsOutsideCardTotal: number; fixedCostsOutsideCardTotalAll: number; looseExpensesTotal: number; incomeTotal: number; totalToPay: number; totalSpent: number; projectedBalance: number
     estimatedInvoicesByCard: { cardId: string; cardName: string; estimatedAmount: number; invoiceAmount: number; difference: number }[]
   }
   invoices: { id: string; amount: number; dueDate: string; status: "PENDING" | "PAID"; card: { name: string } }[]
@@ -38,44 +38,49 @@ export default function MonthlyClosingPage() {
   }
 
   const summary = data?.summary
-  const payableFormula = [
-    { label: "Faturas", value: summary?.cardInvoicesTotal ?? 0 },
-    { label: "Fixos fora do cartão", value: summary?.fixedCostsOutsideCardTotal ?? 0 },
+
+  const pendingFormula = [
+    { label: "Faturas pendentes", value: summary?.cardInvoicesTotal ?? 0 },
+    { label: "Fixos fora pendentes", value: summary?.fixedCostsOutsideCardTotal ?? 0 },
     { label: "Avulsas", value: summary?.looseExpensesTotal ?? 0 },
   ]
 
+  const paidTotal = (summary?.totalSpent ?? 0) - (summary?.totalToPay ?? 0)
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between"><div><h1 className="text-2xl font-bold tracking-tight">Fechamento Mensal</h1><p className="text-muted-foreground">Quanto precisa sair do bolso neste mês, sem descontar receitas.</p></div><Input className="w-40" type="month" value={month} onChange={(e) => setMonth(e.target.value)} /></div>
+      <div className="flex items-center justify-between"><div><h1 className="text-2xl font-bold tracking-tight">Fechamento Mensal</h1><p className="text-muted-foreground">Gastos do mês: realizado vs. a pagar.</p></div><Input className="w-40" type="month" value={month} onChange={(e) => setMonth(e.target.value)} /></div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_2fr]">
-        <Metric title="Saídas a pagar no mês" value={summary?.totalToPay ?? 0} description="Faturas + fixos fora do cartão + avulsas" highlight />
-        <Card className="border-0 shadow-sm">
-          <CardContent className="p-5">
-            <p className="text-xs font-medium text-muted-foreground">Como esse total é calculado</p>
-            <div className="mt-3 grid gap-3 md:grid-cols-3">
-              {payableFormula.map((item) => (
-                <div key={item.label} className="rounded-lg bg-muted p-3">
-                  <p className="text-xs text-muted-foreground">{item.label}</p>
-                  <p className="text-lg font-bold">{formatCurrency(item.value)}</p>
-                </div>
-              ))}
-            </div>
-            <p className="mt-3 text-xs text-muted-foreground">
-              Custos fixos pagos no cartão aparecem para controle, mas não somam de novo porque já estão dentro da fatura lançada.
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-3">
+        <Metric title="Saídas totais do mês" value={summary?.totalSpent ?? 0} description="Tudo: faturas + fixos + avulsas" highlight />
+        <Metric title="Já pago" value={paidTotal} description="Desse total, já foi pago" />
+        <Metric title="Ainda a pagar" value={summary?.totalToPay ?? 0} description="Restante pendente" />
       </div>
+      <Card className="border-0 shadow-sm">
+        <CardContent className="p-5">
+          <p className="text-xs font-medium text-muted-foreground">Detalhamento do que ainda falta pagar</p>
+          <div className="mt-3 grid gap-3 md:grid-cols-3">
+            {pendingFormula.map((item) => (
+              <div key={item.label} className="rounded-lg bg-muted p-3">
+                <p className="text-xs text-muted-foreground">{item.label}</p>
+                <p className="text-lg font-bold">{formatCurrency(item.value)}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Custos fixos dentro do cartão não somam de novo (já estão na fatura). Gastos já pagos também são excluídos do "a pagar".
+          </p>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <Metric title="Faturas lançadas" value={summary?.cardInvoicesTotal ?? 0} description="Valor manual final das faturas" />
-        <Metric title="Fixos fora do cartão" value={summary?.fixedCostsOutsideCardTotal ?? 0} description="Somam direto no total" />
+        <Metric title="Faturas totais" value={(summary?.cardInvoicesTotal ?? 0) + (summary?.cardInvoicesPaidTotal ?? 0)} description={`${formatCurrency(summary?.cardInvoicesPaidTotal ?? 0)} já pago · ${formatCurrency(summary?.cardInvoicesTotal ?? 0)} pendente`} />
+        <Metric title="Fixos fora do cartão" value={summary?.fixedCostsOutsideCardTotalAll ?? 0} description={`${formatCurrency(summary?.fixedCostsOutsideCardTotal ?? 0)} pendente · ${formatCurrency((summary?.fixedCostsOutsideCardTotalAll ?? 0) - (summary?.fixedCostsOutsideCardTotal ?? 0))} já pago`} />
         <Metric title="Despesas avulsas" value={summary?.looseExpensesTotal ?? 0} description="Transações não recorrentes" />
         <Metric title="Receitas do mês" value={summary?.incomeTotal ?? 0} description="Informativo; não reduz o total" />
         <Metric title="Fixos totais" value={summary?.fixedCostsTotal ?? 0} description="Dentro + fora do cartão" />
-        <Metric title="Fixos no cartão" value={summary?.fixedCostsInsideCardTotal ?? 0} description="Só previsão da fatura" />
-        <Metric title="Saldo após receitas" value={summary?.projectedBalance ?? 0} description="Receitas - saídas a pagar" />
+        <Metric title="Fixos dentro do cartão" value={summary?.fixedCostsInsideCardTotal ?? 0} description="Previstos na fatura" />
+        <Metric title="Saldo projetado" value={summary?.projectedBalance ?? 0} description="Receitas - total a pagar" />
       </div>
       <section className="grid gap-4 lg:grid-cols-2">
         <Card className="border-0 shadow-sm"><CardHeader><CardTitle className="text-base">Faturas por cartão</CardTitle></CardHeader><CardContent className="space-y-3">{data?.invoices.map((invoice) => <div key={invoice.id} className="rounded-lg border p-3"><div className="flex justify-between"><strong>{invoice.card.name}</strong><span>{formatCurrency(invoice.amount)}</span></div><p className="text-sm text-muted-foreground">Vence em {formatDate(invoice.dueDate)} · {invoice.status === "PAID" ? "Pago" : "Pendente"}</p></div>)}</CardContent></Card>

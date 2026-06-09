@@ -8,7 +8,7 @@ export async function getBankAccounts(userId: string, client?: PrismaClient) {
     where: { userId },
     include: {
       cards: { select: { id: true, name: true, brand: true } },
-      movements: { orderBy: { date: "desc" }, take: 5 },
+      movements: { orderBy: { date: "desc" }, take: 50 },
     },
     orderBy: [{ active: "desc" }, { name: "asc" }],
   })

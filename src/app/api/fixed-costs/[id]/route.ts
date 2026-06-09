@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { fixedCostSchema } from "@/features/fixed-costs/fixed-costs.schema"
+import { fixedCostPartialSchema } from "@/features/fixed-costs/fixed-costs.schema"
 import { deleteFixedCost, updateFixedCost } from "@/features/fixed-costs/fixed-costs.service"
 
 export async function PUT(
@@ -12,7 +12,7 @@ export async function PUT(
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
 
-  const parsed = fixedCostSchema.partial().safeParse(await request.json())
+  const parsed = fixedCostPartialSchema.safeParse(await request.json())
   if (!parsed.success) {
     return NextResponse.json({ error: "Dados inválidos" }, { status: 400 })
   }

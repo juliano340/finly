@@ -37,8 +37,8 @@ export default function DashboardPage() {
   const [month, setMonth] = useState(getCurrentMonth)
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [closing, setClosing] = useState<{ summary: { totalToPay: number; totalSpent: number } } | null>(null)
   const [bankTotal, setBankTotal] = useState(0)
-  const [totalToPay, setTotalToPay] = useState(0)
 
   const fetchStats = useCallback(async () => {
     setLoading(true)
@@ -54,8 +54,8 @@ export default function DashboardPage() {
         setBankTotal(accounts.reduce((acc: number, a: { balance: number }) => acc + a.balance, 0))
       }
       if (closingRes.ok) {
-        const closing = await closingRes.json()
-        setTotalToPay(closing.summary?.totalToPay ?? 0)
+        const data = await closingRes.json()
+        setClosing(data)
       }
     } finally {
       setLoading(false)
@@ -84,13 +84,6 @@ export default function DashboardPage() {
 
   const cards = [
     {
-      label: "Saldo atual",
-      value: summary.balance,
-      icon: Wallet,
-      color: "text-primary",
-      bg: "bg-primary/10",
-    },
-    {
       label: "Receitas do mês",
       value: summary.income,
       icon: ArrowUp,
@@ -103,6 +96,13 @@ export default function DashboardPage() {
       icon: ArrowDown,
       color: "text-red-500",
       bg: "bg-red-50",
+    },
+    {
+      label: "Resultado líquido",
+      value: summary.balance,
+      icon: Wallet,
+      color: summary.balance >= 0 ? "text-emerald-500" : "text-red-500",
+      bg: summary.balance >= 0 ? "bg-emerald-50" : "bg-red-50",
     },
   ]
 
@@ -153,23 +153,45 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card className={`border-0 shadow-sm ${bankTotal >= totalToPay ? "bg-emerald-600 text-white" : "bg-red-600 text-white"}`}>
+      <div className="grid gap-4 sm:grid-cols-4">
+        <Card className={`border-0 shadow-sm ${bankTotal >= (closing?.summary.totalToPay ?? 0) ? "bg-emerald-600 text-white" : "bg-red-600 text-white"}`}>
           <CardContent className="flex items-center gap-4 p-6">
             <div className="rounded-xl bg-white/20 p-3"><Landmark className="h-5 w-5 text-white" /></div>
-            <div><p className="text-xs font-medium opacity-80">Saldo em contas</p><p className="text-xl font-bold">{formatCurrency(bankTotal)}</p></div>
+            <div>
+              <p className="text-xs font-medium opacity-80">Saldo em contas</p>
+              <p className="text-xl font-bold">{formatCurrency(bankTotal)}</p>
+              <p className="text-[10px] opacity-60">Soma dos saldos bancários</p>
+            </div>
           </CardContent>
         </Card>
         <Card className="border-0 shadow-sm">
           <CardContent className="flex items-center gap-4 p-6">
-            <div className="rounded-xl bg-red-100 p-3"><Wallet className="h-5 w-5 text-red-600" /></div>
-            <div><p className="text-xs font-medium text-muted-foreground">Total a pagar</p><p className="text-xl font-bold text-red-600">{formatCurrency(totalToPay)}</p></div>
+            <div className="rounded-xl bg-red-100 p-3"><ArrowDown className="h-5 w-5 text-red-600" /></div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">A pagar</p>
+              <p className="text-xl font-bold text-red-600">{formatCurrency(closing?.summary.totalToPay ?? 0)}</p>
+              <p className="text-[10px] text-muted-foreground/60">Faturas pendentes + contas fixas + avulsas</p>
+            </div>
           </CardContent>
         </Card>
         <Card className="border-0 shadow-sm">
           <CardContent className="flex items-center gap-4 p-6">
             <div className="rounded-xl bg-primary/10 p-3"><Banknote className="h-5 w-5 text-primary" /></div>
-            <div><p className="text-xs font-medium text-muted-foreground">Disponível</p><p className="text-xl font-bold">{formatCurrency(bankTotal - totalToPay)}</p></div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">Disponível</p>
+              <p className="text-xl font-bold">{formatCurrency(bankTotal - (closing?.summary.totalToPay ?? 0))}</p>
+              <p className="text-[10px] text-muted-foreground/60">Saldo − A pagar</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-sm bg-red-50">
+          <CardContent className="flex items-center gap-4 p-6">
+            <div className="rounded-xl bg-red-100 p-3"><Banknote className="h-5 w-5 text-red-600" /></div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">Gastos do mês</p>
+              <p className="text-xl font-bold text-red-600">{loading ? "..." : formatCurrency(closing?.summary.totalSpent ?? 0)}</p>
+              <p className="text-[10px] text-muted-foreground/60">Tudo que entrou na fatura + PIX + avulsas</p>
+            </div>
           </CardContent>
         </Card>
       </div>

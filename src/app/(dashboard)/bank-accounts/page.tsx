@@ -2,12 +2,12 @@
 
 import type { FormEvent } from "react"
 import { useEffect, useState } from "react"
-import { ChevronRight, Landmark, Plus } from "lucide-react"
+import { ChevronRight, Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { formatCurrency, formatDate } from "@/lib/utils"
 
 interface BankAccount {
@@ -25,13 +25,18 @@ interface BankAccount {
 
 export default function BankAccountsPage() {
   const [accounts, setAccounts] = useState<BankAccount[]>([])
-  const [showCreate, setShowCreate] = useState(false)
   const [selectedAccount, setSelectedAccount] = useState<BankAccount | null>(null)
+  const [creating, setCreating] = useState(false)
   const [detailTab, setDetailTab] = useState("overview")
+  const [showForm, setShowForm] = useState<"movement" | "adjust" | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
   const fetchAccounts = async () => {
     const res = await fetch("/api/bank-accounts")
-    if (res.ok) setAccounts(await res.json())
+    if (!res.ok) return
+    const data = await res.json()
+    setAccounts(data)
+    setSelectedAccount((prev) => prev ? data.find((a: BankAccount) => a.id === prev.id) ?? prev : null)
   }
 
   useEffect(() => {
@@ -50,7 +55,28 @@ export default function BankAccountsPage() {
         initialBalance: formData.get("initialBalance") || 0,
       }),
     })
-    setShowCreate(false)
+    setCreating(false)
+    fetchAccounts()
+  }
+
+  const handleUpdate = async (accountId: string, formData: FormData) => {
+    await fetch(`/api/bank-accounts/${accountId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: formData.get("name"),
+        institution: formData.get("institution") || null,
+        type: formData.get("type"),
+        color: formData.get("color") || "#22C55E",
+      }),
+    })
+    fetchAccounts()
+  }
+
+  const handleDelete = async (accountId: string) => {
+    await fetch(`/api/bank-accounts/${accountId}`, { method: "DELETE" })
+    setConfirmDelete(null)
+    setSelectedAccount(null)
     fetchAccounts()
   }
 
@@ -102,7 +128,7 @@ export default function BankAccountsPage() {
           <h1 className="text-2xl font-bold tracking-tight">Contas Bancárias</h1>
           <p className="text-muted-foreground">Controle saldos por conta e vincule cartões a elas.</p>
         </div>
-        <Button onClick={() => setShowCreate(true)}><Plus className="mr-2 h-4 w-4" />Nova conta</Button>
+        <Button onClick={() => setCreating(true)}><Plus className="mr-2 h-4 w-4" />Nova conta</Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
@@ -121,7 +147,7 @@ export default function BankAccountsPage() {
               <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: account.color }} />
               <div>
                 <p className="font-medium">{account.name}</p>
-                <p className="text-xs text-muted-foreground">{account.institution ?? "Sem instituição"} · {account.cards.length} cartão{account.cards.length !== 1 ? "es" : ""}</p>
+                <p className="text-xs text-muted-foreground">{account.institution ?? "Sem instituição"} · {account.cards.length} {account.cards.length === 1 ? "cartão" : "cartões"}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -132,34 +158,44 @@ export default function BankAccountsPage() {
         ))}
       </div>
 
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Nova conta</DialogTitle></DialogHeader>
-          <form action={handleCreate} className="space-y-4">
-            <div className="grid gap-3">
-              <Input className="uppercase" name="name" placeholder="Nome da conta" onInput={uppercaseInput} required />
-              <Input className="uppercase" name="institution" placeholder="Instituição" onInput={uppercaseInput} />
-              <select className="rounded-md border bg-background px-3 py-2 text-sm" name="type" defaultValue="DIGITAL">
-                <option value="CHECKING">Corrente</option>
-                <option value="SAVINGS">Poupança</option>
-                <option value="DIGITAL">Digital</option>
-                <option value="CASH">Dinheiro</option>
-                <option value="INVESTMENT">Investimento</option>
-              </select>
-              <Input name="initialBalance" type="number" step="0.01" placeholder="Saldo inicial" defaultValue="0" />
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-muted-foreground">Cor:</label>
-                <Input name="color" type="color" defaultValue="#22C55E" className="w-16" />
-              </div>
-            </div>
-            <Button type="submit" className="w-full">Salvar</Button>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      <Sheet open={!!selectedAccount} onOpenChange={(open) => { if (!open) setSelectedAccount(null) }}>
+      <Sheet open={creating || !!selectedAccount} onOpenChange={(open) => { if (!open) { setCreating(false); setSelectedAccount(null) } }}>
         <SheetContent className="w-full sm:max-w-md">
-          {selectedAccount && (
+          {creating ? (
+            <>
+              <SheetHeader><SheetTitle>Nova conta</SheetTitle></SheetHeader>
+              <form action={handleCreate} className="flex-1 overflow-y-auto px-4 pb-4">
+                <div className="mt-4 grid gap-4">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Nome da conta</label>
+                    <Input className="uppercase" name="name" placeholder="Ex: NUBANK" onInput={uppercaseInput} required />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Instituição</label>
+                    <Input className="uppercase" name="institution" placeholder="Ex: NUBANK" onInput={uppercaseInput} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Tipo da conta</label>
+                    <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="type" defaultValue="DIGITAL">
+                      <option value="CHECKING">Corrente</option>
+                      <option value="SAVINGS">Poupança</option>
+                      <option value="DIGITAL">Digital</option>
+                      <option value="CASH">Dinheiro</option>
+                      <option value="INVESTMENT">Investimento</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Saldo inicial</label>
+                    <Input name="initialBalance" type="number" step="0.01" placeholder="0,00" defaultValue="0" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium">Cor:</label>
+                    <Input name="color" type="color" defaultValue="#22C55E" className="w-16" />
+                  </div>
+                </div>
+                <Button type="submit" className="mt-6 w-full">Salvar</Button>
+              </form>
+            </>
+          ) : selectedAccount ? (
             <>
               <SheetHeader>
                 <SheetTitle className="flex items-center gap-2">
@@ -169,9 +205,9 @@ export default function BankAccountsPage() {
               </SheetHeader>
               <div className="flex-1 overflow-y-auto px-4 pb-4">
                 <div className="flex gap-1 border-b">
-                  {(["overview", "movements", "adjust"] as const).map((tab) => (
+                  {(["overview", "movements", "adjust", "edit"] as const).map((tab) => (
                     <button key={tab} type="button" onClick={() => setDetailTab(tab)} className={`px-3 pb-2 text-sm transition-colors ${detailTab === tab ? "border-b-2 border-foreground font-medium text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-                      {tab === "overview" ? "Visão Geral" : tab === "movements" ? "Movimentações" : "Ajuste"}
+                      {tab === "overview" ? "Visão Geral" : tab === "movements" ? "Movimentações" : tab === "adjust" ? "Ajuste" : "Editar"}
                     </button>
                   ))}
                 </div>
@@ -194,15 +230,24 @@ export default function BankAccountsPage() {
 
                 {detailTab === "movements" && (
                   <div className="mt-4 space-y-4">
-                    <form action={(formData) => { handleMovement(selectedAccount.id, formData) }} className="grid gap-2">
-                      <div className="grid grid-cols-2 gap-2">
-                        <Input name="amount" type="number" step="0.01" min="0.01" placeholder="Valor" required />
-                        <select className="rounded-md border bg-background px-3 py-2 text-sm" name="type" defaultValue="INCOME"><option value="INCOME">Recebimento</option><option value="EXPENSE">Saída</option></select>
-                      </div>
-                      <Input className="uppercase" name="description" placeholder="Descrição" onInput={uppercaseInput} />
-                      <Input name="date" type="date" />
-                      <Button type="submit">Adicionar</Button>
-                    </form>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">Movimentações</p>
+                      <Button size="sm" variant="outline" onClick={() => setShowForm("movement")}><Plus className="h-4 w-4" /></Button>
+                    </div>
+                    {showForm === "movement" && (
+                      <form action={(formData) => { handleMovement(selectedAccount.id, formData); setShowForm(null) }} className="grid gap-2 rounded-lg border p-3">
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input name="amount" type="number" step="0.01" min="0.01" placeholder="Valor" required />
+                          <select className="rounded-md border bg-background px-3 py-2 text-sm" name="type" defaultValue="INCOME"><option value="INCOME">Recebimento</option><option value="EXPENSE">Saída</option></select>
+                        </div>
+                        <Input className="uppercase" name="description" placeholder="Descrição" onInput={uppercaseInput} />
+                        <Input name="date" type="date" />
+                        <div className="flex gap-2">
+                          <Button type="submit">Adicionar</Button>
+                          <Button type="button" variant="ghost" onClick={() => setShowForm(null)}>Cancelar</Button>
+                        </div>
+                      </form>
+                    )}
                     <div className="space-y-1">
                       {selectedAccount.movements.length === 0 ? (
                         <p className="text-sm text-muted-foreground">Nenhuma movimentação.</p>
@@ -218,20 +263,73 @@ export default function BankAccountsPage() {
 
                 {detailTab === "adjust" && (
                   <div className="mt-4 space-y-4">
-                    <p className="text-sm text-muted-foreground">Informe o valor correto que deveria aparecer na conta.</p>
-                    <form action={(formData) => { handleAdjustment(selectedAccount.id, formData) }} className="grid gap-2">
-                      <Input name="targetBalance" type="number" step="0.01" placeholder="Saldo correto" required />
-                      <Input className="uppercase" name="adjustDescription" placeholder="Motivo do ajuste" onInput={uppercaseInput} />
-                      <Input name="adjustDate" type="date" />
-                      <Button type="submit" variant="outline">Ajustar saldo</Button>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">Ajuste de saldo</p>
+                      <Button size="sm" variant="outline" onClick={() => setShowForm(showForm === "adjust" ? null : "adjust")}><Plus className="h-4 w-4" /></Button>
+                    </div>
+                    {showForm === "adjust" && (
+                      <div className="rounded-lg border p-3 space-y-3">
+                        <p className="text-xs text-muted-foreground">Informe o valor correto que deveria aparecer na conta.</p>
+                        <form action={(formData) => { handleAdjustment(selectedAccount.id, formData); setShowForm(null) }} className="grid gap-2">
+                          <Input name="targetBalance" type="number" step="0.01" placeholder="Saldo correto" required />
+                          <Input className="uppercase" name="adjustDescription" placeholder="Motivo do ajuste" onInput={uppercaseInput} />
+                          <Input name="adjustDate" type="date" />
+                          <div className="flex gap-2">
+                            <Button type="submit" variant="outline">Ajustar saldo</Button>
+                            <Button type="button" variant="ghost" onClick={() => setShowForm(null)}>Cancelar</Button>
+                          </div>
+                        </form>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {detailTab === "edit" && (
+                  <div className="mt-4 space-y-6">
+                    <form action={(formData) => handleUpdate(selectedAccount.id, formData)} className="grid gap-4">
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium">Nome da conta</label>
+                        <Input className="uppercase" name="name" defaultValue={selectedAccount.name} onInput={uppercaseInput} required />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium">Instituição</label>
+                        <Input className="uppercase" name="institution" defaultValue={selectedAccount.institution ?? ""} onInput={uppercaseInput} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium">Tipo da conta</label>
+                        <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="type" defaultValue={selectedAccount.type}>
+                          <option value="CHECKING">Corrente</option>
+                          <option value="SAVINGS">Poupança</option>
+                          <option value="DIGITAL">Digital</option>
+                          <option value="CASH">Dinheiro</option>
+                          <option value="INVESTMENT">Investimento</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm font-medium">Cor:</label>
+                        <Input name="color" type="color" defaultValue={selectedAccount.color} className="w-16" />
+                      </div>
+                      <Button type="submit" className="w-full">Salvar alterações</Button>
                     </form>
+                    <Button type="button" variant="destructive" className="w-full" onClick={() => setConfirmDelete(selectedAccount.id)}>
+                      <Trash2 className="mr-2 h-4 w-4" />Excluir conta
+                    </Button>
                   </div>
                 )}
               </div>
             </>
-          )}
+          ) : null}
         </SheetContent>
       </Sheet>
+
+      <ConfirmDialog
+        open={!!confirmDelete}
+        onOpenChange={() => setConfirmDelete(null)}
+        title="Excluir conta"
+        description="Tem certeza? Esta ação não pode ser desfeita."
+        confirmText="Excluir"
+        onConfirm={() => confirmDelete && handleDelete(confirmDelete)}
+      />
     </div>
   )
 }

@@ -5,12 +5,15 @@ import { ensureFinancialMonth } from "@/features/financial-months/financial-mont
 export interface MonthlyClosingSummary {
   month: string
   cardInvoicesTotal: number
+  cardInvoicesPaidTotal: number
   fixedCostsTotal: number
   fixedCostsInsideCardTotal: number
   fixedCostsOutsideCardTotal: number
+  fixedCostsOutsideCardTotalAll: number
   looseExpensesTotal: number
   incomeTotal: number
   totalToPay: number
+  totalSpent: number
   projectedBalance: number
   estimatedInvoicesByCard: {
     cardId: string
@@ -46,13 +49,18 @@ export async function getMonthlyClosing(
     aggregateTransactions(userId, month, "INCOME", db),
   ])
 
-  const cardInvoicesTotal = sum(invoices.map((invoice) => invoice.amount))
+  const cardInvoicesTotal = sum(invoices.filter((inv) => inv.status === "PENDING").map((inv) => inv.amount))
   const fixedCostsTotal = sum(occurrences.map((item) => item.amount))
   const insideCard = occurrences.filter((item) => item.fixedCost.paidInsideCard)
   const outsideCard = occurrences.filter((item) => !item.fixedCost.paidInsideCard)
   const fixedCostsInsideCardTotal = sum(insideCard.map((item) => item.amount))
-  const fixedCostsOutsideCardTotal = sum(outsideCard.map((item) => item.amount))
+  const fixedCostsOutsideCardTotal = sum(outsideCard.filter((item) => item.status === "PENDING").map((item) => item.amount))
+  const fixedCostsOutsideCardTotalAll = sum(outsideCard.map((item) => item.amount))
   const totalToPay = cardInvoicesTotal + fixedCostsOutsideCardTotal + looseExpenses
+
+  const allCardInvoices = sum(invoices.map((inv) => inv.amount))
+  const allOutsideCard = sum(outsideCard.map((item) => item.amount))
+  const totalSpent = allCardInvoices + allOutsideCard + looseExpenses
 
   return {
     financialMonth,
@@ -64,9 +72,12 @@ export async function getMonthlyClosing(
       fixedCostsTotal,
       fixedCostsInsideCardTotal,
       fixedCostsOutsideCardTotal,
+      fixedCostsOutsideCardTotalAll,
+      cardInvoicesPaidTotal: allCardInvoices - cardInvoicesTotal,
       looseExpensesTotal: looseExpenses,
       incomeTotal: income,
       totalToPay,
+      totalSpent,
       projectedBalance: income - totalToPay,
       estimatedInvoicesByCard: buildInvoiceEstimates(invoices, insideCard),
     } satisfies MonthlyClosingSummary,
@@ -103,6 +114,42 @@ export async function payFixedCostOccurrence(
     return tx.fixedCostOccurrence.update({
       where: { id: occurrenceId },
       data: { status: "PAID", paidAt: new Date() },
+      include: { fixedCost: { include: { category: true, card: true, bankAccount: true } } },
+    })
+  })
+}
+
+export async function unpayFixedCostOccurrence(
+  occurrenceId: string,
+  userId: string,
+  client?: PrismaClient
+) {
+  const db = client ?? defaultPrisma
+  const occurrence = await db.fixedCostOccurrence.findUnique({
+    where: { id: occurrenceId },
+    include: { fixedCost: { include: { bankAccount: true } } },
+  })
+  if (!occurrence || occurrence.userId !== userId) return null
+  if (occurrence.status !== "PAID") return occurrence
+
+  return db.$transaction(async (tx) => {
+    if (occurrence.fixedCost.bankAccountId) {
+      const description = `PAGAMENTO ${occurrence.fixedCost.name}`
+      await tx.bankAccountMovement.deleteMany({
+        where: {
+          bankAccountId: occurrence.fixedCost.bankAccountId,
+          amount: occurrence.amount,
+          type: "EXPENSE",
+          description,
+          date: occurrence.paidAt ?? undefined,
+          userId,
+        },
+      })
+    }
+
+    return tx.fixedCostOccurrence.update({
+      where: { id: occurrenceId },
+      data: { status: "PENDING", paidAt: null },
       include: { fixedCost: { include: { category: true, card: true, bankAccount: true } } },
     })
   })

@@ -1,14 +1,15 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Input } from "@/components/ui/input"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { formatCurrency, formatDate } from "@/lib/utils"
 
-interface CardItem { id: string; name: string }
+interface CardItem { id: string; name: string; color: string }
 interface Invoice { id: string; month: string; dueDate: string; amount: number; status: "PENDING" | "PAID"; card: CardItem }
 
 function currentMonth() {
@@ -38,7 +39,8 @@ export default function InvoicesPage() {
   const [cards, setCards] = useState<CardItem[]>([])
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [month, setMonth] = useState(currentMonth)
-  const [editingId, setEditingId] = useState<string | null>(null)
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
+  const [creating, setCreating] = useState(false)
   const [copiando, setCopiando] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
 
@@ -49,7 +51,7 @@ export default function InvoicesPage() {
   }, [month])
 
   useEffect(() => {
-    fetchData() // eslint-disable-line react-hooks/set-state-in-effect
+    fetchData()
   }, [fetchData])
 
   const handleCreate = async (formData: FormData) => {
@@ -58,6 +60,7 @@ export default function InvoicesPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ cardId: formData.get("cardId"), month, dueDate: formData.get("dueDate"), amount: formData.get("amount"), status: formData.get("status") }),
     })
+    setCreating(false)
     fetchData()
   }
 
@@ -67,7 +70,7 @@ export default function InvoicesPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ cardId: formData.get("cardId"), dueDate: formData.get("dueDate"), amount: formData.get("amount"), status: formData.get("status") }),
     })
-    setEditingId(null)
+    setSelectedInvoice(null)
     fetchData()
   }
 
@@ -75,6 +78,7 @@ export default function InvoicesPage() {
     if (!deleteTarget) return
     await fetch(`/api/invoices/${deleteTarget}`, { method: "DELETE" })
     setDeleteTarget(null)
+    setSelectedInvoice(null)
     fetchData()
   }
 
@@ -103,56 +107,105 @@ export default function InvoicesPage() {
             <span className="min-w-28 text-center text-sm font-medium capitalize">{monthLabel(month)}</span>
             <Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(nextMonth(month))}><ChevronRight className="size-4" /></Button>
           </div>
-          <Input className="w-40" type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
+          <Input className="w-32" type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
+          <Button onClick={() => setCreating(true)}>Nova fatura</Button>
         </div>
       </div>
-      <Card className="border-0 shadow-sm" key={`create-${month}`}>
-        <CardHeader><CardTitle className="text-base">Nova fatura</CardTitle></CardHeader>
-        <CardContent>
-          <form action={handleCreate} className="grid gap-3 md:grid-cols-5">
-            <select className="rounded-md border bg-background px-3 py-2 text-sm" name="cardId" required>{cards.map((card) => <option key={card.id} value={card.id}>{card.name}</option>)}</select>
-            <Input name="dueDate" type="date" required />
-            <Input name="amount" type="number" min="0" step="0.01" placeholder="Valor" required />
-            <select className="rounded-md border bg-background px-3 py-2 text-sm" name="status" defaultValue="PENDING"><option value="PENDING">Pendente</option><option value="PAID">Pago</option></select>
-            <Button type="submit">Salvar</Button>
-          </form>
-        </CardContent>
-      </Card>
-      <div className="grid gap-4 md:grid-cols-3">
-        {invoices.map((invoice) => (
-          <Card key={invoice.id} className="border-0 shadow-sm">
-            <CardContent className="p-5">
-              {editingId === invoice.id ? (
-                <form action={(fd) => handleUpdate(invoice.id, fd)} className="space-y-3">
-                  <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="cardId" defaultValue={invoice.card.id}>{cards.map((card) => <option key={card.id} value={card.id}>{card.name}</option>)}</select>
-                  <Input name="dueDate" type="date" defaultValue={invoice.dueDate.slice(0, 10)} required />
-                  <Input name="amount" type="number" min="0" step="0.01" defaultValue={invoice.amount} required />
-                  <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="status" defaultValue={invoice.status}><option value="PENDING">Pendente</option><option value="PAID">Pago</option></select>
-                  <div className="flex gap-2">
-                    <Button size="sm" type="submit">Salvar</Button>
-                    <Button size="sm" type="button" variant="outline" onClick={() => setEditingId(null)}>Cancelar</Button>
-                  </div>
-                </form>
-              ) : (
-                <>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-semibold">{invoice.card.name}</p>
-                      <p className="text-2xl font-bold">{formatCurrency(invoice.amount)}</p>
-                      <p className="text-sm text-muted-foreground">Vence em {formatDate(invoice.dueDate)}</p>
-                      <p className="text-sm">{invoice.status === "PAID" ? "Pago" : "Pendente"}</p>
-                    </div>
-                    <div className="flex gap-1">
-                      <Button size="sm" variant="outline" onClick={() => setEditingId(invoice.id)}><Pencil className="mr-2 h-3 w-3" />Editar</Button>
-                      <Button size="sm" variant="outline" onClick={() => setDeleteTarget(invoice.id)}><Trash2 className="mr-2 h-3 w-3" />Excluir</Button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
+
+      <div className="space-y-2">
+        {invoices.length === 0 ? (
+          <Card className="border-0 shadow-sm"><CardContent className="p-8 text-center text-sm text-muted-foreground">Nenhuma fatura neste mês.</CardContent></Card>
+        ) : invoices.map((invoice) => (
+          <button key={invoice.id} type="button" onClick={() => setSelectedInvoice(invoice)} className="flex w-full items-center justify-between rounded-lg border bg-card p-4 text-left text-sm transition-colors hover:bg-muted/50">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white" style={{ backgroundColor: invoice.card.color }}>{invoice.card.name.charAt(0)}</div>
+              <div>
+                <p className="font-medium">{invoice.card.name}</p>
+                <p className="text-xs text-muted-foreground">Vence {formatDate(invoice.dueDate)} · {invoice.status === "PAID" ? "Pago" : "Pendente"}</p>
+              </div>
+            </div>
+            <strong>{formatCurrency(invoice.amount)}</strong>
+          </button>
         ))}
       </div>
+
+      <Sheet open={creating || !!selectedInvoice} onOpenChange={(open) => { if (!open) { setCreating(false); setSelectedInvoice(null) } }}>
+        <SheetContent className="w-full sm:max-w-md">
+          {creating ? (
+            <>
+              <SheetHeader><SheetTitle>Nova fatura</SheetTitle></SheetHeader>
+              <form action={handleCreate} className="flex-1 overflow-y-auto px-4 pb-4">
+                <div className="mt-4 grid gap-4">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Cartão</label>
+                    <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="cardId" required>
+                      {cards.map((card) => <option key={card.id} value={card.id}>{card.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Data de vencimento</label>
+                    <Input name="dueDate" type="date" required />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Valor</label>
+                    <Input name="amount" type="number" min="0" step="0.01" placeholder="0,00" required />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Status</label>
+                    <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="status" defaultValue="PENDING">
+                      <option value="PENDING">Pendente</option>
+                      <option value="PAID">Pago</option>
+                    </select>
+                  </div>
+                </div>
+                <Button type="submit" className="mt-6 w-full">Salvar</Button>
+              </form>
+            </>
+          ) : selectedInvoice ? (
+            <>
+              <SheetHeader>
+                <SheetTitle>{selectedInvoice.card.name}</SheetTitle>
+              </SheetHeader>
+              <div className="flex-1 overflow-y-auto px-4 pb-4">
+                <div className="mt-4 space-y-4">
+                  <div className="rounded-lg bg-muted p-4">
+                    <p className="text-xs text-muted-foreground">Valor</p>
+                    <p className="text-2xl font-bold">{formatCurrency(selectedInvoice.amount)}</p>
+                  </div>
+                  <form action={(formData) => handleUpdate(selectedInvoice.id, formData)} className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium">Cartão</label>
+                      <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="cardId" defaultValue={selectedInvoice.card.id}>
+                        {cards.map((card) => <option key={card.id} value={card.id}>{card.name}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium">Data de vencimento</label>
+                      <Input name="dueDate" type="date" defaultValue={selectedInvoice.dueDate.slice(0, 10)} required />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium">Valor</label>
+                      <Input name="amount" type="number" min="0" step="0.01" defaultValue={selectedInvoice.amount} required />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium">Status</label>
+                      <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="status" defaultValue={selectedInvoice.status}>
+                        <option value="PENDING">Pendente</option>
+                        <option value="PAID">Pago</option>
+                      </select>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button type="submit" className="flex-1">Salvar alterações</Button>
+                      <Button type="button" variant="outline" onClick={() => setDeleteTarget(selectedInvoice.id)}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </>
+          ) : null}
+        </SheetContent>
+      </Sheet>
+
       <ConfirmDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }} title="Excluir fatura" description="Tem certeza que deseja excluir esta fatura? Esta ação não pode ser desfeita." onConfirm={handleDelete} confirmText="Excluir" />
     </div>
   )
