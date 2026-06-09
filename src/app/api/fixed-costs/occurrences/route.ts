@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { ensureFinancialMonth } from "@/features/financial-months/financial-months.service"
+import { ensureFixedCostOccurrences } from "@/features/monthly-closing/monthly-closing.service"
 
 export async function GET(request: Request) {
   const session = await auth()
@@ -14,9 +16,18 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Mês é obrigatório" }, { status: 400 })
   }
 
+  const userId = session.user.id
+  const financialMonth = await ensureFinancialMonth(userId, month, prisma)
+  await ensureFixedCostOccurrences(userId, month, financialMonth.id, prisma)
+
   const occurrences = await prisma.fixedCostOccurrence.findMany({
-    where: { userId: session.user.id, month },
-    select: { id: true, fixedCostId: true, status: true, paidAt: true },
+    where: { userId, month },
+    include: {
+      fixedCost: {
+        include: { category: true, card: true, bankAccount: true },
+      },
+    },
+    orderBy: { fixedCost: { name: "asc" } },
   })
 
   return NextResponse.json(occurrences)

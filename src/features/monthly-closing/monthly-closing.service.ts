@@ -155,7 +155,7 @@ export async function unpayFixedCostOccurrence(
   })
 }
 
-async function ensureFixedCostOccurrences(
+export async function ensureFixedCostOccurrences(
   userId: string,
   month: string,
   financialMonthId: string,

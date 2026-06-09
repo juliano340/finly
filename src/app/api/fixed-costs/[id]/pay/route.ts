@@ -9,14 +9,15 @@ function currentMonth() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
 }
 
-export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
 
   const { id } = await params
-  const month = currentMonth()
+  const url = new URL(request.url)
+  const month = url.searchParams.get("month") ?? currentMonth()
   const userId = session.user.id
 
   const fixedCost = await prisma.fixedCost.findUnique({ where: { id } })

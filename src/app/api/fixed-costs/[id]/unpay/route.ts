@@ -3,17 +3,22 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { unpayFixedCostOccurrence } from "@/features/monthly-closing/monthly-closing.service"
 
-export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
 
   const { id } = await params
+  const url = new URL(request.url)
+  const month = url.searchParams.get("month")
   const userId = session.user.id
 
+  const where: Record<string, unknown> = { fixedCostId: id, userId, status: "PAID" }
+  if (month) where.month = month
+
   const occurrence = await prisma.fixedCostOccurrence.findFirst({
-    where: { fixedCostId: id, userId, status: "PAID" },
+    where,
     orderBy: { paidAt: "desc" },
   })
 
