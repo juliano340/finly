@@ -208,17 +208,20 @@ model BankAccountMovement {
 }
 
 model CardInvoice {
-  id               String        @id @default(cuid())
-  cardId           String
-  financialMonthId String
-  month            String
-  dueDate          DateTime
-  amount           Float
-  status           PaymentStatus @default(PENDING)
-  paidAt           DateTime?
-  userId           String
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  id                    String        @id @default(cuid())
+  cardId                String
+  financialMonthId      String
+  month                 String
+  dueDate               DateTime
+  amount                Float
+  status                PaymentStatus @default(PENDING)
+  paidAt                DateTime?
+  paymentMethod         String?
+  paymentBankAccountId  String?
+  bankAccountMovementId String?
+  userId                String
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
 
   card           Card           @relation(fields: [cardId], references: [id], onDelete: Cascade)
   financialMonth FinancialMonth @relation(fields: [financialMonthId], references: [id], onDelete: Cascade)

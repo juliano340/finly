@@ -1,16 +1,18 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Loader2, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { formatCurrency, formatDate } from "@/lib/utils"
 
 interface CardItem { id: string; name: string; color: string }
-interface Invoice { id: string; month: string; dueDate: string; amount: number; status: "PENDING" | "PAID"; card: CardItem }
+interface BankAccountItem { id: string; name: string }
+interface Invoice { id: string; month: string; dueDate: string; amount: number; status: "PENDING" | "PAID"; card: CardItem; paymentMethod?: string | null; paymentBankAccountId?: string | null }
 
 function currentMonth() {
   const now = new Date()
@@ -35,24 +37,82 @@ function monthLabel(month: string) {
   return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
 }
 
+const paymentMethods = [
+  { value: "PIX", label: "Pix", needsAccount: true },
+  { value: "TED", label: "TED", needsAccount: true },
+  { value: "DEBIT", label: "Débito em conta", needsAccount: true },
+  { value: "CASH", label: "Dinheiro", needsAccount: false },
+  { value: "BANK_SLIP", label: "Boleto", needsAccount: false },
+]
+
+const methodLabels: Record<string, string> = { PIX: "Pix", TED: "TED", DEBIT: "Débito", CASH: "Dinheiro", BANK_SLIP: "Boleto" }
+
 export default function InvoicesPage() {
   const [cards, setCards] = useState<CardItem[]>([])
+  const [bankAccounts, setBankAccounts] = useState<BankAccountItem[]>([])
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [month, setMonth] = useState(currentMonth)
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
   const [creating, setCreating] = useState(false)
   const [copiando, setCopiando] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [payingInvoice, setPayingInvoice] = useState<Invoice | null>(null)
+  const [payMethod, setPayMethod] = useState("PIX")
+  const [payAccountId, setPayAccountId] = useState("")
+  const [paying, setPaying] = useState(false)
+  const [payError, setPayError] = useState("")
 
   const fetchData = useCallback(async () => {
-    const [cardsRes, invoicesRes] = await Promise.all([fetch("/api/cards"), fetch(`/api/invoices?month=${month}`)])
+    const [cardsRes, invoicesRes, accountsRes] = await Promise.all([
+      fetch("/api/cards"),
+      fetch(`/api/invoices?month=${month}`),
+      fetch("/api/bank-accounts"),
+    ])
     if (cardsRes.ok) setCards(await cardsRes.json())
     if (invoicesRes.ok) setInvoices(await invoicesRes.json())
+    if (accountsRes.ok) setBankAccounts(await accountsRes.json())
   }, [month])
 
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
+  useEffect(() => { fetchData() }, [fetchData])
+
+  const openPayDialog = (invoice: Invoice) => {
+    setPayingInvoice(invoice)
+    setPayMethod("PIX")
+    setPayAccountId("")
+    setPayError("")
+  }
+
+  const handlePay = async () => {
+    if (!payingInvoice) return
+    const method = paymentMethods.find((m) => m.value === payMethod)
+    if (method?.needsAccount && !payAccountId) {
+      setPayError("Selecione uma conta")
+      return
+    }
+    setPaying(true)
+    setPayError("")
+    const res = await fetch(`/api/invoices/${payingInvoice.id}/pay`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        paymentMethod: payMethod,
+        bankAccountId: method?.needsAccount ? payAccountId : null,
+      }),
+    })
+    setPaying(false)
+    if (res.ok) {
+      setPayingInvoice(null)
+      fetchData()
+    } else {
+      const err = await res.json()
+      setPayError(err.error ?? "Erro ao pagar")
+    }
+  }
+
+  const handleUnpay = async (invoiceId: string) => {
+    const res = await fetch(`/api/invoices/${invoiceId}/unpay`, { method: "POST" })
+    if (res.ok) fetchData()
+  }
 
   const handleCreate = async (formData: FormData) => {
     await fetch("/api/invoices", {
@@ -94,6 +154,8 @@ export default function InvoicesPage() {
     fetchData()
   }
 
+  const currentMethod = paymentMethods.find((m) => m.value === payMethod)
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -116,18 +178,94 @@ export default function InvoicesPage() {
         {invoices.length === 0 ? (
           <Card className="border-0 shadow-sm"><CardContent className="p-8 text-center text-sm text-muted-foreground">Nenhuma fatura neste mês.</CardContent></Card>
         ) : invoices.map((invoice) => (
-          <button key={invoice.id} type="button" onClick={() => setSelectedInvoice(invoice)} className="flex w-full items-center justify-between rounded-lg border bg-card p-4 text-left text-sm transition-colors hover:bg-muted/50">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white" style={{ backgroundColor: invoice.card.color }}>{invoice.card.name.charAt(0)}</div>
-              <div>
-                <p className="font-medium">{invoice.card.name}</p>
-                <p className="text-xs text-muted-foreground">Vence {formatDate(invoice.dueDate)} · {invoice.status === "PAID" ? "Pago" : "Pendente"}</p>
+          <div key={invoice.id} className="flex items-center gap-2">
+            <button type="button" onClick={() => setSelectedInvoice(invoice)} className="flex flex-1 items-center justify-between rounded-lg border bg-card p-4 text-left text-sm transition-colors hover:bg-muted/50">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white" style={{ backgroundColor: invoice.card.color }}>{invoice.card.name.charAt(0)}</div>
+                <div>
+                  <p className="font-medium">{invoice.card.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Vence {formatDate(invoice.dueDate)} ·{" "}
+                    {invoice.status === "PAID"
+                      ? `Pago${invoice.paymentMethod ? ` via ${methodLabels[invoice.paymentMethod] ?? invoice.paymentMethod}` : ""}`
+                      : "Pendente"}
+                  </p>
+                </div>
               </div>
-            </div>
-            <strong>{formatCurrency(invoice.amount)}</strong>
-          </button>
+              <strong>{formatCurrency(invoice.amount)}</strong>
+            </button>
+            {invoice.status === "PENDING" ? (
+              <Button size="sm" variant="default" onClick={(e) => { e.stopPropagation(); openPayDialog(invoice) }}>
+                Pagar
+              </Button>
+            ) : (
+              <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleUnpay(invoice.id) }}>
+                Estornar
+              </Button>
+            )}
+          </div>
         ))}
       </div>
+
+      <Dialog open={!!payingInvoice} onOpenChange={(open) => { if (!open) setPayingInvoice(null) }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Pagar fatura</DialogTitle>
+          </DialogHeader>
+          {payingInvoice && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 rounded-lg bg-muted p-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white" style={{ backgroundColor: payingInvoice.card.color }}>{payingInvoice.card.name.charAt(0)}</div>
+                <div>
+                  <p className="font-medium">{payingInvoice.card.name}</p>
+                  <p className="text-lg font-bold">{formatCurrency(payingInvoice.amount)}</p>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Como pagar</label>
+                <select
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                  value={payMethod}
+                  onChange={(e) => setPayMethod(e.target.value)}
+                >
+                  {paymentMethods.map((m) => (
+                    <option key={m.value} value={m.value}>{m.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {currentMethod?.needsAccount && (
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Conta</label>
+                  <select
+                    className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                    value={payAccountId}
+                    onChange={(e) => setPayAccountId(e.target.value)}
+                  >
+                    <option value="">Selecione uma conta</option>
+                    {bankAccounts.map((acc) => (
+                      <option key={acc.id} value={acc.id}>{acc.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {payError && <p className="text-sm text-destructive">{payError}</p>}
+
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => setPayingInvoice(null)}>
+                  Cancelar
+                </Button>
+                <Button className="flex-1" onClick={handlePay} disabled={paying}>
+                  {paying ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
+                  Confirmar pagamento
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Sheet open={creating || !!selectedInvoice} onOpenChange={(open) => { if (!open) { setCreating(false); setSelectedInvoice(null) } }}>
         <SheetContent className="w-full sm:max-w-md">
