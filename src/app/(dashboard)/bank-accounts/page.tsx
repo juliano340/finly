@@ -253,7 +253,7 @@ export default function BankAccountsPage() {
                         <p className="text-sm text-muted-foreground">Nenhuma movimentação.</p>
                       ) : selectedAccount.movements.map((mov) => (
                         <div key={mov.id} className="flex justify-between rounded-lg border p-2 text-sm">
-                          <span>{mov.description ?? (mov.type === "INCOME" ? "Recebimento" : "Saída")} · {formatDate(mov.date)}</span>
+                          <span>{(mov.description ?? "").startsWith("PAGAMENTO_FATURA:") ? "Pagamento fatura" : mov.description ?? (mov.type === "INCOME" ? "Recebimento" : "Saída")} · {formatDate(mov.date)}</span>
                           <span className={mov.type === "INCOME" ? "text-emerald-600" : "text-red-600"}>{mov.type === "INCOME" ? "+" : "-"}{formatCurrency(mov.amount)}</span>
                         </div>
                       ))}
