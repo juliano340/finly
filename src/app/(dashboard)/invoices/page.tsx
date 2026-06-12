@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { ChevronLeft, ChevronRight, Loader2, Trash2 } from "lucide-react"
+import { CheckCircle2, ChevronLeft, ChevronRight, Loader2, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -179,30 +179,44 @@ export default function InvoicesPage() {
           <Card className="border-0 shadow-sm"><CardContent className="p-8 text-center text-sm text-muted-foreground">Nenhuma fatura neste mês.</CardContent></Card>
         ) : invoices.map((invoice) => (
           <div key={invoice.id} className="flex items-center gap-2">
-            <button type="button" onClick={() => setSelectedInvoice(invoice)} className="flex flex-1 items-center justify-between rounded-lg border bg-card p-4 text-left text-sm transition-colors hover:bg-muted/50">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white" style={{ backgroundColor: invoice.card.color }}>{invoice.card.name.charAt(0)}</div>
-                <div>
-                  <p className="font-medium">{invoice.card.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Vence {formatDate(invoice.dueDate)} ·{" "}
-                    {invoice.status === "PAID"
-                      ? `Pago${invoice.paymentMethod ? ` via ${methodLabels[invoice.paymentMethod] ?? invoice.paymentMethod}` : ""}`
-                      : "Pendente"}
-                  </p>
+            <button type="button" onClick={() => setSelectedInvoice(invoice)} className="w-full rounded-lg border bg-card p-4 text-left text-sm transition-colors hover:bg-muted/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white" style={{ backgroundColor: invoice.card.color }}>{invoice.card.name.charAt(0)}</div>
+                  <span className="font-medium">{invoice.card.name}</span>
                 </div>
+                <strong>{formatCurrency(invoice.amount)}</strong>
               </div>
-              <strong>{formatCurrency(invoice.amount)}</strong>
+              <p className="mt-0.5 pl-12 text-xs text-muted-foreground">
+                Vence {formatDate(invoice.dueDate)} ·{" "}
+                {invoice.status === "PAID"
+                  ? `Pago${invoice.paymentMethod ? ` via ${methodLabels[invoice.paymentMethod] ?? invoice.paymentMethod}` : ""}`
+                  : "Pendente"}
+              </p>
+              <div className="mt-1 pl-12">
+                {invoice.status === "PENDING" ? (
+                  <span
+                    role="button" tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); openPayDialog(invoice) } }}
+                    onClick={(e) => { e.stopPropagation(); openPayDialog(invoice) }}
+                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/80"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Pagar
+                  </span>
+                ) : (
+                  <span
+                    role="button" tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); handleUnpay(invoice.id) } }}
+                    onClick={(e) => { e.stopPropagation(); handleUnpay(invoice.id) }}
+                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-600 transition-colors hover:bg-emerald-500/20"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5 fill-emerald-600 text-white" />
+                    Estornar
+                  </span>
+                )}
+              </div>
             </button>
-            {invoice.status === "PENDING" ? (
-              <Button size="sm" variant="default" onClick={(e) => { e.stopPropagation(); openPayDialog(invoice) }}>
-                Pagar
-              </Button>
-            ) : (
-              <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleUnpay(invoice.id) }}>
-                Estornar
-              </Button>
-            )}
           </div>
         ))}
       </div>
@@ -344,7 +358,7 @@ export default function InvoicesPage() {
         </SheetContent>
       </Sheet>
 
-      <ConfirmDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }} title="Excluir fatura" description="Tem certeza que deseja excluir esta fatura? Esta ação não pode ser desfeita." onConfirm={handleDelete} confirmText="Excluir" />
+      <ConfirmDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }} title="Excluir fatura" description="Tem certeza que deseja excluir esta fatura? Esta ação não pode ser feita." onConfirm={handleDelete} confirmText="Excluir" />
     </div>
   )
 }

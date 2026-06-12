@@ -245,26 +245,29 @@ export default function FixedCostsPage() {
           const isLoading = payingId === occ.fixedCostId || unpayingId === occ.fixedCostId
           return (
             <div key={occ.id} className="flex items-center gap-2">
-              <button type="button" onClick={() => { setInsideCard(occ.fixedCost.paidInsideCard); setSelectedTemplate(occ.fixedCost) }} className="flex flex-1 items-center justify-between rounded-lg border bg-card p-4 text-left text-sm transition-colors hover:bg-muted/50">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-xs font-bold">{occ.fixedCost.name.charAt(0)}</div>
-                  <div>
-                    <p className="font-medium">{occ.fixedCost.name}</p>
-                    <p className="text-xs text-muted-foreground">{occ.fixedCost.category.name} · {occ.fixedCost.paidInsideCard ? `Cartão ${occ.fixedCost.card?.name ?? "-"}` : "Fora do cartão"}</p>
+              <button type="button" onClick={() => { setInsideCard(occ.fixedCost.paidInsideCard); setSelectedTemplate(occ.fixedCost) }} className="w-full rounded-lg border bg-card p-4 text-left text-sm transition-colors hover:bg-muted/50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-xs font-bold">{occ.fixedCost.name.charAt(0)}</div>
+                    <span className="font-medium">{occ.fixedCost.name}</span>
                   </div>
+                  <strong>{formatCurrency(occ.amount)}</strong>
                 </div>
-                <div className="flex items-center gap-2">
-                  {!occ.fixedCost.paidInsideCard && (
+                <p className="mt-0.5 pl-12 text-xs text-muted-foreground">{occ.fixedCost.category.name} · {occ.fixedCost.paidInsideCard ? `Cartão ${occ.fixedCost.card?.name ?? "-"}` : "Fora do cartão"}</p>
+                <div className="mt-1 pl-12">
+                  {occ.fixedCost.paidInsideCard ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-600">Na fatura</span>
+                  ) : (
                     <span
                       role="button" tabIndex={0}
                       onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); occ.status === "PAID" ? handleUnpay(occ.fixedCostId) : handlePay(occ.fixedCostId) } }}
                       onClick={(e) => { e.stopPropagation(); occ.status === "PAID" ? handleUnpay(occ.fixedCostId) : handlePay(occ.fixedCostId) }}
-                      className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition-colors ${occ.status === "PAID" ? "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+                      className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${occ.status === "PAID" ? "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
                     >
-                      {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className={`h-4 w-4 ${occ.status === "PAID" ? "fill-emerald-600 text-white" : ""}`} />}
+                      {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className={`h-3.5 w-3.5 ${occ.status === "PAID" ? "fill-emerald-600 text-white" : ""}`} />}
+                      {occ.status === "PAID" ? "Estornar" : "Pagar"}
                     </span>
                   )}
-                  <strong>{formatCurrency(occ.amount)}</strong>
                 </div>
               </button>
             </div>
