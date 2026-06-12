@@ -14,7 +14,7 @@ export async function POST(
   const { id } = await params
   const userId = session.user.id
   const body = await request.json()
-  const { paymentMethod, bankAccountId } = body as { paymentMethod?: string; bankAccountId?: string }
+  const { paymentMethod, bankAccountId } = body
 
   if (!paymentMethod) {
     return NextResponse.json({ error: "Método de pagamento é obrigatório" }, { status: 400 })
@@ -22,7 +22,6 @@ export async function POST(
 
   const invoice = await prisma.cardInvoice.findUnique({
     where: { id },
-    include: { card: true },
   })
   if (!invoice || invoice.userId !== userId) {
     return NextResponse.json({ error: "Fatura não encontrada" }, { status: 404 })
@@ -31,18 +30,22 @@ export async function POST(
     return NextResponse.json({ error: "Fatura já está paga" }, { status: 400 })
   }
 
-  return prisma.$transaction(async (tx) => {
+  const realBankAccountId = bankAccountId && typeof bankAccountId === "string" && bankAccountId.trim() !== "" ? bankAccountId.trim() : null
+
+  if (realBankAccountId) {
+    const account = await prisma.bankAccount.findUnique({ where: { id: realBankAccountId } })
+    if (!account || account.userId !== userId) {
+      return NextResponse.json({ error: "Conta não encontrada" }, { status: 400 })
+    }
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
     let movementId: string | null = null
 
-    if (bankAccountId) {
-      const account = await tx.bankAccount.findUnique({ where: { id: bankAccountId } })
-      if (!account || account.userId !== userId) {
-        throw new Error("Conta não encontrada")
-      }
-
+    if (realBankAccountId) {
       const movement = await tx.bankAccountMovement.create({
         data: {
-          bankAccountId,
+          bankAccountId: realBankAccountId,
           amount: invoice.amount,
           type: "EXPENSE",
           description: `PAGAMENTO_FATURA:${id}`,
@@ -53,18 +56,18 @@ export async function POST(
       movementId = movement.id
     }
 
-    const updated = await tx.cardInvoice.update({
+    return tx.cardInvoice.update({
       where: { id },
       data: {
         status: "PAID",
         paidAt: new Date(),
         paymentMethod,
-        paymentBankAccountId: bankAccountId ?? null,
+        paymentBankAccountId: realBankAccountId,
         bankAccountMovementId: movementId,
       },
       include: { card: true },
     })
-
-    return NextResponse.json(updated)
   })
+
+  return NextResponse.json(result)
 }
