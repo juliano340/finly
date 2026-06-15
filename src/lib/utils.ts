@@ -13,5 +13,5 @@ export function formatCurrency(value: number): string {
 }
 
 export function formatDate(date: Date | string): string {
-  return new Intl.DateTimeFormat("pt-BR").format(new Date(date))
+  return new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(date))
 }

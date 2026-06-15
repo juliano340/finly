@@ -41,4 +41,9 @@ describe("formatDate", () => {
     const result = formatDate(new Date(2026, 5, 4, 12, 0, 0))
     expect(result).toBe("04/06/2026")
   })
+
+  it("mantém data de calendário em ISO meia-noite UTC", () => {
+    const result = formatDate("2026-06-15T00:00:00.000Z")
+    expect(result).toBe("15/06/2026")
+  })
 })

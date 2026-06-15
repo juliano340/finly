@@ -22,6 +22,19 @@ export const bankAccountAdjustmentSchema = z.object({
   date: z.coerce.date().default(() => new Date()),
 })
 
+export const bankAccountTransferSchema = z.object({
+  fromAccountId: z.string().min(1),
+  toAccountId: z.string().min(1),
+  amount: z.coerce.number().positive("Valor deve ser maior que zero"),
+  method: z.enum(["PIX", "TED", "TRANSFER"]).default("PIX"),
+  description: z.string().max(160).optional().nullable(),
+  date: z.coerce.date().default(() => new Date()),
+}).refine((input) => input.fromAccountId !== input.toAccountId, {
+  message: "Contas devem ser diferentes",
+  path: ["toAccountId"],
+})
+
 export type BankAccountInput = z.infer<typeof bankAccountSchema>
 export type BankAccountMovementInput = z.infer<typeof bankAccountMovementSchema>
 export type BankAccountAdjustmentInput = z.infer<typeof bankAccountAdjustmentSchema>
+export type BankAccountTransferInput = z.infer<typeof bankAccountTransferSchema>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { CheckCircle2, ChevronLeft, ChevronRight, Loader2, Trash2 } from "lucide-react"
+import { Calculator, CheckCircle2, ChevronLeft, ChevronRight, Loader2, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -11,7 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { formatCurrency, formatDate } from "@/lib/utils"
 
 interface CardItem { id: string; name: string; color: string }
-interface BankAccountItem { id: string; name: string }
+interface BankAccountItem { id: string; name: string; balance: number }
 interface Invoice { id: string; month: string; dueDate: string; amount: number; status: "PENDING" | "PAID"; card: CardItem; paymentMethod?: string | null; paymentBankAccountId?: string | null }
 
 function currentMonth() {
@@ -61,6 +61,10 @@ export default function InvoicesPage() {
   const [payAccountId, setPayAccountId] = useState("")
   const [paying, setPaying] = useState(false)
   const [payError, setPayError] = useState("")
+  const [simulatorOpen, setSimulatorOpen] = useState(false)
+  const [simInvoiceId, setSimInvoiceId] = useState("")
+  const [simAccountId, setSimAccountId] = useState("")
+  const [simAmount, setSimAmount] = useState("")
 
   const fetchData = useCallback(async () => {
     const [cardsRes, invoicesRes, accountsRes] = await Promise.all([
@@ -170,6 +174,9 @@ export default function InvoicesPage() {
             <Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(nextMonth(month))}><ChevronRight className="size-4" /></Button>
           </div>
           <Input className="w-32" type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
+          <Button variant="outline" size="sm" onClick={() => { setSimulatorOpen(true); setSimInvoiceId(""); setSimAccountId(""); setSimAmount("") }}>
+            <Calculator className="mr-1 h-4 w-4" /> Simular
+          </Button>
           <Button onClick={() => setCreating(true)}>Nova fatura</Button>
         </div>
       </div>
@@ -278,6 +285,79 @@ export default function InvoicesPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={simulatorOpen} onOpenChange={(open) => { if (!open) setSimulatorOpen(false) }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Simular pagamento</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Fatura</label>
+              <select
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                value={simInvoiceId}
+                onChange={(e) => {
+                  setSimInvoiceId(e.target.value)
+                  const inv = invoices.find((i) => i.id === e.target.value)
+                  if (inv) setSimAmount(String(inv.amount))
+                }}
+              >
+                <option value="">Selecione uma fatura</option>
+                {invoices.filter((i) => i.status === "PENDING").map((inv) => (
+                  <option key={inv.id} value={inv.id}>{inv.card.name} — {formatCurrency(inv.amount)}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Conta</label>
+              <select
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                value={simAccountId}
+                onChange={(e) => setSimAccountId(e.target.value)}
+              >
+                <option value="">Selecione uma conta</option>
+                {bankAccounts.map((acc) => (
+                  <option key={acc.id} value={acc.id}>{acc.name} ({formatCurrency(acc.balance)})</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Valor a pagar</label>
+              <Input type="number" min="0" step="0.01" placeholder="0,00" value={simAmount} onChange={(e) => setSimAmount(e.target.value)} />
+            </div>
+            {(() => {
+              const simInv = invoices.find((i) => i.id === simInvoiceId)
+              const simAcc = bankAccounts.find((a) => a.id === simAccountId)
+              const amount = Number.parseFloat(simAmount) || 0
+              if (!simInv || !simAcc || amount <= 0) return null
+              const after = simAcc.balance - amount
+              return (
+                <div className="space-y-2 rounded-lg bg-muted p-4 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Saldo atual</span>
+                    <span className="font-medium">{formatCurrency(simAcc.balance)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Pagamento</span>
+                    <span className="font-medium text-destructive">-{formatCurrency(amount)}</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-2">
+                    <span className="text-muted-foreground">Saldo após</span>
+                    <span className={`font-bold ${after >= 0 ? "text-emerald-600" : "text-destructive"}`}>
+                      {formatCurrency(after)}
+                    </span>
+                  </div>
+                  {after < 0 && (
+                    <p className="text-xs text-destructive">Saldo insuficiente após o pagamento.</p>
+                  )}
+                </div>
+              )
+            })()}
+            <Button className="w-full" variant="outline" onClick={() => setSimulatorOpen(false)}>Fechar</Button>
+          </div>
         </DialogContent>
       </Dialog>
 

@@ -12,7 +12,7 @@ import { formatCurrency } from "@/lib/utils"
 interface Category { id: string; name: string }
 interface CardItem { id: string; name: string; color: string }
 interface BankAccountItem { id: string; name: string }
-interface FixedCostData { id: string; name: string; defaultAmount: number; categoryId: string; paymentMethod: string; paidInsideCard: boolean; cardId: string | null; bankAccountId: string | null; active: boolean; category: Category; card: CardItem | null; bankAccount: BankAccountItem | null }
+interface FixedCostData { id: string; name: string; defaultAmount: number; categoryId: string; paymentMethod: string; dueDay: number | null; paidInsideCard: boolean; cardId: string | null; bankAccountId: string | null; active: boolean; category: Category; card: CardItem | null; bankAccount: BankAccountItem | null }
 
 interface Occurrence {
   id: string
@@ -108,6 +108,7 @@ export default function FixedCostsPage() {
         defaultAmount: formData.get("defaultAmount"),
         categoryId: formData.get("categoryId"),
         paymentMethod: paidInsideCard ? "CREDIT_CARD" : formData.get("paymentMethod"),
+        dueDay: formData.get("dueDay") || null,
         paidInsideCard,
         cardId: paidInsideCard ? formData.get("cardId") : null,
         bankAccountId: formData.get("bankAccountId") || null,
@@ -134,6 +135,7 @@ export default function FixedCostsPage() {
         defaultAmount: formData.get("defaultAmount"),
         categoryId: formData.get("categoryId"),
         paymentMethod: paidInsideCard ? "CREDIT_CARD" : formData.get("paymentMethod"),
+        dueDay: formData.get("dueDay") || null,
         paidInsideCard,
         cardId: paidInsideCard ? formData.get("cardId") : null,
         bankAccountId: formData.get("bankAccountId") || null,
@@ -188,13 +190,14 @@ export default function FixedCostsPage() {
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Nome</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Categoria</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Origem</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Vencimento</th>
               <th className="px-4 py-3 text-right font-medium text-muted-foreground">Valor</th>
               <th className="px-4 py-3 text-center font-medium text-muted-foreground">Status</th>
             </tr>
           </thead>
           <tbody>
             {occurrences.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">Nenhum custo fixo neste mês.</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Nenhum custo fixo neste mês.</td></tr>
             ) : occurrences.map((occ) => {
               const isLoading = payingId === occ.fixedCostId || unpayingId === occ.fixedCostId
               return (
@@ -211,6 +214,7 @@ export default function FixedCostsPage() {
                       : <span className="font-medium text-foreground">Fora do cartão{occ.fixedCost.bankAccount ? ` · ${occ.fixedCost.bankAccount.name}` : ""}</span>
                     }
                   </td>
+                  <td className="px-4 py-3 text-muted-foreground">{occ.fixedCost.dueDay ? `Dia ${occ.fixedCost.dueDay}` : "-"}</td>
                   <td className="px-4 py-3 text-right font-medium">{formatCurrency(occ.amount)}</td>
                   <td className="px-4 py-3 text-center">
                     {occ.fixedCost.paidInsideCard ? (
@@ -253,7 +257,7 @@ export default function FixedCostsPage() {
                   </div>
                   <strong>{formatCurrency(occ.amount)}</strong>
                 </div>
-                <p className="mt-0.5 pl-12 text-xs text-muted-foreground">{occ.fixedCost.category.name} · {occ.fixedCost.paidInsideCard ? `Cartão ${occ.fixedCost.card?.name ?? "-"}` : "Fora do cartão"}</p>
+                <p className="mt-0.5 pl-12 text-xs text-muted-foreground">{occ.fixedCost.category.name} · {occ.fixedCost.paidInsideCard ? `Cartão ${occ.fixedCost.card?.name ?? "-"}` : "Fora do cartão"} · {occ.fixedCost.dueDay ? `vence dia ${occ.fixedCost.dueDay}` : "sem vencimento"}</p>
                 <div className="mt-1 pl-12">
                   {occ.fixedCost.paidInsideCard ? (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-600">Na fatura</span>
@@ -289,6 +293,10 @@ export default function FixedCostsPage() {
                   <div className="space-y-1">
                     <label className="text-sm font-medium">Valor padrão</label>
                     <Input name="defaultAmount" type="number" step="0.01" placeholder="0,00" required />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Dia de vencimento</label>
+                    <Input name="dueDay" type="number" min="1" max="31" placeholder="Ex: 10" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-sm font-medium">Categoria</label>
@@ -350,6 +358,10 @@ export default function FixedCostsPage() {
                     <div className="space-y-1">
                       <label className="text-sm font-medium">Valor padrão</label>
                       <Input name="defaultAmount" type="number" step="0.01" defaultValue={selectedTemplate.defaultAmount} required />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium">Dia de vencimento</label>
+                      <Input name="dueDay" type="number" min="1" max="31" defaultValue={selectedTemplate.dueDay ?? ""} placeholder="Ex: 10" />
                     </div>
                     <div className="space-y-1">
                       <label className="text-sm font-medium">Categoria</label>

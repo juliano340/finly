@@ -236,6 +236,7 @@ model FixedCost {
   defaultAmount  Float
   categoryId     String
   paymentMethod  FixedCostPaymentMethod
+  dueDay         Int?
   paidInsideCard Boolean                @default(false)
   cardId         String?
   bankAccountId  String?

@@ -1,6 +1,7 @@
 import { prisma as defaultPrisma } from "@/lib/prisma"
 import type { PrismaClient } from "@/generated/prisma"
-import type { BankAccountAdjustmentInput, BankAccountInput, BankAccountMovementInput } from "./bank-accounts.schema"
+import { randomUUID } from "node:crypto"
+import type { BankAccountAdjustmentInput, BankAccountInput, BankAccountMovementInput, BankAccountTransferInput } from "./bank-accounts.schema"
 
 export async function getBankAccounts(userId: string, client?: PrismaClient) {
   const db = client ?? defaultPrisma
@@ -147,5 +148,51 @@ export async function adjustBankAccountBalance(
       date: input.date,
       userId,
     },
+  })
+}
+
+export async function transferBetweenBankAccounts(
+  userId: string,
+  input: BankAccountTransferInput,
+  client?: PrismaClient
+) {
+  const db = client ?? defaultPrisma
+  if (input.fromAccountId === input.toAccountId) return null
+
+  return db.$transaction(async (tx) => {
+    const accounts = await tx.bankAccount.findMany({
+      where: { userId, id: { in: [input.fromAccountId, input.toAccountId] } },
+      select: { id: true, name: true },
+    })
+    const from = accounts.find((account) => account.id === input.fromAccountId)
+    const to = accounts.find((account) => account.id === input.toAccountId)
+    if (!from || !to) return null
+
+    const transferId = randomUUID()
+    const description = input.description?.trim()
+    const baseDescription = description ? `${input.method} - ${description}` : input.method
+
+    const outgoing = await tx.bankAccountMovement.create({
+      data: {
+        bankAccountId: from.id,
+        amount: input.amount,
+        type: "EXPENSE",
+        description: `TRANSFERENCIA_SAIDA:${transferId}:${to.name}:${baseDescription}`,
+        date: input.date,
+        userId,
+      },
+    })
+    const incoming = await tx.bankAccountMovement.create({
+      data: {
+        bankAccountId: to.id,
+        amount: input.amount,
+        type: "INCOME",
+        description: `TRANSFERENCIA_ENTRADA:${transferId}:${from.name}:${baseDescription}`,
+        date: input.date,
+        userId,
+      },
+    })
+
+    return { outgoing, incoming }
   })
 }

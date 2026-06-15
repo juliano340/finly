@@ -2,9 +2,11 @@
 
 import type { FormEvent } from "react"
 import { useEffect, useState } from "react"
-import { ChevronRight, Plus, Trash2 } from "lucide-react"
+import { ArrowLeftRight, ChevronRight, Plus, Trash2 } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -30,6 +32,12 @@ export default function BankAccountsPage() {
   const [detailTab, setDetailTab] = useState("overview")
   const [showForm, setShowForm] = useState<"movement" | "adjust" | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [transferOpen, setTransferOpen] = useState(false)
+  const [transferFromId, setTransferFromId] = useState("")
+  const [transferToId, setTransferToId] = useState("")
+  const [transferAmount, setTransferAmount] = useState("")
+  const [transferMethod, setTransferMethod] = useState("PIX")
+  const [transferError, setTransferError] = useState("")
 
   const fetchAccounts = async () => {
     const res = await fetch("/api/bank-accounts")
@@ -107,6 +115,35 @@ export default function BankAccountsPage() {
     fetchAccounts()
   }
 
+  const handleTransfer = async (formData: FormData) => {
+    setTransferError("")
+    const res = await fetch("/api/bank-accounts/transfer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fromAccountId: formData.get("fromAccountId"),
+        toAccountId: formData.get("toAccountId"),
+        amount: formData.get("amount"),
+        method: formData.get("method"),
+        description: formData.get("description") || null,
+        date: formData.get("date") || new Date(),
+      }),
+    })
+    if (!res.ok) {
+      const err = await res.json()
+      setTransferError(err.error ?? "Erro ao transferir")
+      toast.error(err.error ?? "Erro ao transferir")
+      return
+    }
+    setTransferOpen(false)
+    setTransferFromId("")
+    setTransferToId("")
+    setTransferAmount("")
+    setTransferMethod("PIX")
+    toast.success("Transferência realizada com sucesso!")
+    fetchAccounts()
+  }
+
   const uppercaseInput = (event: FormEvent<HTMLInputElement>) => {
     event.currentTarget.value = event.currentTarget.value.toUpperCase()
   }
@@ -115,6 +152,9 @@ export default function BankAccountsPage() {
   const activeAccounts = accounts.filter((a) => a.active).length
   const linkedCards = accounts.reduce((acc, a) => acc + a.cards.length, 0)
   const negativeAccounts = accounts.filter((a) => a.balance < 0).length
+  const transferFrom = accounts.find((account) => account.id === transferFromId)
+  const transferTo = accounts.find((account) => account.id === transferToId)
+  const transferValue = Number.parseFloat(transferAmount) || 0
 
   const openDetail = (account: BankAccount) => {
     setDetailTab("overview")
@@ -128,7 +168,10 @@ export default function BankAccountsPage() {
           <h1 className="text-2xl font-bold tracking-tight">Contas Bancárias</h1>
           <p className="text-muted-foreground">Controle saldos por conta e vincule cartões a elas.</p>
         </div>
-        <Button onClick={() => setCreating(true)}><Plus className="mr-2 h-4 w-4" />Nova conta</Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setTransferOpen(true)}><ArrowLeftRight className="mr-2 h-4 w-4" />Transferir</Button>
+          <Button onClick={() => setCreating(true)}><Plus className="mr-2 h-4 w-4" />Nova conta</Button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
@@ -253,7 +296,7 @@ export default function BankAccountsPage() {
                         <p className="text-sm text-muted-foreground">Nenhuma movimentação.</p>
                       ) : selectedAccount.movements.map((mov) => (
                         <div key={mov.id} className="flex justify-between rounded-lg border p-2 text-sm">
-                          <span>{(mov.description ?? "").startsWith("PAGAMENTO_FATURA:") ? "Pagamento fatura" : mov.description ?? (mov.type === "INCOME" ? "Recebimento" : "Saída")} · {formatDate(mov.date)}</span>
+                          <span>{formatMovementDescription(mov.description, mov.type)} · {formatDate(mov.date)}</span>
                           <span className={mov.type === "INCOME" ? "text-emerald-600" : "text-red-600"}>{mov.type === "INCOME" ? "+" : "-"}{formatCurrency(mov.amount)}</span>
                         </div>
                       ))}
@@ -322,6 +365,59 @@ export default function BankAccountsPage() {
         </SheetContent>
       </Sheet>
 
+      <Dialog open={transferOpen} onOpenChange={(open) => { if (!open) setTransferOpen(false) }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Transferir entre contas</DialogTitle>
+          </DialogHeader>
+          <form action={handleTransfer} className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Conta origem</label>
+                <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="fromAccountId" value={transferFromId} onChange={(e) => setTransferFromId(e.target.value)} required>
+                  <option value="">Selecione</option>
+                  {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Conta destino</label>
+                <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="toAccountId" value={transferToId} onChange={(e) => setTransferToId(e.target.value)} required>
+                  <option value="">Selecione</option>
+                  {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Valor</label>
+                <Input name="amount" type="number" min="0.01" step="0.01" placeholder="0,00" value={transferAmount} onChange={(e) => setTransferAmount(e.target.value)} required />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Método</label>
+                <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="method" value={transferMethod} onChange={(e) => setTransferMethod(e.target.value)}>
+                  <option value="PIX">Pix</option>
+                  <option value="TED">TED</option>
+                  <option value="TRANSFER">Transferência</option>
+                </select>
+              </div>
+            </div>
+            <Input className="uppercase" name="description" placeholder="Descrição opcional" onInput={uppercaseInput} />
+            <Input name="date" type="date" />
+            {transferFrom && transferTo && transferValue > 0 && (
+              <div className="space-y-2 rounded-lg bg-muted p-4 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">Origem após transferência</span><strong className={transferFrom.balance - transferValue < 0 ? "text-red-600" : ""}>{formatCurrency(transferFrom.balance - transferValue)}</strong></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Destino após transferência</span><strong className="text-emerald-600">{formatCurrency(transferTo.balance + transferValue)}</strong></div>
+              </div>
+            )}
+            {transferError && <p className="text-sm text-destructive">{transferError}</p>}
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" className="flex-1" onClick={() => setTransferOpen(false)}>Cancelar</Button>
+              <Button type="submit" className="flex-1">Transferir</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <ConfirmDialog
         open={!!confirmDelete}
         onOpenChange={() => setConfirmDelete(null)}
@@ -332,6 +428,14 @@ export default function BankAccountsPage() {
       />
     </div>
   )
+}
+
+function formatMovementDescription(description: string | null, type: "INCOME" | "EXPENSE") {
+  if (!description) return type === "INCOME" ? "Recebimento" : "Saída"
+  if (description.startsWith("PAGAMENTO_FATURA:")) return "Pagamento fatura"
+  if (description.startsWith("TRANSFERENCIA_SAIDA:")) return `Transferência para ${description.split(":")[2] ?? "conta"}`
+  if (description.startsWith("TRANSFERENCIA_ENTRADA:")) return `Transferência de ${description.split(":")[2] ?? "conta"}`
+  return description
 }
 
 function SummaryCard({ title, value, highlight = false }: { title: string; value: string; highlight?: boolean }) {

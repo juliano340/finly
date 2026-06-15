@@ -5,6 +5,7 @@ const fixedCostShape = {
   defaultAmount: z.coerce.number().positive("Valor deve ser maior que zero"),
   categoryId: z.string().min(1, "Categoria é obrigatória"),
   paymentMethod: z.enum(["PIX", "BANK_SLIP", "DEBIT", "CREDIT_CARD", "CASH"]),
+  dueDay: z.coerce.number().int().min(1).max(31).optional().nullable(),
   paidInsideCard: z.coerce.boolean().default(false),
   cardId: z.string().optional().nullable(),
   bankAccountId: z.string().optional().nullable(),

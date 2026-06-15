@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { signOut, useSession } from "next-auth/react"
+import { toast } from "sonner"
 import {
   LayoutDashboard,
   Tags,
@@ -21,6 +22,7 @@ import {
 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { formatCurrency, formatDate } from "@/lib/utils"
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -34,17 +36,52 @@ const navItems = [
   { href: "/settings", label: "Configurações", icon: Settings },
 ]
 
+interface DueNotification {
+  id: string
+  type: "INVOICE" | "FIXED_COST"
+  title: string
+  amount: number
+  dueDate: string
+  daysUntilDue: number
+  status: "OVERDUE" | "DUE_TODAY" | "DUE_SOON"
+  href: string
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const { status } = useSession()
   const [collapsed, setCollapsed] = useState(false)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [notifications, setNotifications] = useState<DueNotification[]>([])
+  const [notified, setNotified] = useState(false)
+
+  const fetchNotifications = () => {
+    return fetch("/api/notifications/due-soon")
+      .then((res) => res.ok ? res.json() : [])
+      .then((data: DueNotification[]) => setNotifications(data))
+      .catch(() => setNotifications([]))
+  }
 
   useEffect(() => {
     if (status === "unauthenticated") {
       router.replace("/login")
     }
   }, [status, router])
+
+  useEffect(() => {
+    if (status !== "authenticated") return
+    fetchNotifications()
+  }, [status, pathname])
+
+  useEffect(() => {
+    if (notified || notifications.length === 0) return
+    const overdue = notifications.filter((item) => item.status === "OVERDUE").length
+    const dueToday = notifications.filter((item) => item.status === "DUE_TODAY").length
+    if (overdue > 0) toast.warning(`Você tem ${overdue} ${overdue === 1 ? "conta atrasada" : "contas atrasadas"}`)
+    else if (dueToday > 0) toast.info(`Você tem ${dueToday} ${dueToday === 1 ? "conta vencendo hoje" : "contas vencendo hoje"}`)
+    setNotified(true)
+  }, [notifications, notified])
 
   if (status === "loading") {
     return (
@@ -129,10 +166,50 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <h2 className="text-sm font-medium text-muted-foreground">
             {navItems.find((i) => i.href === pathname)?.label ?? ""}
           </h2>
-          <div className="flex items-center gap-3">
-            <button className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
+          <div className="relative flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                if (!notificationsOpen) fetchNotifications()
+                setNotificationsOpen((open) => !open)
+              }}
+              className="relative rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
               <Bell className="h-4 w-4" />
+              {notifications.length > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                  {notifications.length > 9 ? "9+" : notifications.length}
+                </span>
+              )}
             </button>
+            {notificationsOpen && (
+              <div className="absolute right-10 top-9 z-50 w-80 overflow-hidden rounded-xl border bg-background shadow-lg">
+                <div className="border-b p-3">
+                  <p className="text-sm font-semibold">Lembretes</p>
+                  <p className="text-xs text-muted-foreground">Contas próximas do vencimento</p>
+                </div>
+                <div className="max-h-96 overflow-y-auto p-2">
+                  {notifications.length === 0 ? (
+                    <p className="p-3 text-sm text-muted-foreground">Nenhuma conta próxima do vencimento.</p>
+                  ) : notifications.map((item) => (
+                    <Link
+                      key={`${item.type}-${item.id}`}
+                      href={item.href}
+                      onClick={() => setNotificationsOpen(false)}
+                      className="block rounded-lg p-3 text-sm transition-colors hover:bg-muted"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium">{item.title}</p>
+                          <p className="text-xs text-muted-foreground">{notificationLabel(item)} · {formatDate(item.dueDate)}</p>
+                        </div>
+                        <p className="shrink-0 font-semibold">{formatCurrency(item.amount)}</p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
             <Avatar className="h-8 w-8">
               <AvatarFallback className="bg-primary text-xs text-primary-foreground">
                 U
@@ -146,4 +223,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
     </div>
   )
+}
+
+function notificationLabel(item: DueNotification) {
+  if (item.status === "OVERDUE") return item.daysUntilDue === -1 ? "Atrasada há 1 dia" : `Atrasada há ${Math.abs(item.daysUntilDue)} dias`
+  if (item.status === "DUE_TODAY") return "Vence hoje"
+  return item.daysUntilDue === 1 ? "Vence amanhã" : `Vence em ${item.daysUntilDue} dias`
 }
