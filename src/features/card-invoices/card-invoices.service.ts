@@ -114,7 +114,7 @@ export async function copyCardInvoices(
         cardId: invoice.cardId,
         financialMonthId: financialMonth.id,
         month: toMonth,
-        dueDate: invoice.dueDate,
+        dueDate: dueDateForTargetMonth(invoice.dueDate, toMonth),
         amount: invoice.amount,
         status: "PENDING",
         userId,
@@ -125,4 +125,11 @@ export async function copyCardInvoices(
   }
 
   return created
+}
+
+function dueDateForTargetMonth(sourceDueDate: Date, targetMonth: string) {
+  const [year, month] = targetMonth.split("-").map(Number)
+  const sourceDay = sourceDueDate.getUTCDate()
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate()
+  return new Date(Date.UTC(year, month - 1, Math.min(sourceDay, lastDay)))
 }

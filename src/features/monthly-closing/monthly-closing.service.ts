@@ -2,6 +2,14 @@ import { prisma as defaultPrisma } from "@/lib/prisma"
 import type { PrismaClient } from "@/generated/prisma"
 import { ensureFinancialMonth } from "@/features/financial-months/financial-months.service"
 
+type FixedCostOccurrenceClient = Pick<PrismaClient, "fixedCost" | "fixedCostOccurrence">
+
+interface CardInvoiceFixedCostSyncInput {
+  cardId: string
+  financialMonthId: string
+  month: string
+}
+
 export interface MonthlyClosingSummary {
   month: string
   cardInvoicesTotal: number
@@ -160,7 +168,7 @@ export async function ensureFixedCostOccurrences(
   userId: string,
   month: string,
   financialMonthId: string,
-  db: PrismaClient
+  db: FixedCostOccurrenceClient
 ) {
   const fixedCosts = await db.fixedCost.findMany({ where: { userId, active: true } })
   for (const fixedCost of fixedCosts) {
@@ -176,6 +184,49 @@ export async function ensureFixedCostOccurrences(
       },
     })
   }
+}
+
+export async function markCardInvoiceFixedCostsPaid(
+  userId: string,
+  invoice: CardInvoiceFixedCostSyncInput,
+  paidAt: Date = new Date(),
+  client: FixedCostOccurrenceClient = defaultPrisma
+) {
+  await ensureFixedCostOccurrences(userId, invoice.month, invoice.financialMonthId, client)
+
+  return client.fixedCostOccurrence.updateMany({
+    where: {
+      userId,
+      month: invoice.month,
+      status: "PENDING",
+      fixedCost: {
+        paidInsideCard: true,
+        cardId: invoice.cardId,
+      },
+    },
+    data: { status: "PAID", paidAt },
+  })
+}
+
+export async function markCardInvoiceFixedCostsPending(
+  userId: string,
+  invoice: CardInvoiceFixedCostSyncInput,
+  client: FixedCostOccurrenceClient = defaultPrisma
+) {
+  await ensureFixedCostOccurrences(userId, invoice.month, invoice.financialMonthId, client)
+
+  return client.fixedCostOccurrence.updateMany({
+    where: {
+      userId,
+      month: invoice.month,
+      status: "PAID",
+      fixedCost: {
+        paidInsideCard: true,
+        cardId: invoice.cardId,
+      },
+    },
+    data: { status: "PENDING", paidAt: null },
+  })
 }
 
 async function aggregateTransactions(

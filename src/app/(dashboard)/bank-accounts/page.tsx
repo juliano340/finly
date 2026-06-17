@@ -1,8 +1,8 @@
 "use client"
 
 import type { FormEvent } from "react"
-import { useEffect, useState } from "react"
-import { ArrowLeftRight, ChevronRight, Plus, Trash2 } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { AlertTriangle, ArrowLeftRight, Pencil, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -26,6 +26,7 @@ interface BankAccount {
 }
 
 export default function BankAccountsPage() {
+  const transferSubmittingRef = useRef(false)
   const [accounts, setAccounts] = useState<BankAccount[]>([])
   const [selectedAccount, setSelectedAccount] = useState<BankAccount | null>(null)
   const [creating, setCreating] = useState(false)
@@ -38,6 +39,7 @@ export default function BankAccountsPage() {
   const [transferAmount, setTransferAmount] = useState("")
   const [transferMethod, setTransferMethod] = useState("PIX")
   const [transferError, setTransferError] = useState("")
+  const [transferSubmitting, setTransferSubmitting] = useState(false)
 
   const fetchAccounts = async () => {
     const res = await fetch("/api/bank-accounts")
@@ -48,11 +50,12 @@ export default function BankAccountsPage() {
   }
 
   useEffect(() => {
-    fetchAccounts()
+    const timer = window.setTimeout(() => { void fetchAccounts() }, 0)
+    return () => window.clearTimeout(timer)
   }, [])
 
   const handleCreate = async (formData: FormData) => {
-    await fetch("/api/bank-accounts", {
+    const res = await fetch("/api/bank-accounts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -64,11 +67,17 @@ export default function BankAccountsPage() {
       }),
     })
     setCreating(false)
+    if (res.ok) {
+      toast.success("Conta criada com sucesso.")
+    } else {
+      const err = await res.json().catch(() => ({}))
+      toast.error(err.error ?? "Não foi possível criar a conta.")
+    }
     fetchAccounts()
   }
 
   const handleUpdate = async (accountId: string, formData: FormData) => {
-    await fetch(`/api/bank-accounts/${accountId}`, {
+    const res = await fetch(`/api/bank-accounts/${accountId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -78,18 +87,30 @@ export default function BankAccountsPage() {
         color: formData.get("color") || "#22C55E",
       }),
     })
+    if (res.ok) {
+      toast.success("Conta atualizada com sucesso.")
+    } else {
+      const err = await res.json().catch(() => ({}))
+      toast.error(err.error ?? "Não foi possível atualizar a conta.")
+    }
     fetchAccounts()
   }
 
   const handleDelete = async (accountId: string) => {
-    await fetch(`/api/bank-accounts/${accountId}`, { method: "DELETE" })
+    const res = await fetch(`/api/bank-accounts/${accountId}`, { method: "DELETE" })
     setConfirmDelete(null)
     setSelectedAccount(null)
+    if (res.ok) {
+      toast.success("Conta excluída.")
+    } else {
+      const err = await res.json().catch(() => ({}))
+      toast.error(err.error ?? "Não foi possível excluir a conta.")
+    }
     fetchAccounts()
   }
 
   const handleMovement = async (accountId: string, formData: FormData) => {
-    await fetch(`/api/bank-accounts/${accountId}/movements`, {
+    const res = await fetch(`/api/bank-accounts/${accountId}/movements`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -99,11 +120,17 @@ export default function BankAccountsPage() {
         date: formData.get("date") || new Date(),
       }),
     })
+    if (res.ok) {
+      toast.success("Movimentação registrada com sucesso.")
+    } else {
+      const err = await res.json().catch(() => ({}))
+      toast.error(err.error ?? "Não foi possível registrar a movimentação.")
+    }
     fetchAccounts()
   }
 
   const handleAdjustment = async (accountId: string, formData: FormData) => {
-    await fetch(`/api/bank-accounts/${accountId}/adjust`, {
+    const res = await fetch(`/api/bank-accounts/${accountId}/adjust`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -112,36 +139,50 @@ export default function BankAccountsPage() {
         date: formData.get("adjustDate") || new Date(),
       }),
     })
+    if (res.ok) {
+      toast.success("Saldo ajustado com sucesso.")
+    } else {
+      const err = await res.json().catch(() => ({}))
+      toast.error(err.error ?? "Não foi possível ajustar o saldo.")
+    }
     fetchAccounts()
   }
 
   const handleTransfer = async (formData: FormData) => {
+    if (transferSubmittingRef.current) return
+    transferSubmittingRef.current = true
+    setTransferSubmitting(true)
     setTransferError("")
-    const res = await fetch("/api/bank-accounts/transfer", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        fromAccountId: formData.get("fromAccountId"),
-        toAccountId: formData.get("toAccountId"),
-        amount: formData.get("amount"),
-        method: formData.get("method"),
-        description: formData.get("description") || null,
-        date: formData.get("date") || new Date(),
-      }),
-    })
-    if (!res.ok) {
-      const err = await res.json()
-      setTransferError(err.error ?? "Erro ao transferir")
-      toast.error(err.error ?? "Erro ao transferir")
-      return
+    try {
+      const res = await fetch("/api/bank-accounts/transfer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fromAccountId: formData.get("fromAccountId"),
+          toAccountId: formData.get("toAccountId"),
+          amount: formData.get("amount"),
+          method: formData.get("method"),
+          description: formData.get("description") || null,
+          date: formData.get("date") || new Date(),
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        setTransferError(err.error ?? "Erro ao transferir")
+        toast.error(err.error ?? "Erro ao transferir")
+        return
+      }
+      setTransferOpen(false)
+      setTransferFromId("")
+      setTransferToId("")
+      setTransferAmount("")
+      setTransferMethod("PIX")
+      toast.success("Transferência realizada com sucesso!")
+      fetchAccounts()
+    } finally {
+      transferSubmittingRef.current = false
+      setTransferSubmitting(false)
     }
-    setTransferOpen(false)
-    setTransferFromId("")
-    setTransferToId("")
-    setTransferAmount("")
-    setTransferMethod("PIX")
-    toast.success("Transferência realizada com sucesso!")
-    fetchAccounts()
   }
 
   const uppercaseInput = (event: FormEvent<HTMLInputElement>) => {
@@ -155,6 +196,9 @@ export default function BankAccountsPage() {
   const transferFrom = accounts.find((account) => account.id === transferFromId)
   const transferTo = accounts.find((account) => account.id === transferToId)
   const transferValue = Number.parseFloat(transferAmount) || 0
+  const transferFromBalanceAfter = transferFrom ? transferFrom.balance - transferValue : null
+  const transferToBalanceAfter = transferTo ? transferTo.balance + transferValue : null
+  const transferWillOverdraw = transferFromBalanceAfter !== null && transferValue > 0 && transferFromBalanceAfter < 0
 
   const openDetail = (account: BankAccount) => {
     setDetailTab("overview")
@@ -181,23 +225,92 @@ export default function BankAccountsPage() {
         <SummaryCard title="Contas negativas" value={String(negativeAccounts)} />
       </div>
 
-      <div className="space-y-2">
+      <div className="hidden overflow-hidden rounded-lg border md:block">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b bg-muted/50">
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Conta</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Instituição</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Saldo</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {accounts.length === 0 ? (
+              <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">Nenhuma conta bancária cadastrada.</td></tr>
+            ) : accounts.map((account) => (
+              <tr key={account.id} className="border-b transition-colors hover:bg-muted/50">
+                <td className="px-4 py-3">
+                  <button type="button" onClick={() => openDetail(account)} className="flex items-center gap-3 text-left font-medium hover:underline">
+                    <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: account.color }} />
+                    {account.name}
+                    {account.cards.length > 0 && (
+                      <span className="text-xs text-muted-foreground">· {account.cards.length} {account.cards.length === 1 ? "cartão" : "cartões"}</span>
+                    )}
+                  </button>
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">{account.institution ?? "-"}</td>
+                <td className={`px-4 py-3 text-right font-medium ${account.balance < 0 ? "text-red-600" : ""}`}>{formatCurrency(account.balance)}</td>
+                <td className="px-4 py-3 text-right">
+                  <div className="flex justify-end gap-1">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label="Editar conta"
+                      onClick={() => openDetail(account)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label="Excluir conta"
+                      onClick={() => setConfirmDelete(account.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-600" />
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="space-y-2 md:hidden">
         {accounts.length === 0 ? (
           <Card className="border-0 shadow-sm"><CardContent className="p-8 text-center text-sm text-muted-foreground">Nenhuma conta bancária cadastrada.</CardContent></Card>
         ) : accounts.map((account) => (
-          <button key={account.id} type="button" onClick={() => openDetail(account)} className="flex w-full items-center justify-between rounded-lg border bg-card p-4 text-left text-sm transition-colors hover:bg-muted/50">
-            <div className="flex items-center gap-3">
-              <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: account.color }} />
-              <div>
-                <p className="font-medium">{account.name}</p>
-                <p className="text-xs text-muted-foreground">{account.institution ?? "Sem instituição"} · {account.cards.length} {account.cards.length === 1 ? "cartão" : "cartões"}</p>
+          <div key={account.id} className="flex items-center gap-2">
+            <button type="button" onClick={() => openDetail(account)} className="flex w-full flex-col gap-1 rounded-lg border bg-card p-4 text-left text-sm transition-colors hover:bg-muted/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: account.color }} />
+                  <span className="font-medium">{account.name}</span>
+                </div>
+                <strong className={account.balance < 0 ? "text-red-600" : ""}>{formatCurrency(account.balance)}</strong>
               </div>
+              <p className="pl-6 text-xs text-muted-foreground">{account.institution ?? "Sem instituição"} · {account.cards.length} {account.cards.length === 1 ? "cartão" : "cartões"}</p>
+            </button>
+            <div className="flex flex-col gap-1">
+              <Button
+                size="icon"
+                variant="ghost"
+                aria-label="Editar conta"
+                onClick={() => openDetail(account)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                aria-label="Excluir conta"
+                onClick={() => setConfirmDelete(account.id)}
+              >
+                <Trash2 className="h-4 w-4 text-red-600" />
+              </Button>
             </div>
-            <div className="flex items-center gap-2">
-              <strong className={account.balance < 0 ? "text-red-600" : ""}>{formatCurrency(account.balance)}</strong>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </div>
-          </button>
+          </div>
         ))}
       </div>
 
@@ -366,7 +479,7 @@ export default function BankAccountsPage() {
       </Sheet>
 
       <Dialog open={transferOpen} onOpenChange={(open) => { if (!open) setTransferOpen(false) }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Transferir entre contas</DialogTitle>
           </DialogHeader>
@@ -374,45 +487,92 @@ export default function BankAccountsPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
                 <label className="text-sm font-medium">Conta origem</label>
-                <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="fromAccountId" value={transferFromId} onChange={(e) => setTransferFromId(e.target.value)} required>
+                <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="fromAccountId" value={transferFromId} onChange={(e) => setTransferFromId(e.target.value)} disabled={transferSubmitting} required>
                   <option value="">Selecione</option>
-                  {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+                  {accounts.map((account) => (
+                    <option key={account.id} value={account.id} disabled={account.id === transferToId}>
+                      {account.name} - {formatCurrency(account.balance)}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium">Conta destino</label>
-                <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="toAccountId" value={transferToId} onChange={(e) => setTransferToId(e.target.value)} required>
+                <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="toAccountId" value={transferToId} onChange={(e) => setTransferToId(e.target.value)} disabled={transferSubmitting} required>
                   <option value="">Selecione</option>
-                  {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+                  {accounts.map((account) => (
+                    <option key={account.id} value={account.id} disabled={account.id === transferFromId}>
+                      {account.name} - {formatCurrency(account.balance)}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <TransferAccountPreview label="Origem" account={transferFrom} balanceAfter={transferFromBalanceAfter} />
+              <TransferAccountPreview label="Destino" account={transferTo} balanceAfter={transferToBalanceAfter} />
+            </div>
+
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
-                <label className="text-sm font-medium">Valor</label>
-                <Input name="amount" type="number" min="0.01" step="0.01" placeholder="0,00" value={transferAmount} onChange={(e) => setTransferAmount(e.target.value)} required />
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-sm font-medium">Valor</label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto px-2 py-1 text-xs"
+                    disabled={transferSubmitting || !transferFrom || transferFrom.balance <= 0}
+                    onClick={() => transferFrom && setTransferAmount(transferFrom.balance.toFixed(2))}
+                  >
+                    Transferir saldo total
+                  </Button>
+                </div>
+                <Input name="amount" type="number" min="0.01" step="0.01" placeholder="0,00" value={transferAmount} onChange={(e) => setTransferAmount(e.target.value)} disabled={transferSubmitting} required />
               </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium">Método</label>
-                <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="method" value={transferMethod} onChange={(e) => setTransferMethod(e.target.value)}>
+                <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="method" value={transferMethod} onChange={(e) => setTransferMethod(e.target.value)} disabled={transferSubmitting}>
                   <option value="PIX">Pix</option>
                   <option value="TED">TED</option>
                   <option value="TRANSFER">Transferência</option>
                 </select>
               </div>
             </div>
-            <Input className="uppercase" name="description" placeholder="Descrição opcional" onInput={uppercaseInput} />
-            <Input name="date" type="date" />
+            <Input className="uppercase" name="description" placeholder="Descrição opcional" onInput={uppercaseInput} disabled={transferSubmitting} />
+            <Input name="date" type="date" disabled={transferSubmitting} />
+
+            {transferWillOverdraw && (
+              <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <div>
+                  <p className="font-medium">Essa transferência deixará a conta origem negativa.</p>
+                  <p className="text-xs text-amber-800">A operação ainda pode ser concluída se esse for o ajuste desejado.</p>
+                </div>
+              </div>
+            )}
+
             {transferFrom && transferTo && transferValue > 0 && (
-              <div className="space-y-2 rounded-lg bg-muted p-4 text-sm">
-                <div className="flex justify-between"><span className="text-muted-foreground">Origem após transferência</span><strong className={transferFrom.balance - transferValue < 0 ? "text-red-600" : ""}>{formatCurrency(transferFrom.balance - transferValue)}</strong></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Destino após transferência</span><strong className="text-emerald-600">{formatCurrency(transferTo.balance + transferValue)}</strong></div>
+              <div className="grid gap-2 rounded-lg bg-muted p-4 text-sm sm:grid-cols-3">
+                <div>
+                  <span className="text-xs text-muted-foreground">Valor transferido</span>
+                  <strong className="block">{formatCurrency(transferValue)}</strong>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground">Origem depois</span>
+                  <strong className={`block ${transferWillOverdraw ? "text-red-600" : ""}`}>{formatCurrency(transferFrom.balance - transferValue)}</strong>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground">Destino depois</span>
+                  <strong className="block text-emerald-600">{formatCurrency(transferTo.balance + transferValue)}</strong>
+                </div>
               </div>
             )}
             {transferError && <p className="text-sm text-destructive">{transferError}</p>}
             <div className="flex gap-2">
-              <Button type="button" variant="outline" className="flex-1" onClick={() => setTransferOpen(false)}>Cancelar</Button>
-              <Button type="submit" className="flex-1">Transferir</Button>
+              <Button type="button" variant="outline" className="flex-1" disabled={transferSubmitting} onClick={() => setTransferOpen(false)}>Cancelar</Button>
+              <Button type="submit" className="flex-1" disabled={transferSubmitting}>{transferSubmitting ? "Transferindo..." : "Transferir"}</Button>
             </div>
           </form>
         </DialogContent>
@@ -436,6 +596,44 @@ function formatMovementDescription(description: string | null, type: "INCOME" | 
   if (description.startsWith("TRANSFERENCIA_SAIDA:")) return `Transferência para ${description.split(":")[2] ?? "conta"}`
   if (description.startsWith("TRANSFERENCIA_ENTRADA:")) return `Transferência de ${description.split(":")[2] ?? "conta"}`
   return description
+}
+
+function TransferAccountPreview({
+  label,
+  account,
+  balanceAfter,
+}: {
+  label: string
+  account: BankAccount | undefined
+  balanceAfter: number | null
+}) {
+  return (
+    <div className="rounded-xl border bg-card p-4">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      {account ? (
+        <div className="mt-3 space-y-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: account.color }} />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold">{account.name}</p>
+                <p className="truncate text-xs text-muted-foreground">{account.institution ?? "Sem instituição"}</p>
+              </div>
+            </div>
+            <p className={`shrink-0 text-sm font-bold ${account.balance < 0 ? "text-red-600" : ""}`}>{formatCurrency(account.balance)}</p>
+          </div>
+          {balanceAfter !== null && (
+            <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2 text-xs">
+              <span className="text-muted-foreground">Saldo após</span>
+              <strong className={balanceAfter < 0 ? "text-red-600" : "text-emerald-600"}>{formatCurrency(balanceAfter)}</strong>
+            </div>
+          )}
+        </div>
+      ) : (
+        <p className="mt-3 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">Selecione uma conta.</p>
+      )}
+    </div>
+  )
 }
 
 function SummaryCard({ title, value, highlight = false }: { title: string; value: string; highlight?: boolean }) {

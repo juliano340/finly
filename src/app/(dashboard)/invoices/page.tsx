@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Calculator, CheckCircle2, ChevronLeft, ChevronRight, Loader2, Trash2 } from "lucide-react"
+import { Calculator, CheckCircle2, ChevronLeft, ChevronRight, Loader2, Pencil, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -181,7 +181,84 @@ export default function InvoicesPage() {
         </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="hidden overflow-hidden rounded-lg border md:block">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b bg-muted/50">
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Cartão</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Vencimento</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Valor</th>
+              <th className="px-4 py-3 text-center font-medium text-muted-foreground">Status</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {invoices.length === 0 ? (
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">Nenhuma fatura neste mês.</td></tr>
+            ) : invoices.map((invoice) => (
+              <tr key={invoice.id} className="border-b transition-colors hover:bg-muted/50">
+                <td className="px-4 py-3">
+                  <button type="button" onClick={() => setSelectedInvoice(invoice)} className="flex items-center gap-3 text-left font-medium hover:underline">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white" style={{ backgroundColor: invoice.card.color }}>{invoice.card.name.charAt(0)}</span>
+                    {invoice.card.name}
+                  </button>
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">{formatDate(invoice.dueDate)}</td>
+                <td className="px-4 py-3 text-right font-medium">{formatCurrency(invoice.amount)}</td>
+                <td className="px-4 py-3 text-center">
+                  {invoice.status === "PAID" ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600">
+                      Pago{invoice.paymentMethod ? ` · ${methodLabels[invoice.paymentMethod] ?? invoice.paymentMethod}` : ""}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-600">Pendente</span>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <div className="flex justify-end gap-1">
+                    {invoice.status === "PENDING" ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => openPayDialog(invoice)}
+                      >
+                        <CheckCircle2 className="mr-1 h-4 w-4" /> Pagar
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-emerald-600 hover:text-emerald-700"
+                        onClick={() => handleUnpay(invoice.id)}
+                      >
+                        Estornar
+                      </Button>
+                    )}
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label="Editar fatura"
+                      onClick={() => setSelectedInvoice(invoice)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label="Excluir fatura"
+                      onClick={() => setDeleteTarget(invoice.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-600" />
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="space-y-2 md:hidden">
         {invoices.length === 0 ? (
           <Card className="border-0 shadow-sm"><CardContent className="p-8 text-center text-sm text-muted-foreground">Nenhuma fatura neste mês.</CardContent></Card>
         ) : invoices.map((invoice) => (
@@ -224,6 +301,24 @@ export default function InvoicesPage() {
                 )}
               </div>
             </button>
+            <div className="flex flex-col gap-1">
+              <Button
+                size="icon"
+                variant="ghost"
+                aria-label="Editar fatura"
+                onClick={() => setSelectedInvoice(invoice)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                aria-label="Excluir fatura"
+                onClick={() => setDeleteTarget(invoice.id)}
+              >
+                <Trash2 className="h-4 w-4 text-red-600" />
+              </Button>
+            </div>
           </div>
         ))}
       </div>

@@ -20,11 +20,11 @@ export async function getDueSoonNotifications(
   userId: string,
   daysAhead = 7,
   client?: PrismaClient,
-  now = new Date()
+  now: Date = new Date()
 ) {
   const db = client ?? defaultPrisma
-  const today = startOfDay(now)
-  const endDate = addDays(today, daysAhead)
+  const today = startOfDayUtc(now)
+  const endDate = addDaysUtc(today, daysAhead)
   const months = monthsBetween(today, endDate)
 
   for (const month of months) {
@@ -37,13 +37,15 @@ export async function getDueSoonNotifications(
       where: {
         userId,
         status: "PENDING",
-        dueDate: { lte: endOfDay(endDate) },
+        month: { in: months },
+        dueDate: { lte: endOfDayUtc(endDate) },
       },
       include: { card: true },
     }),
     db.fixedCostOccurrence.findMany({
       where: {
         userId,
+        month: { in: months },
         status: "PENDING",
         fixedCost: { dueDay: { not: null } },
       },
@@ -52,8 +54,8 @@ export async function getDueSoonNotifications(
   ])
 
   const invoiceNotifications = invoices.map((invoice) => {
-    const dueDate = startOfDay(invoice.dueDate)
-    const daysUntilDue = differenceInDays(today, dueDate)
+    const dueDate = startOfDayUtc(invoice.dueDate)
+    const daysUntilDue = clampDays(differenceInDaysUtc(today, dueDate))
     return {
       id: invoice.id,
       type: "INVOICE" as const,
@@ -67,10 +69,10 @@ export async function getDueSoonNotifications(
   })
 
   const fixedCostNotifications = occurrences.flatMap((occurrence) => {
-    if (!occurrence.fixedCost.dueDay) return []
+    if (!isValidMonth(occurrence.month) || !occurrence.fixedCost.dueDay) return []
     const dueDate = fixedCostDueDate(occurrence.month, occurrence.fixedCost.dueDay)
-    if (dueDate > endOfDay(endDate)) return []
-    const daysUntilDue = differenceInDays(today, dueDate)
+    if (dueDate.getTime() > endOfDayUtc(endDate).getTime()) return []
+    const daysUntilDue = clampDays(differenceInDaysUtc(today, dueDate))
     return [{
       id: occurrence.id,
       type: "FIXED_COST" as const,
@@ -90,7 +92,7 @@ export async function getDueSoonNotifications(
 function fixedCostDueDate(month: string, dueDay: number) {
   const [year, monthIndex] = month.split("-").map(Number)
   const lastDay = new Date(Date.UTC(year, monthIndex, 0)).getUTCDate()
-  return startOfDay(new Date(Date.UTC(year, monthIndex - 1, Math.min(dueDay, lastDay))))
+  return startOfDayUtc(new Date(Date.UTC(year, monthIndex - 1, Math.min(dueDay, lastDay))))
 }
 
 function notificationStatus(daysUntilDue: number): DueNotificationStatus {
@@ -105,31 +107,40 @@ function statusPriority(status: DueNotificationStatus) {
   return 2
 }
 
-function startOfDay(date: Date) {
+function startOfDayUtc(date: Date) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
 }
 
-function endOfDay(date: Date) {
+function endOfDayUtc(date: Date) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 23, 59, 59, 999))
 }
 
-function addDays(date: Date, days: number) {
-  const result = new Date(date)
-  result.setDate(result.getDate() + days)
-  return result
+function addDaysUtc(date: Date, days: number) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + days))
 }
 
-function differenceInDays(from: Date, to: Date) {
-  return Math.round((startOfDay(to).getTime() - startOfDay(from).getTime()) / 86_400_000)
+function differenceInDaysUtc(today: Date, target: Date) {
+  return Math.round((target.getTime() - today.getTime()) / 86_400_000)
 }
 
 function monthsBetween(start: Date, end: Date) {
   const months: string[] = []
   const cursor = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1))
   const last = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 1))
-  while (cursor <= last) {
+  while (cursor.getTime() <= last.getTime()) {
     months.push(`${cursor.getUTCFullYear()}-${String(cursor.getUTCMonth() + 1).padStart(2, "0")}`)
     cursor.setUTCMonth(cursor.getUTCMonth() + 1)
   }
   return months
+}
+
+function isValidMonth(month: string) {
+  return /^\d{4}-\d{2}$/.test(month) && month.startsWith("20")
+}
+
+function clampDays(days: number) {
+  if (!Number.isFinite(days)) return 0
+  if (days < -3650) return -3650
+  if (days > 3650) return 3650
+  return days
 }

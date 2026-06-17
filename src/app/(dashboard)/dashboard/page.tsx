@@ -17,9 +17,20 @@ import { Button } from "@/components/ui/button"
 import { ExpenseByCategoryChart } from "./_components/expense-by-category-chart"
 import { IncomeVsExpenseChart } from "./_components/income-vs-expense-chart"
 import { DailyTrendChart } from "./_components/daily-trend-chart"
+import { MonthlyEvolutionChart } from "./_components/monthly-evolution-chart"
+import { CardInvoiceEvolutionChart } from "./_components/card-invoice-evolution-chart"
 import { RecentTransactions } from "./_components/recent-transactions"
 import { formatCurrency } from "@/lib/utils"
-import type { DashboardStats } from "@/features/dashboard/dashboard.service"
+import type { CardInvoiceEvolutionStats, DashboardStats, MonthlyEvolutionItem, MonthlyEvolutionStats } from "@/features/dashboard/dashboard.service"
+
+type EvolutionMetric = keyof Pick<MonthlyEvolutionItem, "total" | "invoices" | "fixedCosts" | "looseExpenses">
+
+const evolutionMetrics: { key: EvolutionMetric; label: string }[] = [
+  { key: "total", label: "Total" },
+  { key: "invoices", label: "Faturas" },
+  { key: "fixedCosts", label: "Custos fixos" },
+  { key: "looseExpenses", label: "Avulsas" },
+]
 
 function getCurrentMonth() {
   const now = new Date()
@@ -39,14 +50,20 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [closing, setClosing] = useState<{ summary: { totalToPay: number; totalSpent: number } } | null>(null)
   const [bankTotal, setBankTotal] = useState(0)
+  const [evolution, setEvolution] = useState<MonthlyEvolutionStats | null>(null)
+  const [evolutionMetric, setEvolutionMetric] = useState<EvolutionMetric>("total")
+  const [cardEvolution, setCardEvolution] = useState<CardInvoiceEvolutionStats | null>(null)
+  const [selectedCardId, setSelectedCardId] = useState("all")
 
   const fetchStats = useCallback(async () => {
     setLoading(true)
     try {
-      const [statsRes, banksRes, closingRes] = await Promise.all([
+      const [statsRes, banksRes, closingRes, evolutionRes, cardEvolutionRes] = await Promise.all([
         fetch(`/api/dashboard/stats?month=${month}`),
         fetch("/api/bank-accounts"),
         fetch(`/api/monthly-closing?month=${month}`),
+        fetch(`/api/dashboard/monthly-evolution?month=${month}&months=6`),
+        fetch(`/api/dashboard/card-invoice-evolution?month=${month}&months=6`),
       ])
       if (statsRes.ok) setStats(await statsRes.json())
       if (banksRes.ok) {
@@ -57,6 +74,8 @@ export default function DashboardPage() {
         const data = await closingRes.json()
         setClosing(data)
       }
+      if (evolutionRes.ok) setEvolution(await evolutionRes.json())
+      if (cardEvolutionRes.ok) setCardEvolution(await cardEvolutionRes.json())
     } finally {
       setLoading(false)
     }
@@ -105,6 +124,9 @@ export default function DashboardPage() {
       bg: summary.balance >= 0 ? "bg-emerald-50" : "bg-red-50",
     },
   ]
+  const evolutionSummary = getMetricSummary(evolution?.months ?? [], evolutionMetric)
+  const selectedCard = cardEvolution?.cards.find((card) => card.id === selectedCardId)
+  const cardSummary = getCardInvoiceSummary(cardEvolution?.months ?? [], selectedCardId)
 
   return (
     <div className="space-y-6">
@@ -196,6 +218,84 @@ export default function DashboardPage() {
         </Card>
       </div>
 
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <BarChart3 className="h-4 w-4" />
+                Evolução mensal
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">Acompanhe seus gastos dos últimos 6 meses.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {evolutionMetrics.map((metric) => (
+                <Button
+                  key={metric.key}
+                  size="sm"
+                  variant={evolutionMetric === metric.key ? "default" : "outline"}
+                  onClick={() => setEvolutionMetric(metric.key)}
+                >
+                  {metric.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-4">
+            <InsightCard title="Mês atual" value={formatCurrency(evolutionSummary.current)} description="Valor da métrica selecionada" />
+            <InsightCard
+              title="Vs mês anterior"
+              value={formatChangePercent(evolutionSummary.changePercent)}
+              description={evolutionSummary.changePercent === null ? "Sem base comparável" : formatCurrency(evolutionSummary.current - evolutionSummary.previous)}
+              tone={(evolutionSummary.changePercent ?? 0) > 0 ? "bad" : "good"}
+            />
+            <InsightCard title="Média mensal" value={formatCurrency(evolutionSummary.average)} description="Média dos últimos 6 meses" />
+            <InsightCard title="Maior mês" value={evolutionSummary.highest?.label ?? "-"} description={formatCurrency(evolutionSummary.highest?.value ?? 0)} />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <MonthlyEvolutionChart data={evolution?.months ?? []} metric={evolutionMetric} />
+        </CardContent>
+      </Card>
+
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <BarChart3 className="h-4 w-4" />
+                Evolução das faturas
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">Veja quanto cada cartão fechou mês a mês.</p>
+            </div>
+            <select
+              className="h-9 rounded-md border bg-background px-3 text-sm"
+              value={selectedCardId}
+              onChange={(event) => setSelectedCardId(event.target.value)}
+            >
+              <option value="all">Todos os cartões</option>
+              {cardEvolution?.cards.map((card) => (
+                <option key={card.id} value={card.id}>{card.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-4">
+            <InsightCard title="Fatura atual" value={formatCurrency(cardSummary.current)} description={selectedCard?.name ?? "Todos os cartões"} />
+            <InsightCard
+              title="Vs mês anterior"
+              value={formatChangePercent(cardSummary.changePercent)}
+              description={cardSummary.changePercent === null ? "Sem base comparável" : formatCurrency(cardSummary.current - cardSummary.previous)}
+              tone={(cardSummary.changePercent ?? 0) > 0 ? "bad" : "good"}
+            />
+            <InsightCard title="Média 6 meses" value={formatCurrency(cardSummary.average)} description="Média das faturas no período" />
+            <InsightCard title="Maior fatura" value={cardSummary.highest?.label ?? "-"} description={formatCurrency(cardSummary.highest?.value ?? 0)} />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <CardInvoiceEvolutionChart data={cardEvolution?.months ?? []} cards={cardEvolution?.cards ?? []} cardId={selectedCardId} color={selectedCard?.color ?? "#2563EB"} />
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="border-0 shadow-sm">
           <CardHeader>
@@ -240,4 +340,72 @@ export default function DashboardPage() {
       </div>
     </div>
   )
+}
+
+function InsightCard({
+  title,
+  value,
+  description,
+  tone = "neutral",
+}: {
+  title: string
+  value: string
+  description: string
+  tone?: "neutral" | "good" | "bad"
+}) {
+  const toneClass = tone === "good" ? "text-emerald-600" : tone === "bad" ? "text-red-600" : "text-foreground"
+  return (
+    <div className="rounded-xl bg-muted p-4">
+      <p className="text-xs font-medium text-muted-foreground">{title}</p>
+      <p className={`mt-1 text-lg font-bold ${toneClass}`}>{value}</p>
+      <p className="mt-1 text-[10px] text-muted-foreground/70">{description}</p>
+    </div>
+  )
+}
+
+function formatChangePercent(value: number | null | undefined) {
+  if (value === null || value === undefined) return "-"
+  const sign = value > 0 ? "+" : ""
+  return `${sign}${value.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`
+}
+
+function getMetricSummary(items: MonthlyEvolutionItem[], metric: EvolutionMetric) {
+  const current = items.at(-1)?.[metric] ?? 0
+  const previous = items.at(-2)?.[metric] ?? 0
+  const total = items.reduce((sum, item) => sum + item[metric], 0)
+  const highest = items.length
+    ? items.reduce(
+        (best, item) => item[metric] > best.value ? { label: item.label, value: item[metric] } : best,
+        { label: items[0].label, value: items[0][metric] }
+      )
+    : null
+
+  return {
+    current,
+    previous,
+    average: items.length ? total / items.length : 0,
+    highest,
+    changePercent: previous > 0 ? ((current - previous) / previous) * 100 : null,
+  }
+}
+
+function getCardInvoiceSummary(items: CardInvoiceEvolutionStats["months"], cardId: string) {
+  const valueFor = (item: CardInvoiceEvolutionStats["months"][number]) => cardId === "all" ? item.total : item.cards[cardId] ?? 0
+  const current = items.length ? valueFor(items[items.length - 1]) : 0
+  const previous = items.length > 1 ? valueFor(items[items.length - 2]) : 0
+  const total = items.reduce((sum, item) => sum + valueFor(item), 0)
+  const highest = items.length
+    ? items.reduce(
+        (best, item) => valueFor(item) > best.value ? { label: item.label, value: valueFor(item) } : best,
+        { label: items[0].label, value: valueFor(items[0]) }
+      )
+    : null
+
+  return {
+    current,
+    previous,
+    average: items.length ? total / items.length : 0,
+    highest,
+    changePercent: previous > 0 ? ((current - previous) / previous) * 100 : null,
+  }
 }

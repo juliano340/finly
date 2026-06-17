@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { ChevronRight, CreditCard, Plus, Trash2 } from "lucide-react"
+import { CreditCard, Pencil, Plus, Trash2 } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -46,7 +47,7 @@ export default function CardsPage() {
   }, [])
 
   const handleCreate = async (formData: FormData) => {
-    await fetch("/api/cards", {
+    const res = await fetch("/api/cards", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -59,11 +60,17 @@ export default function CardsPage() {
       }),
     })
     setCreating(false)
+    if (res.ok) {
+      toast.success("Cartão criado com sucesso.")
+    } else {
+      const err = await res.json().catch(() => ({}))
+      toast.error(err.error ?? "Não foi possível criar o cartão.")
+    }
     fetchData()
   }
 
   const handleUpdate = async (cardId: string, formData: FormData) => {
-    await fetch(`/api/cards/${cardId}`, {
+    const res = await fetch(`/api/cards/${cardId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -76,13 +83,25 @@ export default function CardsPage() {
       }),
     })
     setSelectedCard(null)
+    if (res.ok) {
+      toast.success("Cartão atualizado com sucesso.")
+    } else {
+      const err = await res.json().catch(() => ({}))
+      toast.error(err.error ?? "Não foi possível atualizar o cartão.")
+    }
     fetchData()
   }
 
   const handleDelete = async (cardId: string) => {
-    await fetch(`/api/cards/${cardId}`, { method: "DELETE" })
+    const res = await fetch(`/api/cards/${cardId}`, { method: "DELETE" })
     setConfirmDelete(null)
     setSelectedCard(null)
+    if (res.ok) {
+      toast.success("Cartão excluído.")
+    } else {
+      const err = await res.json().catch(() => ({}))
+      toast.error(err.error ?? "Não foi possível excluir o cartão.")
+    }
     fetchData()
   }
 
@@ -96,23 +115,97 @@ export default function CardsPage() {
         <Button onClick={() => setCreating(true)}><Plus className="mr-2 h-4 w-4" />Novo cartão</Button>
       </div>
 
-      <div className="space-y-2">
+      <div className="hidden overflow-hidden rounded-lg border md:block">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b bg-muted/50">
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Cartão</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Bandeira</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Conta</th>
+              <th className="px-4 py-3 text-center font-medium text-muted-foreground">Fechamento</th>
+              <th className="px-4 py-3 text-center font-medium text-muted-foreground">Vencimento</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {cards.length === 0 ? (
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Nenhum cartão cadastrado.</td></tr>
+            ) : cards.map((card) => (
+              <tr key={card.id} className="border-b transition-colors hover:bg-muted/50">
+                <td className="px-4 py-3">
+                  <button type="button" onClick={() => setSelectedCard(card)} className="flex items-center gap-3 text-left font-medium hover:underline">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full text-white" style={{ backgroundColor: card.color }}>
+                      <CreditCard className="h-4 w-4" />
+                    </span>
+                    {card.name}
+                  </button>
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">{card.brand ?? "-"}</td>
+                <td className="px-4 py-3 text-muted-foreground">{card.bankAccount?.name ?? "-"}</td>
+                <td className="px-4 py-3 text-center text-muted-foreground">{card.closingDay ?? "-"}</td>
+                <td className="px-4 py-3 text-center text-muted-foreground">{card.dueDay ?? "-"}</td>
+                <td className="px-4 py-3 text-right">
+                  <div className="flex justify-end gap-1">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label="Editar cartão"
+                      onClick={() => setSelectedCard(card)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label="Excluir cartão"
+                      onClick={() => setConfirmDelete(card.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-600" />
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="space-y-2 md:hidden">
         {cards.length === 0 ? (
           <Card className="border-0 shadow-sm"><CardContent className="p-8 text-center text-sm text-muted-foreground">Nenhum cartão cadastrado.</CardContent></Card>
         ) : cards.map((card) => (
-          <button key={card.id} type="button" onClick={() => setSelectedCard(card)} className="flex w-full items-center justify-between rounded-lg border bg-card p-4 text-left text-sm transition-colors hover:bg-muted/50">
-            <div className="flex items-center gap-3">
-              <span className="rounded-lg p-2 text-white" style={{ backgroundColor: card.color }}><CreditCard className="h-4 w-4" /></span>
-              <div>
-                <p className="font-medium">{card.name}</p>
-                <p className="text-xs text-muted-foreground">{card.brand ?? "Sem bandeira"} · Fecha {card.closingDay ?? "-"} · Vence {card.dueDay ?? "-"}</p>
+          <div key={card.id} className="flex items-center gap-2">
+            <button type="button" onClick={() => setSelectedCard(card)} className="flex w-full items-center justify-between rounded-lg border bg-card p-4 text-left text-sm transition-colors hover:bg-muted/50">
+              <div className="flex items-center gap-3">
+                <span className="rounded-lg p-2 text-white" style={{ backgroundColor: card.color }}><CreditCard className="h-4 w-4" /></span>
+                <div>
+                  <p className="font-medium">{card.name}</p>
+                  <p className="text-xs text-muted-foreground">{card.brand ?? "Sem bandeira"} · Fecha {card.closingDay ?? "-"} · Vence {card.dueDay ?? "-"}</p>
+                </div>
               </div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>{card.bankAccount?.name ?? "sem conta"}</span>
+              </div>
+            </button>
+            <div className="flex flex-col gap-1">
+              <Button
+                size="icon"
+                variant="ghost"
+                aria-label="Editar cartão"
+                onClick={() => setSelectedCard(card)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                aria-label="Excluir cartão"
+                onClick={() => setConfirmDelete(card.id)}
+              >
+                <Trash2 className="h-4 w-4 text-red-600" />
+              </Button>
             </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>{card.bankAccount?.name ?? "sem conta"}</span>
-              <ChevronRight className="h-4 w-4" />
-            </div>
-          </button>
+          </div>
         ))}
       </div>
 

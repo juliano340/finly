@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
+import Script from "next/script"
 import { Providers } from "@/components/providers"
 import "./globals.css"
 
@@ -19,6 +20,8 @@ export const metadata: Metadata = {
     "Gerencie suas finanças pessoais de forma simples e inteligente.",
 }
 
+const themeBootstrap = `(function(){try{var t=localStorage.getItem('cinema-theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();`
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -31,6 +34,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col bg-background text-foreground" suppressHydrationWarning>
+        <Script id="theme-bootstrap" strategy="beforeInteractive">{themeBootstrap}</Script>
         <Providers>{children}</Providers>
       </body>
     </html>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { markCardInvoiceFixedCostsPaid } from "@/features/monthly-closing/monthly-closing.service"
 
 export async function POST(
   request: Request,
@@ -38,7 +39,20 @@ export async function POST(
       }
     }
 
+    const paidAt = new Date()
+
     const updated = await prisma.$transaction(async (tx) => {
+      const claimed = await tx.cardInvoice.updateMany({
+        where: { id, userId, status: "PENDING" },
+        data: {
+          status: "PAID",
+          paidAt,
+          paymentMethod,
+          paymentBankAccountId: realBankAccountId,
+        },
+      })
+      if (claimed.count !== 1) throw new Error("Fatura já está paga")
+
       let movementId: string | null = null
 
       if (realBankAccountId) {
@@ -48,20 +62,18 @@ export async function POST(
             amount: invoice.amount,
             type: "EXPENSE",
             description: `PAGAMENTO_FATURA:${id}`,
-            date: new Date(),
+            date: paidAt,
             userId,
           },
         })
         movementId = movement.id
       }
 
+      await markCardInvoiceFixedCostsPaid(userId, invoice, paidAt, tx)
+
       return tx.cardInvoice.update({
         where: { id },
         data: {
-          status: "PAID",
-          paidAt: new Date(),
-          paymentMethod,
-          paymentBankAccountId: realBankAccountId,
           bankAccountMovementId: movementId,
         },
         include: { card: true },
@@ -72,6 +84,6 @@ export async function POST(
   } catch (err) {
     console.error("PAY INVOICE ERROR:", err)
     const message = err instanceof Error ? err.message : "Erro interno"
-    return NextResponse.json({ error: message }, { status: 500 })
+    return NextResponse.json({ error: message }, { status: message === "Fatura já está paga" ? 400 : 500 })
   }
 }

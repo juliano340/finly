@@ -1,7 +1,8 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { CheckCircle2, ChevronLeft, ChevronRight, Loader2, Trash2 } from "lucide-react"
+import { CheckCircle2, ChevronLeft, ChevronRight, Loader2, Pencil, Trash2 } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -47,6 +48,15 @@ function monthLabel(month: string) {
   return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
 }
 
+function formatDueDate(dueDay: number | null, month: string) {
+  if (!dueDay) return "-"
+  const [year, m] = month.split("-").map(Number)
+  const lastDay = new Date(year, m, 0).getDate()
+  const day = Math.min(dueDay, lastDay)
+  const date = new Date(Date.UTC(year, m - 1, day))
+  return date.toLocaleDateString("pt-BR", { timeZone: "UTC" })
+}
+
 export default function FixedCostsPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [cards, setCards] = useState<CardItem[]>([])
@@ -75,13 +85,21 @@ export default function FixedCostsPage() {
     if (occRes.ok) setOccurrences(await occRes.json())
   }, [month])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void fetchData() }, 0)
+    return () => window.clearTimeout(timer)
+  }, [fetchData])
 
   const handlePay = async (fixedCostId: string) => {
     setPayingId(fixedCostId)
     try {
       const res = await fetch(`/api/fixed-costs/${fixedCostId}/pay?month=${month}`, { method: "POST" })
-      if (res.ok) fetchData()
+      if (res.ok) {
+        toast.success("Custo fixo marcado como pago.")
+        fetchData()
+      } else {
+        toast.error("Não foi possível marcar como pago.")
+      }
     } finally {
       setPayingId(null)
     }
@@ -91,7 +109,12 @@ export default function FixedCostsPage() {
     setUnpayingId(fixedCostId)
     try {
       const res = await fetch(`/api/fixed-costs/${fixedCostId}/unpay?month=${month}`, { method: "POST" })
-      if (res.ok) fetchData()
+      if (res.ok) {
+        toast.info("Pagamento estornado.")
+        fetchData()
+      } else {
+        toast.error("Não foi possível estornar o pagamento.")
+      }
     } finally {
       setUnpayingId(null)
     }
@@ -118,8 +141,10 @@ export default function FixedCostsPage() {
     if (!res.ok) {
       const err = await res.json()
       setCreateError(err.error ?? "Erro ao salvar")
+      toast.error(err.error ?? "Erro ao criar custo fixo")
       return
     }
+    toast.success("Custo fixo criado com sucesso.")
     setCreating(false)
     fetchData()
   }
@@ -145,17 +170,29 @@ export default function FixedCostsPage() {
     if (!res.ok) {
       const err = await res.json()
       setUpdateError(err.error ?? "Erro ao salvar")
+      toast.error(err.error ?? "Erro ao atualizar custo fixo")
       return
     }
+    toast.success("Custo fixo atualizado.")
     setSelectedTemplate(null)
     fetchData()
   }
 
   const handleDelete = async (itemId: string) => {
-    await fetch(`/api/fixed-costs/${itemId}`, { method: "DELETE" })
+    const res = await fetch(`/api/fixed-costs/${itemId}`, { method: "DELETE" })
     setConfirmDelete(null)
     setSelectedTemplate(null)
+    if (res.ok) {
+      toast.success("Custo fixo excluído.")
+    } else {
+      toast.error("Não foi possível excluir o custo fixo.")
+    }
     fetchData()
+  }
+
+  const openEditSheet = (item: FixedCostData) => {
+    setInsideCard(item.paidInsideCard)
+    setSelectedTemplate(item)
   }
 
   const totalPending = occurrences.filter((o) => o.status === "PENDING").reduce((s, o) => s + o.amount, 0)
@@ -193,11 +230,12 @@ export default function FixedCostsPage() {
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Vencimento</th>
               <th className="px-4 py-3 text-right font-medium text-muted-foreground">Valor</th>
               <th className="px-4 py-3 text-center font-medium text-muted-foreground">Status</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Ações</th>
             </tr>
           </thead>
           <tbody>
             {occurrences.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Nenhum custo fixo neste mês.</td></tr>
+              <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">Nenhum custo fixo neste mês.</td></tr>
             ) : occurrences.map((occ) => {
               const isLoading = payingId === occ.fixedCostId || unpayingId === occ.fixedCostId
               return (
@@ -214,11 +252,13 @@ export default function FixedCostsPage() {
                       : <span className="font-medium text-foreground">Fora do cartão{occ.fixedCost.bankAccount ? ` · ${occ.fixedCost.bankAccount.name}` : ""}</span>
                     }
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">{occ.fixedCost.dueDay ? `Dia ${occ.fixedCost.dueDay}` : "-"}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{formatDueDate(occ.fixedCost.dueDay, occ.month)}</td>
                   <td className="px-4 py-3 text-right font-medium">{formatCurrency(occ.amount)}</td>
                   <td className="px-4 py-3 text-center">
                     {occ.fixedCost.paidInsideCard ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-600">Na fatura</span>
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${occ.status === "PAID" ? "bg-emerald-500/10 text-emerald-600" : "bg-blue-500/10 text-blue-600"}`}>
+                        {occ.status === "PAID" ? "Pago na fatura" : "Na fatura"}
+                      </span>
                     ) : occ.status === "PAID" ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600">Pago</span>
                     ) : (
@@ -234,6 +274,26 @@ export default function FixedCostsPage() {
                         {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : occ.status === "PAID" ? "Estornar" : "Pagar"}
                       </button>
                     )}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        aria-label="Editar custo fixo"
+                        onClick={() => openEditSheet(occ.fixedCost)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        aria-label="Excluir custo fixo"
+                        onClick={() => setConfirmDelete(occ.fixedCost.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               )
@@ -257,15 +317,26 @@ export default function FixedCostsPage() {
                   </div>
                   <strong>{formatCurrency(occ.amount)}</strong>
                 </div>
-                <p className="mt-0.5 pl-12 text-xs text-muted-foreground">{occ.fixedCost.category.name} · {occ.fixedCost.paidInsideCard ? `Cartão ${occ.fixedCost.card?.name ?? "-"}` : "Fora do cartão"} · {occ.fixedCost.dueDay ? `vence dia ${occ.fixedCost.dueDay}` : "sem vencimento"}</p>
+                <p className="mt-0.5 pl-12 text-xs text-muted-foreground">{occ.fixedCost.category.name} · {occ.fixedCost.paidInsideCard ? `Cartão ${occ.fixedCost.card?.name ?? "-"}` : "Fora do cartão"} · {occ.fixedCost.dueDay ? `vence em ${formatDueDate(occ.fixedCost.dueDay, occ.month)}` : "sem vencimento"}</p>
                 <div className="mt-1 pl-12">
                   {occ.fixedCost.paidInsideCard ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-600">Na fatura</span>
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${occ.status === "PAID" ? "bg-emerald-500/10 text-emerald-600" : "bg-blue-500/10 text-blue-600"}`}>
+                      {occ.status === "PAID" ? "Pago na fatura" : "Na fatura"}
+                    </span>
                   ) : (
                     <span
                       role="button" tabIndex={0}
-                      onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); occ.status === "PAID" ? handleUnpay(occ.fixedCostId) : handlePay(occ.fixedCostId) } }}
-                      onClick={(e) => { e.stopPropagation(); occ.status === "PAID" ? handleUnpay(occ.fixedCostId) : handlePay(occ.fixedCostId) }}
+                      onKeyDown={(e) => {
+                        if (e.key !== "Enter") return
+                        e.stopPropagation()
+                        if (occ.status === "PAID") handleUnpay(occ.fixedCostId)
+                        else handlePay(occ.fixedCostId)
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (occ.status === "PAID") handleUnpay(occ.fixedCostId)
+                        else handlePay(occ.fixedCostId)
+                      }}
                       className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${occ.status === "PAID" ? "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
                     >
                       {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className={`h-3.5 w-3.5 ${occ.status === "PAID" ? "fill-emerald-600 text-white" : ""}`} />}
@@ -274,6 +345,24 @@ export default function FixedCostsPage() {
                   )}
                 </div>
               </button>
+              <div className="flex flex-col gap-1">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  aria-label="Editar custo fixo"
+                  onClick={() => openEditSheet(occ.fixedCost)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  aria-label="Excluir custo fixo"
+                  onClick={() => setConfirmDelete(occ.fixedCost.id)}
+                >
+                  <Trash2 className="h-4 w-4 text-red-600" />
+                </Button>
+              </div>
             </div>
           )
         })}

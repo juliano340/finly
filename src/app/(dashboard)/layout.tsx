@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { signOut, useSession } from "next-auth/react"
@@ -19,9 +19,18 @@ import {
   Menu,
   Bell,
   LogOut,
+  User as UserIcon,
 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { formatCurrency, formatDate } from "@/lib/utils"
 
 const navItems = [
@@ -50,11 +59,24 @@ interface DueNotification {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
-  const { status } = useSession()
+  const { data: session, status } = useSession()
   const [collapsed, setCollapsed] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [notifications, setNotifications] = useState<DueNotification[]>([])
   const [notified, setNotified] = useState(false)
+  const notificationsRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!notificationsOpen) return
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node
+      if (notificationsRef.current && !notificationsRef.current.contains(target)) {
+        setNotificationsOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [notificationsOpen])
 
   const fetchNotifications = () => {
     return fetch("/api/notifications/due-soon")
@@ -80,7 +102,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const dueToday = notifications.filter((item) => item.status === "DUE_TODAY").length
     if (overdue > 0) toast.warning(`Você tem ${overdue} ${overdue === 1 ? "conta atrasada" : "contas atrasadas"}`)
     else if (dueToday > 0) toast.info(`Você tem ${dueToday} ${dueToday === 1 ? "conta vencendo hoje" : "contas vencendo hoje"}`)
-    setNotified(true)
+    const timer = window.setTimeout(() => setNotified(true), 0)
+    return () => window.clearTimeout(timer)
   }, [notifications, notified])
 
   if (status === "loading") {
@@ -167,54 +190,55 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {navItems.find((i) => i.href === pathname)?.label ?? ""}
           </h2>
           <div className="relative flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                if (!notificationsOpen) fetchNotifications()
-                setNotificationsOpen((open) => !open)
-              }}
-              className="relative rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              <Bell className="h-4 w-4" />
-              {notifications.length > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
-                  {notifications.length > 9 ? "9+" : notifications.length}
-                </span>
-              )}
-            </button>
-            {notificationsOpen && (
-              <div className="absolute right-10 top-9 z-50 w-80 overflow-hidden rounded-xl border bg-background shadow-lg">
-                <div className="border-b p-3">
-                  <p className="text-sm font-semibold">Lembretes</p>
-                  <p className="text-xs text-muted-foreground">Contas próximas do vencimento</p>
-                </div>
-                <div className="max-h-96 overflow-y-auto p-2">
-                  {notifications.length === 0 ? (
-                    <p className="p-3 text-sm text-muted-foreground">Nenhuma conta próxima do vencimento.</p>
-                  ) : notifications.map((item) => (
-                    <Link
-                      key={`${item.type}-${item.id}`}
-                      href={item.href}
-                      onClick={() => setNotificationsOpen(false)}
-                      className="block rounded-lg p-3 text-sm transition-colors hover:bg-muted"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-medium">{item.title}</p>
-                          <p className="text-xs text-muted-foreground">{notificationLabel(item)} · {formatDate(item.dueDate)}</p>
+            <div ref={notificationsRef} className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!notificationsOpen) fetchNotifications()
+                  setNotificationsOpen((open) => !open)
+                }}
+                className="relative rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <Bell className="h-4 w-4" />
+                {notifications.length > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                    {notifications.length > 9 ? "9+" : notifications.length}
+                  </span>
+                )}
+              </button>
+              {notificationsOpen && (
+                <div className="absolute right-0 top-9 z-50 w-80 overflow-hidden rounded-xl border bg-background shadow-lg">
+                  <div className="border-b p-3">
+                    <p className="text-sm font-semibold">Lembretes</p>
+                    <p className="text-xs text-muted-foreground">Contas próximas do vencimento</p>
+                  </div>
+                  <div className="max-h-96 overflow-y-auto p-2">
+                    {notifications.length === 0 ? (
+                      <p className="p-3 text-sm text-muted-foreground">Nenhuma conta próxima do vencimento.</p>
+                    ) : notifications.map((item) => (
+                      <Link
+                        key={`${item.type}-${item.id}`}
+                        href={item.href}
+                        onClick={() => setNotificationsOpen(false)}
+                        className="block rounded-lg p-3 text-sm transition-colors hover:bg-muted"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-medium">{item.title}</p>
+                            <p className="text-xs text-muted-foreground">{notificationLabel(item)} · {formatDate(item.dueDate)}</p>
+                          </div>
+                          <p className="shrink-0 font-semibold">{formatCurrency(item.amount)}</p>
                         </div>
-                        <p className="shrink-0 font-semibold">{formatCurrency(item.amount)}</p>
-                      </div>
-                    </Link>
-                  ))}
+                      </Link>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-            <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-primary text-xs text-primary-foreground">
-                U
-              </AvatarFallback>
-            </Avatar>
+              )}
+            </div>
+            <AvatarMenu
+              name={session?.user?.name ?? null}
+              email={session?.user?.email ?? null}
+            />
           </div>
         </header>
 
@@ -229,4 +253,50 @@ function notificationLabel(item: DueNotification) {
   if (item.status === "OVERDUE") return item.daysUntilDue === -1 ? "Atrasada há 1 dia" : `Atrasada há ${Math.abs(item.daysUntilDue)} dias`
   if (item.status === "DUE_TODAY") return "Vence hoje"
   return item.daysUntilDue === 1 ? "Vence amanhã" : `Vence em ${item.daysUntilDue} dias`
+}
+
+function AvatarMenu({ name, email }: { name: string | null; email: string | null }) {
+  const initials = (name ?? email ?? "U")
+    .split(/\s+/)
+    .map((part) => part[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase() || "U"
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger className="rounded-full focus:outline-none focus:ring-2 focus:ring-ring">
+        <Avatar className="h-8 w-8 cursor-pointer">
+          <AvatarFallback className="bg-primary text-xs text-primary-foreground">
+            {initials}
+          </AvatarFallback>
+        </Avatar>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel className="flex flex-col gap-0.5 py-2">
+          <span className="text-sm font-medium text-foreground">{name ?? "Sem nome"}</span>
+          <span className="text-xs text-muted-foreground">{email ?? ""}</span>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          render={(props) => (
+            <Link href="/settings" {...props} className="flex items-center gap-2">
+              <UserIcon className="h-4 w-4" />
+              Perfil
+            </Link>
+          )}
+        />
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          variant="destructive"
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          className="flex items-center gap-2"
+        >
+          <LogOut className="h-4 w-4" />
+          Sair
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
 }
