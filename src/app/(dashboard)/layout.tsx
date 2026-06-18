@@ -171,7 +171,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="p-2">
           <Separator className="bg-white/10" />
           <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={() => signOut({ redirect: false }).then(() => { window.location.href = "/login" })}
             className={`mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-white/70 transition-colors hover:bg-white/10 hover:text-white ${
               collapsed ? "justify-center px-2" : ""
             }`}
@@ -243,7 +243,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-auto p-6">{children}</main>
+        <main className="flex-1 overflow-auto p-6">
+          <div key={pathname} className="dashboard-page-transition">
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   )
@@ -290,7 +294,7 @@ function AvatarMenu({ name, email }: { name: string | null; email: string | null
         <DropdownMenuSeparator />
         <DropdownMenuItem
           variant="destructive"
-          onClick={() => signOut({ callbackUrl: "/login" })}
+          onClick={() => signOut({ redirect: false }).then(() => { window.location.href = "/login" })}
           className="flex items-center gap-2"
         >
           <LogOut className="h-4 w-4" />

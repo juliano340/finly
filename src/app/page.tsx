@@ -488,6 +488,9 @@ export default function HomePage() {
           .section-header h2 { font-size: 32px; }
         }
         @media (max-width: 640px) {
+          .header-inner { height: 56px; }
+          .header .btn { padding: 8px 16px; font-size: 13px; }
+          .header .btn-primary { padding: 8px 14px; }
           .hero { min-height: auto; padding: 100px 0 60px; }
           .hero h1 { font-size: 32px; }
           .hero p { font-size: 16px; }

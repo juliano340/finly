@@ -188,7 +188,8 @@ function SignOutButton() {
       variant="destructive"
       onClick={async () => {
         const { signOut } = await import("next-auth/react")
-        await signOut({ callbackUrl: "/login" })
+        await signOut({ redirect: false })
+        window.location.href = "/login"
       }}
     >
       <LogOut className="mr-2 h-4 w-4" /> Sair da conta
