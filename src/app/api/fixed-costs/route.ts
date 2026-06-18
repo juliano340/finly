@@ -3,14 +3,18 @@ import { auth } from "@/lib/auth"
 import { fixedCostSchema } from "@/features/fixed-costs/fixed-costs.schema"
 import { createFixedCost, getFixedCosts } from "@/features/fixed-costs/fixed-costs.service"
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
 
+  const url = new URL(request.url)
+  const type = url.searchParams.get("type") as "INCOME" | "EXPENSE" | null
+
   const fixedCosts = await getFixedCosts(session.user.id)
-  return NextResponse.json(fixedCosts)
+  const filtered = type ? fixedCosts.filter((fc: { type: string }) => fc.type === type) : fixedCosts
+  return NextResponse.json(filtered)
 }
 
 export async function POST(request: Request) {

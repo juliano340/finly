@@ -6,6 +6,12 @@ import { prisma } from "@/lib/prisma"
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
+  logger: {
+    error(error) {
+      if (error?.name === "CredentialsSignin") return
+      console.error("[auth]", error)
+    },
+  },
   providers: [
     Credentials({
       name: "credentials",

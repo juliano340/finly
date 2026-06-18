@@ -39,7 +39,14 @@ export function CategoryCard({ category, onEdit, onDelete }: CategoryCardProps) 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <p className="font-medium truncate">{category.name}</p>
-          <Badge variant="secondary" className="text-[10px]">
+          <Badge
+            variant="secondary"
+            className={`text-[10px] ${
+              category.type === "INCOME"
+                ? "bg-emerald-500/10 text-emerald-600"
+                : "bg-red-500/10 text-red-600"
+            }`}
+          >
             {category.type === "INCOME" ? "Receita" : "Despesa"}
           </Badge>
         </div>

@@ -1,14 +1,14 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { formatCurrency, formatDate } from "@/lib/utils"
 
   interface ClosingData {
     summary: {
-    cardInvoicesTotal: number; cardInvoicesPaidTotal: number; fixedCostsTotal: number; fixedCostsInsideCardTotal: number; fixedCostsOutsideCardTotal: number; fixedCostsOutsideCardTotalAll: number; looseExpensesTotal: number; incomeTotal: number; totalToPay: number; totalSpent: number; projectedBalance: number
+    cardInvoicesTotal: number; cardInvoicesPaidTotal: number; fixedCostsTotal: number; fixedCostsInsideCardTotal: number; fixedCostsOutsideCardTotal: number; fixedCostsOutsideCardTotalAll: number; fixedIncomeTotal: number; looseExpensesTotal: number; incomeTotal: number; totalToPay: number; totalSpent: number; projectedBalance: number
     estimatedInvoicesByCard: { cardId: string; cardName: string; estimatedAmount: number; invoiceAmount: number; difference: number }[]
   }
   invoices: { id: string; amount: number; dueDate: string; status: "PENDING" | "PAID"; card: { name: string } }[]
@@ -18,6 +18,24 @@ import { formatCurrency, formatDate } from "@/lib/utils"
 function currentMonth() {
   const now = new Date()
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
+}
+
+function previousMonth(month: string) {
+  const [y, m] = month.split("-").map(Number)
+  const d = new Date(y, m - 2, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+}
+
+function nextMonth(month: string) {
+  const [y, m] = month.split("-").map(Number)
+  const d = new Date(y, m, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+}
+
+function monthLabel(month: string) {
+  const [y, m] = month.split("-").map(Number)
+  const date = new Date(y, m - 1, 1)
+  return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
 }
 
 export default function MonthlyClosingPage() {
@@ -49,7 +67,7 @@ export default function MonthlyClosingPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between"><div><h1 className="text-2xl font-bold tracking-tight">Fechamento Mensal</h1><p className="text-muted-foreground">Gastos do mês: realizado vs. a pagar.</p></div><Input className="w-40" type="month" value={month} onChange={(e) => setMonth(e.target.value)} /></div>
+      <div className="flex items-center justify-between"><div><h1 className="text-2xl font-bold tracking-tight">Fechamento Mensal</h1><p className="text-muted-foreground">Gastos do mês: realizado vs. a pagar.</p></div><div className="flex items-center gap-1 rounded-md border bg-background px-2 py-1"><Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(previousMonth(month))}><ChevronLeft className="size-4" /></Button><span className="min-w-28 text-center text-sm font-medium capitalize">{monthLabel(month)}</span><Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(nextMonth(month))}><ChevronRight className="size-4" /></Button></div></div>
 
       <div className="grid gap-4 md:grid-cols-3">
         <Metric title="Saídas totais do mês" value={summary?.totalSpent ?? 0} description="Tudo: faturas + fixos + avulsas" highlight />
@@ -77,7 +95,7 @@ export default function MonthlyClosingPage() {
         <Metric title="Faturas totais" value={(summary?.cardInvoicesTotal ?? 0) + (summary?.cardInvoicesPaidTotal ?? 0)} description={`${formatCurrency(summary?.cardInvoicesPaidTotal ?? 0)} já pago · ${formatCurrency(summary?.cardInvoicesTotal ?? 0)} pendente`} />
         <Metric title="Fixos fora do cartão" value={summary?.fixedCostsOutsideCardTotalAll ?? 0} description={`${formatCurrency(summary?.fixedCostsOutsideCardTotal ?? 0)} pendente · ${formatCurrency((summary?.fixedCostsOutsideCardTotalAll ?? 0) - (summary?.fixedCostsOutsideCardTotal ?? 0))} já pago`} />
         <Metric title="Despesas avulsas" value={summary?.looseExpensesTotal ?? 0} description="Transações não recorrentes" />
-        <Metric title="Receitas do mês" value={summary?.incomeTotal ?? 0} description="Informativo; não reduz o total" />
+        <Metric title="Receitas do mês" value={summary?.incomeTotal ?? 0} description={`${formatCurrency(summary?.fixedIncomeTotal ?? 0)} fixas · ${formatCurrency((summary?.incomeTotal ?? 0) - (summary?.fixedIncomeTotal ?? 0))} avulsas`} />
         <Metric title="Fixos totais" value={summary?.fixedCostsTotal ?? 0} description="Dentro + fora do cartão" />
         <Metric title="Fixos dentro do cartão" value={summary?.fixedCostsInsideCardTotal ?? 0} description="Previstos na fatura" />
         <Metric title="Saldo projetado" value={summary?.projectedBalance ?? 0} description="Receitas - total a pagar" />

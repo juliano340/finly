@@ -26,6 +26,7 @@ export interface MonthlyEvolutionItem {
   total: number
   invoices: number
   fixedCosts: number
+  incomeFixedCosts: number
   looseExpenses: number
 }
 
@@ -166,13 +167,17 @@ export async function getMonthlyEvolution(
     const financialMonth = await ensureFinancialMonth(userId, month, db)
     await ensureFixedCostOccurrences(userId, month, financialMonth.id, db)
 
-    const [invoices, fixedCosts, looseExpenses] = await Promise.all([
+    const [invoices, fixedCosts, incomeFixedCostOccurrences, looseExpenses] = await Promise.all([
       db.cardInvoice.aggregate({
         where: { userId, month },
         _sum: { amount: true },
       }),
       db.fixedCostOccurrence.findMany({
-        where: { userId, month, fixedCost: { paidInsideCard: false } },
+        where: { userId, month, fixedCost: { paidInsideCard: false, type: "EXPENSE" } },
+        select: { amount: true },
+      }),
+      db.fixedCostOccurrence.findMany({
+        where: { userId, month, fixedCost: { type: "INCOME" } },
         select: { amount: true },
       }),
       aggregateTransactions(userId, month, "EXPENSE", db),
@@ -180,6 +185,7 @@ export async function getMonthlyEvolution(
 
     const invoiceTotal = invoices._sum.amount ?? 0
     const fixedCostTotal = fixedCosts.reduce((sum, item) => sum + item.amount, 0)
+    const incomeFixedCostTotal = incomeFixedCostOccurrences.reduce((sum, item) => sum + item.amount, 0)
     const total = invoiceTotal + fixedCostTotal + looseExpenses
     items.push({
       month,
@@ -187,6 +193,7 @@ export async function getMonthlyEvolution(
       total,
       invoices: invoiceTotal,
       fixedCosts: fixedCostTotal,
+      incomeFixedCosts: incomeFixedCostTotal,
       looseExpenses,
     })
   }

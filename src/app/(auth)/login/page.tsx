@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, LogIn } from "lucide-react";
+import { Eye, EyeOff, LogIn, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,14 +16,36 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
+  const [hydrated, setHydrated] = useState(false);
   const [loading, setLoading] = useState(false);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const [revealSecondsLeft, setRevealSecondsLeft] = useState(0);
+  const REVEAL_DURATION = 3;
+
+  useEffect(() => {
+    if (revealSecondsLeft <= 0) return
+    const interval = window.setInterval(() => {
+      setRevealSecondsLeft((prev) => {
+        if (prev <= 0.05) {
+          setShowPassword(false)
+          return 0
+        }
+        return prev - 0.05
+      })
+    }, 50)
+    return () => window.clearInterval(interval)
+  }, [revealSecondsLeft])
 
   useEffect(() => {
     const savedEmail = localStorage.getItem("rememberedEmail");
     if (savedEmail) {
       setEmail(savedEmail);
-      setRemember(true);
     }
+    const savedRemember = localStorage.getItem("rememberChoice");
+    if (savedRemember !== null) {
+      setRemember(savedRemember === "true");
+    }
+    setHydrated(true);
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -40,6 +62,8 @@ export default function LoginPage() {
 
     if (result?.error) {
       toast.error("Email ou senha inválidos");
+      setPassword("");
+      passwordRef.current?.focus();
       return;
     }
 
@@ -48,9 +72,18 @@ export default function LoginPage() {
     } else {
       localStorage.removeItem("rememberedEmail");
     }
+    localStorage.setItem("rememberChoice", String(remember));
 
     router.push("/dashboard");
     router.refresh();
+  }
+
+  function handleRememberChange(checked: boolean) {
+    setRemember(checked);
+    localStorage.setItem("rememberChoice", String(checked));
+    if (!checked) {
+      localStorage.removeItem("rememberedEmail");
+    }
   }
 
   return (
@@ -96,6 +129,7 @@ export default function LoginPage() {
               <div className="relative">
                 <Input
                   id="password"
+                  ref={passwordRef}
                   type={showPassword ? "text" : "password"}
                   placeholder="Sua senha"
                   value={password}
@@ -105,27 +139,53 @@ export default function LoginPage() {
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={() => {
+                    if (showPassword) {
+                      setShowPassword(false)
+                      setRevealSecondsLeft(0)
+                    } else {
+                      setShowPassword(true)
+                      setRevealSecondsLeft(REVEAL_DURATION)
+                    }
+                  }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   tabIndex={-1}
                 >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
+                  <span className="relative inline-flex h-7 w-7 items-center justify-center">
+                    {showPassword && (
+                      <svg className="absolute inset-0 -rotate-90" viewBox="0 0 28 28">
+                        <circle cx="14" cy="14" r="12" fill="none" stroke="currentColor" strokeOpacity="0.2" strokeWidth="1.5" />
+                        <circle
+                          cx="14"
+                          cy="14"
+                          r="12"
+                          fill="none"
+                          stroke="var(--primary)"
+                          strokeWidth="1.5"
+                          strokeDasharray={2 * Math.PI * 12}
+                          strokeDashoffset={2 * Math.PI * 12 * (1 - revealSecondsLeft / REVEAL_DURATION)}
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                    )}
+                    {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  </span>
                 </button>
               </div>
             </div>
 
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                <input
-                  type="checkbox"
-                  checked={remember}
-                  onChange={(e) => setRemember(e.target.checked)}
-                  className="h-4 w-4 rounded border-border"
-                />
+                {hydrated ? (
+                  <input
+                    type="checkbox"
+                    checked={remember}
+                    onChange={(e) => handleRememberChange(e.target.checked)}
+                    className="h-4 w-4 rounded border-border"
+                  />
+                ) : (
+                  <span className="inline-block h-4 w-4 rounded border border-border" aria-hidden />
+                )}
                 Lembrar de mim
               </label>
               <a href="#" className="text-sm text-primary hover:underline">
@@ -152,6 +212,40 @@ export default function LoginPage() {
               )}
             </Button>
           </form>
+
+          <div className="mt-6 rounded-lg border border-dashed bg-muted/30 p-4">
+            <p className="text-xs font-medium text-muted-foreground">Conta de demonstração</p>
+            <p className="mt-1 text-sm">
+              <span className="font-mono">demo@finly.com</span> · <span className="font-mono">demo1234</span>
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-3 w-full"
+              onClick={async () => {
+                setEmail("demo@finly.com")
+                setPassword("demo1234")
+                setLoading(true)
+                const result = await signIn("credentials", {
+                  email: "demo@finly.com",
+                  password: "demo1234",
+                  redirect: false,
+                })
+                setLoading(false)
+                if (result?.error) {
+                  toast.error("Conta demo não encontrada. Rode: npm run seed:demo")
+                } else {
+                  localStorage.setItem("rememberChoice", "true")
+                  localStorage.setItem("rememberedEmail", "demo@finly.com")
+                  router.push("/dashboard")
+                  router.refresh()
+                }
+              }}
+            >
+              <Sparkles className="mr-2 h-4 w-4" /> Entrar como demo
+            </Button>
+          </div>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Não tem conta?{" "}

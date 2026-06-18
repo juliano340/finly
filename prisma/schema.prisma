@@ -233,6 +233,7 @@ model CardInvoice {
 model FixedCost {
   id             String                 @id @default(cuid())
   name           String
+  type           TransactionType        @default(EXPENSE)
   defaultAmount  Float
   categoryId     String
   paymentMethod  FixedCostPaymentMethod

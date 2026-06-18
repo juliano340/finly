@@ -47,7 +47,7 @@ export async function getDueSoonNotifications(
         userId,
         month: { in: months },
         status: "PENDING",
-        fixedCost: { dueDay: { not: null } },
+        fixedCost: { dueDay: { not: null }, type: "EXPENSE" },
       },
       include: { fixedCost: true },
     }),

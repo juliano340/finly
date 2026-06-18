@@ -18,6 +18,7 @@ export interface MonthlyClosingSummary {
   fixedCostsInsideCardTotal: number
   fixedCostsOutsideCardTotal: number
   fixedCostsOutsideCardTotalAll: number
+  fixedIncomeTotal: number
   looseExpensesTotal: number
   incomeTotal: number
   totalToPay: number
@@ -58,9 +59,12 @@ export async function getMonthlyClosing(
   ])
 
   const cardInvoicesTotal = sum(invoices.filter((inv) => inv.status === "PENDING").map((inv) => inv.amount))
-  const fixedCostsTotal = sum(occurrences.map((item) => item.amount))
-  const insideCard = occurrences.filter((item) => item.fixedCost.paidInsideCard)
-  const outsideCard = occurrences.filter((item) => !item.fixedCost.paidInsideCard)
+  const expenseOccurrences = occurrences.filter((item) => item.fixedCost.type === "EXPENSE")
+  const incomeOccurrences = occurrences.filter((item) => item.fixedCost.type === "INCOME")
+  const fixedCostsTotal = sum(expenseOccurrences.map((item) => item.amount))
+  const fixedIncomeTotal = sum(incomeOccurrences.map((item) => item.amount))
+  const insideCard = expenseOccurrences.filter((item) => item.fixedCost.paidInsideCard)
+  const outsideCard = expenseOccurrences.filter((item) => !item.fixedCost.paidInsideCard)
   const fixedCostsInsideCardTotal = sum(insideCard.map((item) => item.amount))
   const fixedCostsOutsideCardTotal = sum(outsideCard.filter((item) => item.status === "PENDING").map((item) => item.amount))
   const fixedCostsOutsideCardTotalAll = sum(outsideCard.map((item) => item.amount))
@@ -69,6 +73,7 @@ export async function getMonthlyClosing(
   const allCardInvoices = sum(invoices.map((inv) => inv.amount))
   const allOutsideCard = sum(outsideCard.map((item) => item.amount))
   const totalSpent = allCardInvoices + allOutsideCard + looseExpenses
+  const totalIncome = income + fixedIncomeTotal
 
   return {
     financialMonth,
@@ -82,11 +87,12 @@ export async function getMonthlyClosing(
       fixedCostsOutsideCardTotal,
       fixedCostsOutsideCardTotalAll,
       cardInvoicesPaidTotal: allCardInvoices - cardInvoicesTotal,
+      fixedIncomeTotal,
       looseExpensesTotal: looseExpenses,
-      incomeTotal: income,
+      incomeTotal: totalIncome,
       totalToPay,
       totalSpent,
-      projectedBalance: income - totalToPay,
+      projectedBalance: totalIncome - totalToPay,
       estimatedInvoicesByCard: buildInvoiceEstimates(invoices, insideCard),
     } satisfies MonthlyClosingSummary,
   }
@@ -111,7 +117,7 @@ export async function payFixedCostOccurrence(
         data: {
           bankAccountId: occurrence.fixedCost.bankAccountId,
           amount: occurrence.amount,
-          type: "EXPENSE",
+          type: occurrence.fixedCost.type,
           description: `PAGAMENTO ${occurrence.fixedCost.name}`,
           date: new Date(),
           userId,
@@ -147,7 +153,7 @@ export async function unpayFixedCostOccurrence(
         where: {
           bankAccountId: occurrence.fixedCost.bankAccountId,
           amount: occurrence.amount,
-          type: "EXPENSE",
+          type: occurrence.fixedCost.type,
           description,
           userId,
         },
@@ -202,6 +208,7 @@ export async function markCardInvoiceFixedCostsPaid(
       fixedCost: {
         paidInsideCard: true,
         cardId: invoice.cardId,
+        type: "EXPENSE",
       },
     },
     data: { status: "PAID", paidAt },
@@ -223,6 +230,7 @@ export async function markCardInvoiceFixedCostsPending(
       fixedCost: {
         paidInsideCard: true,
         cardId: invoice.cardId,
+        type: "EXPENSE",
       },
     },
     data: { status: "PENDING", paidAt: null },

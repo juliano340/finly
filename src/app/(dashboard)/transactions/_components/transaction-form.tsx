@@ -2,11 +2,11 @@
 
 import { useState } from "react"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -79,88 +79,90 @@ export function TransactionForm({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Valor</Label>
-            <Input
-              type="number"
-              step="0.01"
-              placeholder="0,00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              required
-            />
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full sm:max-w-md">
+        <SheetHeader>
+          <SheetTitle>{title}</SheetTitle>
+        </SheetHeader>
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-4 pb-4">
+          <div className="mt-4 space-y-4">
+            <div className="space-y-1">
+              <Label>Valor</Label>
+              <Input
+                type="number"
+                step="0.01"
+                placeholder="0,00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Tipo</Label>
+              <Select value={type} onValueChange={(v) => { setType((v ?? "EXPENSE") as typeof type); setCategoryId("") }}>
+                <SelectTrigger>
+                  <SelectValue>
+                    {type === "INCOME" ? "Receita" : "Despesa"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="EXPENSE">Despesa</SelectItem>
+                  <SelectItem value="INCOME">Receita</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Categoria</Label>
+              <Select value={categoryId} onValueChange={(value) => setCategoryId(value ?? "")} disabled={filteredCategories.length === 0}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione...">
+                    {categoryId
+                      ? categories.find((c) => c.id === categoryId)?.name ?? "Selecione..."
+                      : filteredCategories.length === 0
+                      ? "Nenhuma categoria disponível"
+                      : "Selecione..."}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredCategories.length === 0 ? (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                      Crie uma categoria de {type === "INCOME" ? "receita" : "despesa"} primeiro
+                    </div>
+                  ) : (
+                    filteredCategories.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Data</Label>
+              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+            </div>
+            <div className="space-y-1">
+              <Label>Descrição (opcional)</Label>
+              <Input
+                placeholder="Ex: Supermercado Extra"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                maxLength={200}
+              />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label>Tipo</Label>
-            <Select value={type} onValueChange={(v) => { setType((v ?? "EXPENSE") as typeof type); setCategoryId("") }}>
-              <SelectTrigger>
-                <SelectValue>
-                  {type === "INCOME" ? "Receita" : "Despesa"}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="EXPENSE">Despesa</SelectItem>
-                <SelectItem value="INCOME">Receita</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Categoria</Label>
-            <Select value={categoryId} onValueChange={(value) => setCategoryId(value ?? "")} disabled={filteredCategories.length === 0}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione...">
-                  {categoryId
-                    ? categories.find((c) => c.id === categoryId)?.name ?? "Selecione..."
-                    : filteredCategories.length === 0
-                    ? "Nenhuma categoria disponível"
-                    : "Selecione..."}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {filteredCategories.length === 0 ? (
-                  <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                    Crie uma categoria de {type === "INCOME" ? "receita" : "despesa"} primeiro
-                  </div>
-                ) : (
-                  filteredCategories.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Data</Label>
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label>Descrição (opcional)</Label>
-            <Input
-              placeholder="Ex: Supermercado Extra"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              maxLength={200}
-            />
-          </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
+          <div className="mt-6 flex gap-2">
+            <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" className="flex-1" disabled={loading}>
               {loading ? "Salvando..." : "Salvar"}
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   )
 }

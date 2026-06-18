@@ -12,6 +12,7 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url)
   const month = url.searchParams.get("month")
+  const type = url.searchParams.get("type") as "INCOME" | "EXPENSE" | null
   if (!month) {
     return NextResponse.json({ error: "Mês é obrigatório" }, { status: 400 })
   }
@@ -20,8 +21,12 @@ export async function GET(request: Request) {
   const financialMonth = await ensureFinancialMonth(userId, month, prisma)
   await ensureFixedCostOccurrences(userId, month, financialMonth.id, prisma)
 
+  const where = type
+    ? { userId, month, fixedCost: { type } }
+    : { userId, month }
+
   const occurrences = await prisma.fixedCostOccurrence.findMany({
-    where: { userId, month },
+    where,
     include: {
       fixedCost: {
         include: { category: true, card: true, bankAccount: true },

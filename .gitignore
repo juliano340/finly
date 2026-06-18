@@ -19,9 +19,14 @@
 # local screenshots
 landing-fixed-*.png
 
-# database
+# database (dados pessoais/financeiros)
 *.db
 *.db-journal
+*.sqlite
+*.sqlite3
+/prisma/dev.db
+/prisma/dev.db-journal
+/prisma/dev.db-*
 
 # next.js
 /.next/
@@ -42,6 +47,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+.env.local
+.env.*.local
 
 # vercel
 .vercel
@@ -50,4 +57,13 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# generated prisma client
 /src/generated/prisma
+
+# scripts de seed com dados pessoais
+/scripts/seed-*.local.ts
+
+# logs com dados pessoais
+*.log
+logs/
+scripts/seed-accounts.ts

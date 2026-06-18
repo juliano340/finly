@@ -1,0 +1,107 @@
+import { z } from "zod"
+
+const isoDate = z.string().transform((val, ctx) => {
+  const d = new Date(val)
+  if (isNaN(d.getTime())) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Data inválida" })
+    return z.NEVER
+  }
+  return d
+})
+
+export const backupSchema = z.object({
+  version: z.literal(1),
+  exportedAt: isoDate,
+  data: z.object({
+    categories: z.array(z.object({
+      id: z.string(),
+      name: z.string(),
+      icon: z.string().default("wallet"),
+      color: z.string().default("#0EA882"),
+      type: z.enum(["INCOME", "EXPENSE"]).default("EXPENSE"),
+    })),
+    financialMonths: z.array(z.object({
+      id: z.string(),
+      month: z.string(),
+      status: z.enum(["OPEN", "CLOSED"]).default("OPEN"),
+    })),
+    bankAccounts: z.array(z.object({
+      id: z.string(),
+      name: z.string(),
+      institution: z.string().nullable().optional(),
+      type: z.enum(["CHECKING", "SAVINGS", "DIGITAL", "CASH", "INVESTMENT"]).default("CHECKING"),
+      color: z.string().default("#22C55E"),
+      initialBalance: z.number().default(0),
+      active: z.boolean().default(true),
+    })),
+    cards: z.array(z.object({
+      id: z.string(),
+      name: z.string(),
+      brand: z.string().nullable().optional(),
+      color: z.string().default("#22C55E"),
+      closingDay: z.number().int().nullable().optional(),
+      dueDay: z.number().int().nullable().optional(),
+      bankAccountId: z.string().nullable().optional(),
+    })),
+    transactions: z.array(z.object({
+      id: z.string(),
+      amount: z.number(),
+      type: z.enum(["INCOME", "EXPENSE"]),
+      description: z.string().nullable().optional(),
+      date: isoDate,
+      categoryId: z.string(),
+    })),
+    budgets: z.array(z.object({
+      id: z.string(),
+      amount: z.number(),
+      month: z.string(),
+      categoryId: z.string(),
+    })),
+    bankAccountMovements: z.array(z.object({
+      id: z.string(),
+      bankAccountId: z.string(),
+      amount: z.number(),
+      type: z.enum(["INCOME", "EXPENSE"]),
+      description: z.string().nullable().optional(),
+      date: isoDate,
+    })),
+    fixedCosts: z.array(z.object({
+      id: z.string(),
+      name: z.string(),
+      type: z.enum(["INCOME", "EXPENSE"]).default("EXPENSE"),
+      defaultAmount: z.number(),
+      categoryId: z.string(),
+      paymentMethod: z.enum(["PIX", "BANK_SLIP", "DEBIT", "CREDIT_CARD", "CASH"]),
+      dueDay: z.number().int().nullable().optional(),
+      paidInsideCard: z.boolean().default(false),
+      cardId: z.string().nullable().optional(),
+      bankAccountId: z.string().nullable().optional(),
+      active: z.boolean().default(true),
+    })),
+    cardInvoices: z.array(z.object({
+      id: z.string(),
+      cardId: z.string(),
+      financialMonthId: z.string(),
+      month: z.string(),
+      dueDate: isoDate,
+      amount: z.number(),
+      status: z.enum(["PENDING", "PAID"]).default("PENDING"),
+      paidAt: isoDate.nullable().optional(),
+      paymentMethod: z.string().nullable().optional(),
+      paymentBankAccountId: z.string().nullable().optional(),
+      bankAccountMovementId: z.string().nullable().optional(),
+    })),
+    fixedCostOccurrences: z.array(z.object({
+      id: z.string(),
+      fixedCostId: z.string(),
+      financialMonthId: z.string(),
+      month: z.string(),
+      amount: z.number(),
+      status: z.enum(["PENDING", "PAID"]).default("PENDING"),
+      paidAt: isoDate.nullable().optional(),
+    })),
+  }),
+})
+
+export type BackupData = z.infer<typeof backupSchema>
+export type ImportMode = "replace" | "merge"

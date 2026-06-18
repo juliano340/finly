@@ -2,6 +2,7 @@ import { z } from "zod"
 
 const fixedCostShape = {
   name: z.string().min(1, "Nome é obrigatório").max(80),
+  type: z.enum(["INCOME", "EXPENSE"]).default("EXPENSE"),
   defaultAmount: z.coerce.number().positive("Valor deve ser maior que zero"),
   categoryId: z.string().min(1, "Categoria é obrigatória"),
   paymentMethod: z.enum(["PIX", "BANK_SLIP", "DEBIT", "CREDIT_CARD", "CASH"]),
@@ -15,6 +16,9 @@ const fixedCostShape = {
 export const fixedCostSchema = z.object(fixedCostShape).refine(
   (data) => !data.paidInsideCard || !!data.cardId,
   { message: "Cartão é obrigatório para custos pagos dentro do cartão", path: ["cardId"] }
+).refine(
+  (data) => data.type !== "INCOME" || !data.paidInsideCard,
+  { message: "Receitas fixas não podem ser pagas dentro do cartão", path: ["paidInsideCard"] }
 )
 
 export const fixedCostPartialSchema = z.object(fixedCostShape).partial()

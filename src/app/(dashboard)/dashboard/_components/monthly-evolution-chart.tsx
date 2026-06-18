@@ -5,13 +5,14 @@ import type { MonthlyEvolutionItem } from "@/features/dashboard/dashboard.servic
 
 interface MonthlyEvolutionChartProps {
   data: MonthlyEvolutionItem[]
-  metric: keyof Pick<MonthlyEvolutionItem, "total" | "invoices" | "fixedCosts" | "looseExpenses">
+  metric: keyof Pick<MonthlyEvolutionItem, "total" | "invoices" | "fixedCosts" | "incomeFixedCosts" | "looseExpenses">
 }
 
 const metricLabels = {
   total: "Total gasto",
   invoices: "Faturas",
   fixedCosts: "Custos fixos",
+  incomeFixedCosts: "Receitas fixas",
   looseExpenses: "Avulsas",
 }
 
@@ -19,6 +20,7 @@ const metricColors = {
   total: "#0EA882",
   invoices: "#2563EB",
   fixedCosts: "#F59E0B",
+  incomeFixedCosts: "#22C55E",
   looseExpenses: "#E85D5D",
 }
 

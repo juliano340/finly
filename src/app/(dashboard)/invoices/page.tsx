@@ -8,6 +8,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { toast } from "sonner"
 import { formatCurrency, formatDate } from "@/lib/utils"
 
 interface CardItem { id: string; name: string; color: string }
@@ -119,23 +120,34 @@ export default function InvoicesPage() {
   }
 
   const handleCreate = async (formData: FormData) => {
-    await fetch("/api/invoices", {
+    const res = await fetch("/api/invoices", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ cardId: formData.get("cardId"), month, dueDate: formData.get("dueDate"), amount: formData.get("amount"), status: formData.get("status") }),
     })
-    setCreating(false)
-    fetchData()
+    if (res.ok) {
+      const created = await res.json()
+      toast.success("Fatura criada!")
+      setCreating(false)
+      setInvoices((prev) => [...prev, created])
+    } else {
+      toast.error("Erro ao criar fatura")
+    }
   }
 
   const handleUpdate = async (invoiceId: string, formData: FormData) => {
-    await fetch(`/api/invoices/${invoiceId}`, {
+    const res = await fetch(`/api/invoices/${invoiceId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ cardId: formData.get("cardId"), dueDate: formData.get("dueDate"), amount: formData.get("amount"), status: formData.get("status") }),
     })
-    setSelectedInvoice(null)
-    fetchData()
+    if (res.ok) {
+      toast.success("Fatura atualizada!")
+      setSelectedInvoice(null)
+      fetchData()
+    } else {
+      toast.error("Erro ao atualizar fatura")
+    }
   }
 
   const handleDelete = async () => {
@@ -401,8 +413,8 @@ export default function InvoicesPage() {
                 }}
               >
                 <option value="">Selecione uma fatura</option>
-                {invoices.filter((i) => i.status === "PENDING").map((inv) => (
-                  <option key={inv.id} value={inv.id}>{inv.card.name} — {formatCurrency(inv.amount)}</option>
+                {invoices.map((inv) => (
+                  <option key={inv.id} value={inv.id}>{inv.card.name} — {formatCurrency(inv.amount)}{inv.status === "PAID" ? " (paga)" : ""}</option>
                 ))}
               </select>
             </div>

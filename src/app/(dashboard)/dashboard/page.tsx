@@ -23,12 +23,13 @@ import { RecentTransactions } from "./_components/recent-transactions"
 import { formatCurrency } from "@/lib/utils"
 import type { CardInvoiceEvolutionStats, DashboardStats, MonthlyEvolutionItem, MonthlyEvolutionStats } from "@/features/dashboard/dashboard.service"
 
-type EvolutionMetric = keyof Pick<MonthlyEvolutionItem, "total" | "invoices" | "fixedCosts" | "looseExpenses">
+type EvolutionMetric = keyof Pick<MonthlyEvolutionItem, "total" | "invoices" | "fixedCosts" | "incomeFixedCosts" | "looseExpenses">
 
 const evolutionMetrics: { key: EvolutionMetric; label: string }[] = [
   { key: "total", label: "Total" },
   { key: "invoices", label: "Faturas" },
   { key: "fixedCosts", label: "Custos fixos" },
+  { key: "incomeFixedCosts", label: "Receitas fixas" },
   { key: "looseExpenses", label: "Avulsas" },
 ]
 

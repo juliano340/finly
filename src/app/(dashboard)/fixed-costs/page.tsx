@@ -10,10 +10,10 @@ import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { formatCurrency } from "@/lib/utils"
 
-interface Category { id: string; name: string }
+interface Category { id: string; name: string; type: string }
 interface CardItem { id: string; name: string; color: string }
 interface BankAccountItem { id: string; name: string }
-interface FixedCostData { id: string; name: string; defaultAmount: number; categoryId: string; paymentMethod: string; dueDay: number | null; paidInsideCard: boolean; cardId: string | null; bankAccountId: string | null; active: boolean; category: Category; card: CardItem | null; bankAccount: BankAccountItem | null }
+interface FixedCostData { id: string; name: string; type: "INCOME" | "EXPENSE"; defaultAmount: number; categoryId: string; paymentMethod: string; dueDay: number | null; paidInsideCard: boolean; cardId: string | null; bankAccountId: string | null; active: boolean; category: Category; card: CardItem | null; bankAccount: BankAccountItem | null }
 
 interface Occurrence {
   id: string
@@ -63,6 +63,7 @@ export default function FixedCostsPage() {
   const [bankAccounts, setBankAccounts] = useState<BankAccountItem[]>([])
   const [occurrences, setOccurrences] = useState<Occurrence[]>([])
   const [month, setMonth] = useState(currentMonth)
+  const [activeTab, setActiveTab] = useState<"EXPENSE" | "INCOME">("EXPENSE")
   const [selectedTemplate, setSelectedTemplate] = useState<FixedCostData | null>(null)
   const [creating, setCreating] = useState(false)
   const [insideCard, setInsideCard] = useState(false)
@@ -79,7 +80,7 @@ export default function FixedCostsPage() {
       fetch("/api/bank-accounts"),
       fetch(`/api/fixed-costs/occurrences?month=${month}`),
     ])
-    if (catRes.ok) setCategories((await catRes.json()).filter((c: Category & { type: string }) => c.type === "EXPENSE"))
+    if (catRes.ok) setCategories(await catRes.json())
     if (cardRes.ok) setCards(await cardRes.json())
     if (accountRes.ok) setBankAccounts(await accountRes.json())
     if (occRes.ok) setOccurrences(await occRes.json())
@@ -120,15 +121,18 @@ export default function FixedCostsPage() {
     }
   }
 
+  const filteredCategories = categories.filter((c) => c.type === activeTab)
+
   const handleCreate = async (formData: FormData) => {
-    const paidInsideCard = formData.get("paidInsideCard") === "on"
+    const paidInsideCard = activeTab === "EXPENSE" && formData.get("paidInsideCard") === "on"
     setCreateError("")
     const res = await fetch("/api/fixed-costs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: formData.get("name"),
-        defaultAmount: formData.get("defaultAmount"),
+        type: activeTab,
+        defaultAmount: String(formData.get("defaultAmount") ?? "").replace(",", "."),
         categoryId: formData.get("categoryId"),
         paymentMethod: paidInsideCard ? "CREDIT_CARD" : formData.get("paymentMethod"),
         dueDay: formData.get("dueDay") || null,
@@ -144,20 +148,21 @@ export default function FixedCostsPage() {
       toast.error(err.error ?? "Erro ao criar custo fixo")
       return
     }
-    toast.success("Custo fixo criado com sucesso.")
+    toast.success(activeTab === "EXPENSE" ? "Custo fixo criado com sucesso." : "Receita fixa criada com sucesso.")
     setCreating(false)
     fetchData()
   }
 
   const handleUpdate = async (item: FixedCostData, formData: FormData) => {
-    const paidInsideCard = formData.get("paidInsideCard") === "on"
+    const paidInsideCard = item.type === "EXPENSE" && formData.get("paidInsideCard") === "on"
     setUpdateError("")
     const res = await fetch(`/api/fixed-costs/${item.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: formData.get("name"),
-        defaultAmount: formData.get("defaultAmount"),
+        type: item.type,
+        defaultAmount: String(formData.get("defaultAmount") ?? "").replace(",", "."),
         categoryId: formData.get("categoryId"),
         paymentMethod: paidInsideCard ? "CREDIT_CARD" : formData.get("paymentMethod"),
         dueDay: formData.get("dueDay") || null,
@@ -183,9 +188,9 @@ export default function FixedCostsPage() {
     setConfirmDelete(null)
     setSelectedTemplate(null)
     if (res.ok) {
-      toast.success("Custo fixo excluído.")
+      toast.success("Lançamento fixo excluído.")
     } else {
-      toast.error("Não foi possível excluir o custo fixo.")
+      toast.error("Não foi possível excluir o lançamento fixo.")
     }
     fetchData()
   }
@@ -195,14 +200,15 @@ export default function FixedCostsPage() {
     setSelectedTemplate(item)
   }
 
-  const totalPending = occurrences.filter((o) => o.status === "PENDING").reduce((s, o) => s + o.amount, 0)
-  const totalPaid = occurrences.filter((o) => o.status === "PAID").reduce((s, o) => s + o.amount, 0)
+  const filteredOccurrences = occurrences.filter((o) => o.fixedCost.type === activeTab)
+  const totalPending = filteredOccurrences.filter((o) => o.status === "PENDING").reduce((s, o) => s + o.amount, 0)
+  const totalPaid = filteredOccurrences.filter((o) => o.status === "PAID").reduce((s, o) => s + o.amount, 0)
   const totalAll = totalPending + totalPaid
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-2xl font-bold tracking-tight">Custos Fixos</h1><p className="text-muted-foreground">Contas mensais recorrentes.</p></div>
+        <div><h1 className="text-2xl font-bold tracking-tight">Lançamentos Fixos</h1><p className="text-muted-foreground">Entradas e saídas recorrentes.</p></div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 rounded-md border bg-background px-2 py-1">
             <Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(previousMonth(month))}><ChevronLeft className="size-4" /></Button>
@@ -210,8 +216,13 @@ export default function FixedCostsPage() {
             <Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(nextMonth(month))}><ChevronRight className="size-4" /></Button>
           </div>
           <Input className="w-32" type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
-          <Button onClick={() => { setInsideCard(false); setCreating(true) }}>Novo custo fixo</Button>
+          <Button onClick={() => { setInsideCard(false); setCreating(true) }}>Novo {activeTab === "EXPENSE" ? "custo fixo" : "receita fixa"}</Button>
         </div>
+      </div>
+
+      <div className="flex gap-1 rounded-md border bg-background p-1 w-fit">
+        <button type="button" onClick={() => setActiveTab("EXPENSE")} className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${activeTab === "EXPENSE" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Despesas</button>
+        <button type="button" onClick={() => setActiveTab("INCOME")} className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${activeTab === "INCOME" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Receitas</button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -234,9 +245,9 @@ export default function FixedCostsPage() {
             </tr>
           </thead>
           <tbody>
-            {occurrences.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">Nenhum custo fixo neste mês.</td></tr>
-            ) : occurrences.map((occ) => {
+            {filteredOccurrences.length === 0 ? (
+              <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">Nenhum lançamento fixo neste mês.</td></tr>
+            ) : filteredOccurrences.map((occ) => {
               const isLoading = payingId === occ.fixedCostId || unpayingId === occ.fixedCostId
               return (
                 <tr key={occ.id} className="border-b transition-colors hover:bg-muted/50">
@@ -303,9 +314,9 @@ export default function FixedCostsPage() {
       </div>
 
       <div className="space-y-2 md:hidden">
-        {occurrences.length === 0 ? (
-          <Card className="border-0 shadow-sm"><CardContent className="p-8 text-center text-sm text-muted-foreground">Nenhum custo fixo neste mês.</CardContent></Card>
-        ) : occurrences.map((occ) => {
+        {filteredOccurrences.length === 0 ? (
+          <Card className="border-0 shadow-sm"><CardContent className="p-8 text-center text-sm text-muted-foreground">Nenhum lançamento fixo neste mês.</CardContent></Card>
+        ) : filteredOccurrences.map((occ) => {
           const isLoading = payingId === occ.fixedCostId || unpayingId === occ.fixedCostId
           return (
             <div key={occ.id} className="flex items-center gap-2">
@@ -372,7 +383,7 @@ export default function FixedCostsPage() {
         <SheetContent className="w-full sm:max-w-md">
           {creating ? (
             <>
-              <SheetHeader><SheetTitle>Novo custo fixo</SheetTitle></SheetHeader>
+              <SheetHeader><SheetTitle>Novo {activeTab === "EXPENSE" ? "custo fixo" : "receita fixa"}</SheetTitle></SheetHeader>
               <form action={handleCreate} className="flex-1 overflow-y-auto px-4 pb-4">
                 <div className="mt-4 grid gap-4">
                   <div className="space-y-1">
@@ -381,7 +392,7 @@ export default function FixedCostsPage() {
                   </div>
                   <div className="space-y-1">
                     <label className="text-sm font-medium">Valor padrão</label>
-                    <Input name="defaultAmount" type="number" step="0.01" placeholder="0,00" required />
+                    <Input name="defaultAmount" type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="0,00" required />
                   </div>
                   <div className="space-y-1">
                     <label className="text-sm font-medium">Dia de vencimento</label>
@@ -390,31 +401,35 @@ export default function FixedCostsPage() {
                   <div className="space-y-1">
                     <label className="text-sm font-medium">Categoria</label>
                     <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="categoryId" required>
-                      {categories.map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                      {filteredCategories.map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
                     </select>
                   </div>
-                  <label className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" checked={insideCard} onChange={(e) => setInsideCard(e.target.checked)} name="paidInsideCard" />
-                    Dentro do cartão
-                  </label>
-                  {!insideCard && (
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium">Método de pagamento</label>
-                      <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="paymentMethod" defaultValue="PIX">
-                        <option value="PIX">Pix</option>
-                        <option value="BANK_SLIP">Boleto</option>
-                        <option value="DEBIT">Débito</option>
-                        <option value="CASH">Dinheiro</option>
-                      </select>
-                    </div>
-                  )}
-                  {insideCard && (
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium">Cartão</label>
-                      <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="cardId" required>
-                        {cards.map((card) => <option key={card.id} value={card.id}>{card.name}</option>)}
-                      </select>
-                    </div>
+                  {activeTab === "EXPENSE" && (
+                    <>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked={insideCard} onChange={(e) => setInsideCard(e.target.checked)} name="paidInsideCard" />
+                        Dentro do cartão
+                      </label>
+                      {!insideCard && (
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium">Método de pagamento</label>
+                          <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="paymentMethod" defaultValue="PIX">
+                            <option value="PIX">Pix</option>
+                            <option value="BANK_SLIP">Boleto</option>
+                            <option value="DEBIT">Débito</option>
+                            <option value="CASH">Dinheiro</option>
+                          </select>
+                        </div>
+                      )}
+                      {insideCard && (
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium">Cartão</label>
+                          <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="cardId" required>
+                            {cards.map((card) => <option key={card.id} value={card.id}>{card.name}</option>)}
+                          </select>
+                        </div>
+                      )}
+                    </>
                   )}
                   <div className="space-y-1">
                     <label className="text-sm font-medium">Conta prevista (débito)</label>
@@ -446,7 +461,7 @@ export default function FixedCostsPage() {
                     </div>
                     <div className="space-y-1">
                       <label className="text-sm font-medium">Valor padrão</label>
-                      <Input name="defaultAmount" type="number" step="0.01" defaultValue={selectedTemplate.defaultAmount} required />
+                      <Input name="defaultAmount" type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*" defaultValue={selectedTemplate.defaultAmount} required />
                     </div>
                     <div className="space-y-1">
                       <label className="text-sm font-medium">Dia de vencimento</label>
@@ -455,32 +470,36 @@ export default function FixedCostsPage() {
                     <div className="space-y-1">
                       <label className="text-sm font-medium">Categoria</label>
                       <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="categoryId" defaultValue={selectedTemplate.categoryId} required>
-                        {categories.map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                        {filteredCategories.map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
                       </select>
                     </div>
-                    <label className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" defaultChecked={selectedTemplate.paidInsideCard} name="paidInsideCard" onChange={(e) => setInsideCard(e.target.checked)} />
-                      Dentro do cartão
-                    </label>
-                    {!insideCard && (
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium">Método de pagamento</label>
-                        <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="paymentMethod" defaultValue={selectedTemplate.paymentMethod}>
-                          <option value="PIX">Pix</option>
-                          <option value="BANK_SLIP">Boleto</option>
-                          <option value="DEBIT">Débito</option>
-                          <option value="CASH">Dinheiro</option>
-                        </select>
-                      </div>
-                    )}
-                    {insideCard && (
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium">Cartão</label>
-                        <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="cardId" defaultValue={selectedTemplate.cardId ?? ""} required>
-                          <option value="">Selecione um cartão</option>
-                          {cards.map((card) => <option key={card.id} value={card.id}>{card.name}</option>)}
-                        </select>
-                      </div>
+                    {selectedTemplate.type === "EXPENSE" && (
+                      <>
+                        <label className="flex items-center gap-2 text-sm">
+                          <input type="checkbox" defaultChecked={selectedTemplate.paidInsideCard} name="paidInsideCard" onChange={(e) => setInsideCard(e.target.checked)} />
+                          Dentro do cartão
+                        </label>
+                        {!insideCard && (
+                          <div className="space-y-1">
+                            <label className="text-sm font-medium">Método de pagamento</label>
+                            <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="paymentMethod" defaultValue={selectedTemplate.paymentMethod}>
+                              <option value="PIX">Pix</option>
+                              <option value="BANK_SLIP">Boleto</option>
+                              <option value="DEBIT">Débito</option>
+                              <option value="CASH">Dinheiro</option>
+                            </select>
+                          </div>
+                        )}
+                        {insideCard && (
+                          <div className="space-y-1">
+                            <label className="text-sm font-medium">Cartão</label>
+                            <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="cardId" defaultValue={selectedTemplate.cardId ?? ""} required>
+                              <option value="">Selecione um cartão</option>
+                              {cards.map((card) => <option key={card.id} value={card.id}>{card.name}</option>)}
+                            </select>
+                          </div>
+                        )}
+                      </>
                     )}
                     <div className="space-y-1">
                       <label className="text-sm font-medium">Conta prevista (débito)</label>
@@ -497,7 +516,7 @@ export default function FixedCostsPage() {
                     <Button type="submit" className="w-full">Salvar alterações</Button>
                   </form>
                   <Button type="button" variant="destructive" className="w-full" onClick={() => setConfirmDelete(selectedTemplate.id)}>
-                    <Trash2 className="mr-2 h-4 w-4" />Excluir custo fixo
+                    <Trash2 className="mr-2 h-4 w-4" />Excluir lançamento fixo
                   </Button>
                 </div>
               </div>
@@ -509,7 +528,7 @@ export default function FixedCostsPage() {
       <ConfirmDialog
         open={!!confirmDelete}
         onOpenChange={() => setConfirmDelete(null)}
-        title="Excluir custo fixo"
+        title="Excluir lançamento fixo"
         description="Tem certeza? Esta ação não pode ser desfeita."
         confirmText="Excluir"
         onConfirm={() => confirmDelete && handleDelete(confirmDelete)}

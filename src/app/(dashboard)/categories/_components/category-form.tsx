@@ -2,11 +2,11 @@
 
 import { useState } from "react"
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -60,7 +60,7 @@ export function CategoryForm({
   title,
 }: CategoryFormProps) {
   const [name, setName] = useState(initial?.name ?? "")
-  const [type, setType] = useState<"INCOME" | "EXPENSE">(initial?.type ?? "EXPENSE")
+  const [type, setType] = useState<"Despesa" | "Receita">(initial?.type === "INCOME" ? "Receita" : "Despesa")
   const [icon, setIcon] = useState(initial?.icon ?? "wallet")
   const [color, setColor] = useState(initial?.color ?? "#0EA882")
   const [error, setError] = useState("")
@@ -75,7 +75,7 @@ export function CategoryForm({
     setError("")
     setLoading(true)
     try {
-      await onSubmit({ name: name.trim(), type, icon, color })
+      await onSubmit({ name: name.trim(), type: type === "Receita" ? "INCOME" : "EXPENSE", icon, color })
       onOpenChange(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao salvar")
@@ -85,81 +85,84 @@ export function CategoryForm({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="cat-name">Nome</Label>
-            <Input
-              id="cat-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Ex: Alimentação"
-              maxLength={50}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Tipo</Label>
-            <Select value={type} onValueChange={(v) => setType((v ?? "EXPENSE") as typeof type)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="EXPENSE">Despesa</SelectItem>
-                <SelectItem value="INCOME">Receita</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Ícone</Label>
-            <Select value={icon} onValueChange={(value) => setIcon(value ?? "wallet")}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {iconOptions.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>
-                    {o.label}
-                  </SelectItem>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full sm:max-w-md">
+        <SheetHeader>
+          <SheetTitle>{title}</SheetTitle>
+        </SheetHeader>
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-4 pb-4">
+          <div className="mt-4 space-y-4">
+            <div className="space-y-1">
+              <Label htmlFor="cat-name">Nome</Label>
+              <Input
+                id="cat-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ex: Alimentação"
+                maxLength={50}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Tipo</Label>
+              <Select value={type} onValueChange={(v) => setType((v ?? "EXPENSE") as typeof type)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Despesa">Despesa</SelectItem>
+                  <SelectItem value="Receita">Receita</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Ícone</Label>
+              <Select value={icon} onValueChange={(value) => setIcon(value ?? "wallet")}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {iconOptions.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Cor</Label>
+              <div className="flex flex-wrap gap-2">
+                {colorOptions.map((c) => (
+                  <button
+                    key={c.value}
+                    type="button"
+                    className={`h-8 w-8 rounded-full border-2 transition-all ${
+                      color === c.value ? "border-foreground scale-110" : "border-transparent"
+                    }`}
+                    style={{ backgroundColor: c.value }}
+                    onClick={() => setColor(c.value)}
+                    title={c.label}
+                  />
                 ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Cor</Label>
-            <div className="flex flex-wrap gap-2">
-              {colorOptions.map((c) => (
-                <button
-                  key={c.value}
-                  type="button"
-                  className={`h-8 w-8 rounded-full border-2 transition-all ${
-                    color === c.value ? "border-foreground scale-110" : "border-transparent"
-                  }`}
-                  style={{ backgroundColor: c.value }}
-                  onClick={() => setColor(c.value)}
-                  title={c.label}
-                />
-              ))}
+              </div>
             </div>
           </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <div className="flex justify-end gap-2">
+          {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
+          <div className="mt-6 flex gap-2">
             <Button
               type="button"
               variant="outline"
+              className="flex-1"
               onClick={() => onOpenChange(false)}
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading || !name.trim()}>
+            <Button type="submit" className="flex-1" disabled={loading || !name.trim()}>
               {loading ? "Salvando..." : "Salvar"}
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   )
 }

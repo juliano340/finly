@@ -1,12 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useTheme } from "next-themes"
-import { Loader2, LogOut, Moon, Save, Sun } from "lucide-react"
+import { Database, Download, Loader2, LogOut, Moon, Save, Sun, Upload } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -27,6 +28,11 @@ export default function SettingsPage() {
   const [name, setName] = useState("")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [importMode, setImportMode] = useState<"replace" | "merge">("replace")
+  const [restoreFile, setRestoreFile] = useState<File | null>(null)
+  const [restoring, setRestoring] = useState(false)
+  const [confirmRestore, setConfirmRestore] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     let active = true
@@ -75,6 +81,44 @@ export default function SettingsPage() {
     .join("")
     .toUpperCase() || "U"
 
+  function handleExport() {
+    window.location.href = "/api/backup/export"
+    toast.success("Backup exportado!")
+  }
+
+  async function handleRestore() {
+    if (!restoreFile) {
+      toast.error("Selecione um arquivo de backup.")
+      return
+    }
+    setConfirmRestore(false)
+    setRestoring(true)
+    try {
+      const text = await restoreFile.text()
+      const json = JSON.parse(text)
+      const res = await fetch(`/api/backup/restore?mode=${importMode}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(json),
+      })
+      if (res.ok) {
+        const result = await res.json()
+        const c = result.imported as Record<string, number>
+        const total = Object.values(c).reduce((a, b) => a + b, 0)
+        toast.success(`${total} registros importados com sucesso!`)
+        setRestoreFile(null)
+        if (fileInputRef.current) fileInputRef.current.value = ""
+      } else {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.error ?? "Erro ao importar backup")
+      }
+    } catch {
+      toast.error("Arquivo inválido ou corrompido.")
+    } finally {
+      setRestoring(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -87,6 +131,7 @@ export default function SettingsPage() {
           <TabsTrigger value="account">Conta</TabsTrigger>
           <TabsTrigger value="appearance">Aparência</TabsTrigger>
           <TabsTrigger value="session">Sessão</TabsTrigger>
+          <TabsTrigger value="data">Dados</TabsTrigger>
         </TabsList>
 
         <TabsContent value="account" className="w-full space-y-4">
@@ -177,22 +222,124 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="data" className="w-full space-y-4">
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base">Exportar dados</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Baixe todos os seus dados financeiros em um arquivo JSON. Útil para backup ou migração.
+              </p>
+              <Button onClick={handleExport}>
+                <Download className="mr-2 h-4 w-4" /> Baixar backup
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base">Importar dados</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Restaure um backup previamente exportado. Selecione o modo e o arquivo.
+              </p>
+              <div className="space-y-2">
+                <Label>Modo de importação</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={importMode === "replace" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setImportMode("replace")}
+                  >
+                    Substituir tudo
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={importMode === "merge" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setImportMode("merge")}
+                  >
+                    Mesclar
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {importMode === "replace"
+                    ? "Apaga todos os dados atuais e importa o backup do zero."
+                    : "Mantém dados atuais, adiciona apenas o que não existe (por nome)."}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Arquivo de backup (.json)</Label>
+                <Input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={(e) => setRestoreFile(e.target.files?.[0] ?? null)}
+                />
+              </div>
+              <Button
+                onClick={() => {
+                  if (!restoreFile) {
+                    toast.error("Selecione um arquivo de backup.")
+                    return
+                  }
+                  if (importMode === "replace") {
+                    setConfirmRestore(true)
+                  } else {
+                    handleRestore()
+                  }
+                }}
+                disabled={restoring || !restoreFile}
+              >
+                {restoring ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                {restoring ? "Importando..." : "Restaurar"}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      <ConfirmDialog
+        open={confirmRestore}
+        onOpenChange={setConfirmRestore}
+        title="Substituir todos os dados?"
+        description="Todos os dados atuais serão apagados e substituídos pelo backup. Esta ação não pode ser desfeita."
+        confirmText="Sim, substituir"
+        onConfirm={handleRestore}
+      />
     </div>
   )
 }
 
 function SignOutButton() {
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  async function handleSignOut() {
+    setLoading(true)
+    const { signOut } = await import("next-auth/react")
+    await signOut({ redirect: false })
+    window.location.href = "/login"
+  }
+
   return (
-    <Button
-      variant="destructive"
-      onClick={async () => {
-        const { signOut } = await import("next-auth/react")
-        await signOut({ redirect: false })
-        window.location.href = "/login"
-      }}
-    >
-      <LogOut className="mr-2 h-4 w-4" /> Sair da conta
-    </Button>
+    <>
+      <Button variant="destructive" onClick={() => setOpen(true)}>
+        <LogOut className="mr-2 h-4 w-4" /> Sair da conta
+      </Button>
+      <ConfirmDialog
+        open={open}
+        onOpenChange={setOpen}
+        title="Sair da conta"
+        description="Tem certeza que deseja sair da sua conta?"
+        confirmText="Sim, sair"
+        loading={loading}
+        onConfirm={handleSignOut}
+      />
+    </>
   )
 }

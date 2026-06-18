@@ -4,7 +4,7 @@ import type { FixedCostInput } from "./fixed-costs.schema"
 
 async function validateFixedCostRelations(
   userId: string,
-  input: Pick<FixedCostInput, "categoryId" | "cardId" | "paidInsideCard" | "bankAccountId">,
+  input: Pick<FixedCostInput, "type" | "categoryId" | "cardId" | "paidInsideCard" | "bankAccountId">,
   db: PrismaClient
 ) {
   const category = await db.category.findUnique({ where: { id: input.categoryId } })
@@ -40,6 +40,7 @@ export async function createFixedCost(
   return db.fixedCost.create({
     data: {
       name: input.name,
+      type: input.type,
       defaultAmount: input.defaultAmount,
       categoryId: input.categoryId,
       paymentMethod: input.paymentMethod,
@@ -81,6 +82,7 @@ export async function updateFixedCost(
     where: { id },
     data: {
       ...(input.name !== undefined && { name: input.name }),
+      ...(input.type !== undefined && { type: input.type }),
       ...(input.defaultAmount !== undefined && { defaultAmount: input.defaultAmount }),
       ...(input.categoryId !== undefined && { categoryId: input.categoryId }),
       ...(input.paymentMethod !== undefined && { paymentMethod: input.paymentMethod }),

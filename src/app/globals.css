@@ -139,13 +139,11 @@
 
 @keyframes dashboard-page-enter {
   from {
-    filter: blur(8px);
-    opacity: 0.15;
-    transform: translateY(48px) scale(0.98);
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
   }
 
   to {
-    filter: blur(0);
     opacity: 1;
     transform: translateY(0) scale(1);
   }
@@ -153,22 +151,22 @@
 
 .dashboard-page-transition {
   view-transition-name: dashboard-content;
-  animation: dashboard-page-enter 220ms ease-out both !important;
+  animation: dashboard-page-enter 450ms cubic-bezier(0.22, 1.2, 0.36, 1) both !important;
   transform-origin: top center;
   will-change: filter, opacity, transform;
 }
 
 ::view-transition-old(dashboard-content) {
-  animation: 140ms ease-out both fade-out;
+  animation: 250ms cubic-bezier(0.22, 1.2, 0.36, 1) both fade-out;
 }
 
 ::view-transition-new(dashboard-content) {
-  animation: 220ms ease-out both dashboard-page-enter;
+  animation: 350ms cubic-bezier(0.22, 1.2, 0.36, 1) both dashboard-page-enter;
 }
 
 @keyframes fade-out {
   from { opacity: 1; transform: translateY(0) scale(1); }
-  to { opacity: 0; transform: translateY(-24px) scale(0.99); }
+  to { opacity: 0; transform: translateY(-6px) scale(1.01); }
 }
 
 @media (prefers-reduced-motion: reduce) {

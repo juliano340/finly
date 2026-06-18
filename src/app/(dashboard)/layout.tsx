@@ -31,6 +31,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { formatCurrency, formatDate } from "@/lib/utils"
 
 const navItems = [
@@ -39,7 +40,7 @@ const navItems = [
   { href: "/bank-accounts", label: "Contas Bancárias", icon: Landmark },
   { href: "/cards", label: "Cartões", icon: CreditCard },
   { href: "/invoices", label: "Faturas", icon: Receipt },
-  { href: "/fixed-costs", label: "Custos Fixos", icon: Repeat },
+  { href: "/fixed-costs", label: "Lançamentos Fixos", icon: Repeat },
   { href: "/transactions", label: "Transações", icon: ArrowRightLeft },
   { href: "/categories", label: "Categorias", icon: Tags },
   { href: "/settings", label: "Configurações", icon: Settings },
@@ -64,7 +65,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [notifications, setNotifications] = useState<DueNotification[]>([])
   const [notified, setNotified] = useState(false)
+  const [logoutOpen, setLogoutOpen] = useState(false)
   const notificationsRef = useRef<HTMLDivElement | null>(null)
+
+  const handleLogout = () => {
+    setLogoutOpen(false)
+    signOut({ redirect: false }).then(() => { window.location.href = "/login" })
+  }
 
   useEffect(() => {
     if (!notificationsOpen) return
@@ -171,7 +178,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="p-2">
           <Separator className="bg-white/10" />
           <button
-            onClick={() => signOut({ redirect: false }).then(() => { window.location.href = "/login" })}
+            onClick={() => setLogoutOpen(true)}
             className={`mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-white/70 transition-colors hover:bg-white/10 hover:text-white ${
               collapsed ? "justify-center px-2" : ""
             }`}
@@ -238,6 +245,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <AvatarMenu
               name={session?.user?.name ?? null}
               email={session?.user?.email ?? null}
+              onLogout={() => setLogoutOpen(true)}
             />
           </div>
         </header>
@@ -249,6 +257,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </main>
       </div>
+
+      <ConfirmDialog
+        open={logoutOpen}
+        onOpenChange={setLogoutOpen}
+        title="Sair da conta"
+        description="Tem certeza que deseja sair?"
+        confirmText="Sair"
+        onConfirm={handleLogout}
+      />
     </div>
   )
 }
@@ -259,7 +276,7 @@ function notificationLabel(item: DueNotification) {
   return item.daysUntilDue === 1 ? "Vence amanhã" : `Vence em ${item.daysUntilDue} dias`
 }
 
-function AvatarMenu({ name, email }: { name: string | null; email: string | null }) {
+function AvatarMenu({ name, email, onLogout }: { name: string | null; email: string | null; onLogout: () => void }) {
   const initials = (name ?? email ?? "U")
     .split(/\s+/)
     .map((part) => part[0])
@@ -294,7 +311,7 @@ function AvatarMenu({ name, email }: { name: string | null; email: string | null
         <DropdownMenuSeparator />
         <DropdownMenuItem
           variant="destructive"
-          onClick={() => signOut({ redirect: false }).then(() => { window.location.href = "/login" })}
+          onClick={onLogout}
           className="flex items-center gap-2"
         >
           <LogOut className="h-4 w-4" />
