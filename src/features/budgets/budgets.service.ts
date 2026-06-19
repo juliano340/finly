@@ -1,5 +1,5 @@
 import { prisma as defaultPrisma } from "@/lib/prisma"
-import type { PrismaClient } from "@/generated/prisma"
+import type { PrismaClient } from "@/generated/prisma/client"
 import type { BudgetInput } from "./budgets.schema"
 import type { BudgetWithCategory, BudgetSummary } from "./budgets.types"
 

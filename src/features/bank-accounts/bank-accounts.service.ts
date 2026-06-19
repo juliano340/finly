@@ -1,5 +1,5 @@
 import { prisma as defaultPrisma } from "@/lib/prisma"
-import type { PrismaClient } from "@/generated/prisma"
+import type { PrismaClient } from "@/generated/prisma/client"
 import { randomUUID } from "node:crypto"
 import type { BankAccountAdjustmentInput, BankAccountInput, BankAccountMovementInput, BankAccountTransferInput } from "./bank-accounts.schema"
 

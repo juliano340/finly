@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@/generated/prisma"
+import type { PrismaClient } from "@/generated/prisma/client"
 import { prisma as defaultPrisma } from "@/lib/prisma"
 import { hash } from "bcryptjs"
 import { z } from "zod"

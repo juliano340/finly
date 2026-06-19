@@ -1,5 +1,5 @@
 import { prisma as defaultPrisma } from "@/lib/prisma"
-import type { PrismaClient } from "@/generated/prisma"
+import type { PrismaClient } from "@/generated/prisma/client"
 import type { TransactionInput } from "./transactions.schema"
 import type { TransactionWithRelations } from "./transactions.types"
 

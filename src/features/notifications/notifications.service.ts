@@ -1,5 +1,5 @@
 import { prisma as defaultPrisma } from "@/lib/prisma"
-import type { PrismaClient } from "@/generated/prisma"
+import type { PrismaClient } from "@/generated/prisma/client"
 import { ensureFinancialMonth } from "@/features/financial-months/financial-months.service"
 import { ensureFixedCostOccurrences } from "@/features/monthly-closing/monthly-closing.service"
 
