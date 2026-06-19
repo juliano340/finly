@@ -66,8 +66,10 @@ export default function InvoicesPage() {
   const [simInvoiceId, setSimInvoiceId] = useState("")
   const [simAccountId, setSimAccountId] = useState("")
   const [simAmount, setSimAmount] = useState("")
+  const [loading, setLoading] = useState(true)
 
   const fetchData = useCallback(async () => {
+    setLoading(true)
     const [cardsRes, invoicesRes, accountsRes] = await Promise.all([
       fetch("/api/cards"),
       fetch(`/api/invoices?month=${month}`),
@@ -76,6 +78,7 @@ export default function InvoicesPage() {
     if (cardsRes.ok) setCards(await cardsRes.json())
     if (invoicesRes.ok) setInvoices(await invoicesRes.json())
     if (accountsRes.ok) setBankAccounts(await accountsRes.json())
+    setLoading(false)
   }, [month])
 
   useEffect(() => { fetchData() }, [fetchData])
@@ -152,9 +155,14 @@ export default function InvoicesPage() {
 
   const handleDelete = async () => {
     if (!deleteTarget) return
-    await fetch(`/api/invoices/${deleteTarget}`, { method: "DELETE" })
+    const res = await fetch(`/api/invoices/${deleteTarget}`, { method: "DELETE" })
     setDeleteTarget(null)
     setSelectedInvoice(null)
+    if (res.ok) {
+      toast.success("Fatura excluída.")
+    } else {
+      toast.error("Não foi possível excluir a fatura.")
+    }
     fetchData()
   }
 
@@ -206,7 +214,9 @@ export default function InvoicesPage() {
           </thead>
           <tbody>
             {invoices.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">Nenhuma fatura neste mês.</td></tr>
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                {loading ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</span> : "Nenhuma fatura neste mês."}
+              </td></tr>
             ) : invoices.map((invoice) => (
               <tr key={invoice.id} className="border-b transition-colors hover:bg-muted/50">
                 <td className="px-4 py-3">
@@ -272,7 +282,9 @@ export default function InvoicesPage() {
 
       <div className="space-y-2 md:hidden">
         {invoices.length === 0 ? (
-          <Card className="border-0 shadow-sm"><CardContent className="p-8 text-center text-sm text-muted-foreground">Nenhuma fatura neste mês.</CardContent></Card>
+          <Card className="border-0 shadow-sm"><CardContent className="p-8 text-center text-sm text-muted-foreground">
+            {loading ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</span> : "Nenhuma fatura neste mês."}
+          </CardContent></Card>
         ) : invoices.map((invoice) => (
           <div key={invoice.id} className="flex items-center gap-2">
             <button type="button" onClick={() => setSelectedInvoice(invoice)} className="w-full rounded-lg border bg-card p-4 text-left text-sm transition-colors hover:bg-muted/50">

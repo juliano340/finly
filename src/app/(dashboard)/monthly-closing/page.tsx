@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatCurrency, formatDate } from "@/lib/utils"
@@ -41,9 +41,11 @@ function monthLabel(month: string) {
 export default function MonthlyClosingPage() {
   const [month, setMonth] = useState(currentMonth)
   const [data, setData] = useState<ClosingData | null>(null)
+  const [loading, setLoading] = useState(true)
 
   const fetchClosing = useCallback(async () => {
-    fetch(`/api/monthly-closing?month=${month}`).then((res) => res.json()).then(setData)
+    setLoading(true)
+    fetch(`/api/monthly-closing?month=${month}`).then((res) => res.json()).then((d) => { setData(d); setLoading(false) })
   }, [month])
 
   useEffect(() => {
@@ -70,9 +72,9 @@ export default function MonthlyClosingPage() {
       <div className="flex items-center justify-between"><div><h1 className="text-2xl font-bold tracking-tight">Fechamento Mensal</h1><p className="text-muted-foreground">Gastos do mês: realizado vs. a pagar.</p></div><div className="flex items-center gap-1 rounded-md border bg-background px-2 py-1"><Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(previousMonth(month))}><ChevronLeft className="size-4" /></Button><span className="min-w-28 text-center text-sm font-medium capitalize">{monthLabel(month)}</span><Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(nextMonth(month))}><ChevronRight className="size-4" /></Button></div></div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Metric title="Saídas totais do mês" value={summary?.totalSpent ?? 0} description="Tudo: faturas + fixos + avulsas" highlight />
-        <Metric title="Já pago" value={paidTotal} description="Desse total, já foi pago" />
-        <Metric title="Ainda a pagar" value={summary?.totalToPay ?? 0} description="Restante pendente" />
+        <Metric title="Saídas totais do mês" value={summary?.totalSpent ?? 0} description="Tudo: faturas + fixos + avulsas" highlight loading={loading} />
+        <Metric title="Já pago" value={paidTotal} description="Desse total, já foi pago" loading={loading} />
+        <Metric title="Ainda a pagar" value={summary?.totalToPay ?? 0} description="Restante pendente" loading={loading} />
       </div>
       <Card className="border-0 shadow-sm">
         <CardContent className="p-5">
@@ -92,23 +94,23 @@ export default function MonthlyClosingPage() {
       </Card>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <Metric title="Faturas totais" value={(summary?.cardInvoicesTotal ?? 0) + (summary?.cardInvoicesPaidTotal ?? 0)} description={`${formatCurrency(summary?.cardInvoicesPaidTotal ?? 0)} já pago · ${formatCurrency(summary?.cardInvoicesTotal ?? 0)} pendente`} />
-        <Metric title="Fixos fora do cartão" value={summary?.fixedCostsOutsideCardTotalAll ?? 0} description={`${formatCurrency(summary?.fixedCostsOutsideCardTotal ?? 0)} pendente · ${formatCurrency((summary?.fixedCostsOutsideCardTotalAll ?? 0) - (summary?.fixedCostsOutsideCardTotal ?? 0))} já pago`} />
-        <Metric title="Despesas avulsas" value={summary?.looseExpensesTotal ?? 0} description="Transações não recorrentes" />
-        <Metric title="Receitas do mês" value={summary?.incomeTotal ?? 0} description={`${formatCurrency(summary?.fixedIncomeTotal ?? 0)} fixas · ${formatCurrency((summary?.incomeTotal ?? 0) - (summary?.fixedIncomeTotal ?? 0))} avulsas`} />
-        <Metric title="Fixos totais" value={summary?.fixedCostsTotal ?? 0} description="Dentro + fora do cartão" />
-        <Metric title="Fixos dentro do cartão" value={summary?.fixedCostsInsideCardTotal ?? 0} description="Previstos na fatura" />
-        <Metric title="Saldo projetado" value={summary?.projectedBalance ?? 0} description="Receitas - total a pagar" />
+        <Metric title="Faturas totais" value={(summary?.cardInvoicesTotal ?? 0) + (summary?.cardInvoicesPaidTotal ?? 0)} description={`${formatCurrency(summary?.cardInvoicesPaidTotal ?? 0)} já pago · ${formatCurrency(summary?.cardInvoicesTotal ?? 0)} pendente`} loading={loading} />
+        <Metric title="Fixos fora do cartão" value={summary?.fixedCostsOutsideCardTotalAll ?? 0} description={`${formatCurrency(summary?.fixedCostsOutsideCardTotal ?? 0)} pendente · ${formatCurrency((summary?.fixedCostsOutsideCardTotalAll ?? 0) - (summary?.fixedCostsOutsideCardTotal ?? 0))} já pago`} loading={loading} />
+        <Metric title="Despesas avulsas" value={summary?.looseExpensesTotal ?? 0} description="Transações não recorrentes" loading={loading} />
+        <Metric title="Receitas do mês" value={summary?.incomeTotal ?? 0} description={`${formatCurrency(summary?.fixedIncomeTotal ?? 0)} fixas · ${formatCurrency((summary?.incomeTotal ?? 0) - (summary?.fixedIncomeTotal ?? 0))} avulsas`} loading={loading} />
+        <Metric title="Fixos totais" value={summary?.fixedCostsTotal ?? 0} description="Dentro + fora do cartão" loading={loading} />
+        <Metric title="Fixos dentro do cartão" value={summary?.fixedCostsInsideCardTotal ?? 0} description="Previstos na fatura" loading={loading} />
+        <Metric title="Saldo projetado" value={summary?.projectedBalance ?? 0} description="Receitas - total a pagar" loading={loading} />
       </div>
       <section className="grid gap-4 lg:grid-cols-2">
-        <Card className="border-0 shadow-sm"><CardHeader><CardTitle className="text-base">Faturas por cartão</CardTitle></CardHeader><CardContent className="space-y-3">{data?.invoices.map((invoice) => <div key={invoice.id} className="rounded-lg border p-3"><div className="flex justify-between"><strong>{invoice.card.name}</strong><span>{formatCurrency(invoice.amount)}</span></div><p className="text-sm text-muted-foreground">Vence em {formatDate(invoice.dueDate)} · {invoice.status === "PAID" ? "Pago" : "Pendente"}</p></div>)}</CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardHeader><CardTitle className="text-base">Previsão por cartão</CardTitle></CardHeader><CardContent className="space-y-3">{summary?.estimatedInvoicesByCard.map((item) => <div key={item.cardId} className="rounded-lg border p-3"><div className="flex justify-between"><strong>{item.cardName}</strong><span>{formatCurrency(item.estimatedAmount)}</span></div><p className="text-sm text-muted-foreground">Previsto pelos fixos no cartão. Fatura manual: {formatCurrency(item.invoiceAmount)} · diferença: {formatCurrency(item.difference)}</p></div>)}</CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardHeader><CardTitle className="text-base">Faturas por cartão</CardTitle></CardHeader><CardContent className="space-y-3">{loading ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div> : data?.invoices.map((invoice) => <div key={invoice.id} className="rounded-lg border p-3"><div className="flex justify-between"><strong>{invoice.card.name}</strong><span>{formatCurrency(invoice.amount)}</span></div><p className="text-sm text-muted-foreground">Vence em {formatDate(invoice.dueDate)} · {invoice.status === "PAID" ? "Pago" : "Pendente"}</p></div>)}</CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardHeader><CardTitle className="text-base">Previsão por cartão</CardTitle></CardHeader><CardContent className="space-y-3">{loading ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div> : summary?.estimatedInvoicesByCard.map((item) => <div key={item.cardId} className="rounded-lg border p-3"><div className="flex justify-between"><strong>{item.cardName}</strong><span>{formatCurrency(item.estimatedAmount)}</span></div><p className="text-sm text-muted-foreground">Previsto pelos fixos no cartão. Fatura manual: {formatCurrency(item.invoiceAmount)} · diferença: {formatCurrency(item.difference)}</p></div>)}</CardContent></Card>
       </section>
-      <Card className="border-0 shadow-sm"><CardHeader><CardTitle className="text-base">Custos fixos do mês</CardTitle></CardHeader><CardContent className="space-y-3">{data?.fixedCosts.map((item) => <div key={item.id} className="rounded-lg border p-3"><div className="flex items-start justify-between gap-3"><div><strong>{item.fixedCost.name}</strong><p className="text-sm text-muted-foreground">{item.fixedCost.category.name} · {item.fixedCost.paidInsideCard ? `Incluído na fatura ${item.fixedCost.card?.name ?? ""}` : "Fora do cartão"} · Conta prevista: {item.fixedCost.bankAccount?.name ?? "não definida"} · {item.status === "PAID" ? "Pago" : "Pendente"}</p></div><div className="text-right"><span className="font-medium">{formatCurrency(item.amount)}</span>{item.status === "PENDING" && item.fixedCost.bankAccount && <Button className="mt-2 block" size="sm" variant="outline" onClick={() => handlePayFixedCost(item.id)}>Lançar na conta</Button>}</div></div></div>)}</CardContent></Card>
+      <Card className="border-0 shadow-sm"><CardHeader><CardTitle className="text-base">Custos fixos do mês</CardTitle></CardHeader><CardContent className="space-y-3">{loading ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div> : data?.fixedCosts.map((item) => <div key={item.id} className="rounded-lg border p-3"><div className="flex items-start justify-between gap-3"><div><strong>{item.fixedCost.name}</strong><p className="text-sm text-muted-foreground">{item.fixedCost.category.name} · {item.fixedCost.paidInsideCard ? `Incluído na fatura ${item.fixedCost.card?.name ?? ""}` : "Fora do cartão"} · Conta prevista: {item.fixedCost.bankAccount?.name ?? "não definida"} · {item.status === "PAID" ? "Pago" : "Pendente"}</p></div><div className="text-right"><span className="font-medium">{formatCurrency(item.amount)}</span>{item.status === "PENDING" && item.fixedCost.bankAccount && <Button className="mt-2 block" size="sm" variant="outline" onClick={() => handlePayFixedCost(item.id)}>Lançar na conta</Button>}</div></div></div>)}</CardContent></Card>
     </div>
   )
 }
 
-function Metric({ title, value, description, highlight = false }: { title: string; value: number; description?: string; highlight?: boolean }) {
-  return <Card className={`border-0 shadow-sm ${highlight ? "bg-primary text-primary-foreground" : ""}`}><CardContent className="p-5"><p className="text-xs font-medium opacity-80">{title}</p><p className="text-xl font-bold">{formatCurrency(value)}</p>{description && <p className="mt-1 text-xs opacity-75">{description}</p>}</CardContent></Card>
+function Metric({ title, value, description, highlight = false, loading = false }: { title: string; value: number; description?: string; highlight?: boolean; loading?: boolean }) {
+  return <Card className={`border-0 shadow-sm ${highlight ? "bg-primary text-primary-foreground" : ""}`}><CardContent className="p-5"><p className="text-xs font-medium opacity-80">{title}</p><p className="text-xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin opacity-60" /> : formatCurrency(value)}</p>{description && <p className="mt-1 text-xs opacity-75">{description}</p>}</CardContent></Card>
 }

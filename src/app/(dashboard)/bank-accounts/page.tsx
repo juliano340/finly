@@ -2,7 +2,7 @@
 
 import type { FormEvent } from "react"
 import { useEffect, useRef, useState } from "react"
-import { AlertTriangle, ArrowLeftRight, Pencil, Plus, Trash2 } from "lucide-react"
+import { AlertTriangle, ArrowLeftRight, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -40,13 +40,16 @@ export default function BankAccountsPage() {
   const [transferMethod, setTransferMethod] = useState("PIX")
   const [transferError, setTransferError] = useState("")
   const [transferSubmitting, setTransferSubmitting] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   const fetchAccounts = async () => {
+    setLoading(true)
     const res = await fetch("/api/bank-accounts")
-    if (!res.ok) return
+    if (!res.ok) { setLoading(false); return }
     const data = await res.json()
     setAccounts(data)
     setSelectedAccount((prev) => prev ? data.find((a: BankAccount) => a.id === prev.id) ?? prev : null)
+    setLoading(false)
   }
 
   useEffect(() => {
@@ -219,10 +222,10 @@ export default function BankAccountsPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <SummaryCard title="Saldo total" value={formatCurrency(totalBalance)} highlight />
-        <SummaryCard title="Contas ativas" value={String(activeAccounts)} />
-        <SummaryCard title="Cartões vinculados" value={String(linkedCards)} />
-        <SummaryCard title="Contas negativas" value={String(negativeAccounts)} />
+        <SummaryCard title="Saldo total" value={formatCurrency(totalBalance)} highlight loading={loading} />
+        <SummaryCard title="Contas ativas" value={String(activeAccounts)} loading={loading} />
+        <SummaryCard title="Cartões vinculados" value={String(linkedCards)} loading={loading} />
+        <SummaryCard title="Contas negativas" value={String(negativeAccounts)} loading={loading} />
       </div>
 
       <div className="hidden overflow-hidden rounded-lg border md:block">
@@ -237,7 +240,9 @@ export default function BankAccountsPage() {
           </thead>
           <tbody>
             {accounts.length === 0 ? (
-              <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">Nenhuma conta bancária cadastrada.</td></tr>
+              <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
+                {loading ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</span> : "Nenhuma conta bancária cadastrada."}
+              </td></tr>
             ) : accounts.map((account) => (
               <tr key={account.id} className="border-b transition-colors hover:bg-muted/50">
                 <td className="px-4 py-3">
@@ -279,7 +284,9 @@ export default function BankAccountsPage() {
 
       <div className="space-y-2 md:hidden">
         {accounts.length === 0 ? (
-          <Card className="border-0 shadow-sm"><CardContent className="p-8 text-center text-sm text-muted-foreground">Nenhuma conta bancária cadastrada.</CardContent></Card>
+          <Card className="border-0 shadow-sm"><CardContent className="p-8 text-center text-sm text-muted-foreground">
+            {loading ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</span> : "Nenhuma conta bancária cadastrada."}
+          </CardContent></Card>
         ) : accounts.map((account) => (
           <div key={account.id} className="flex items-center gap-2">
             <button type="button" onClick={() => openDetail(account)} className="flex w-full flex-col gap-1 rounded-lg border bg-card p-4 text-left text-sm transition-colors hover:bg-muted/50">
@@ -636,12 +643,12 @@ function TransferAccountPreview({
   )
 }
 
-function SummaryCard({ title, value, highlight = false }: { title: string; value: string; highlight?: boolean }) {
+function SummaryCard({ title, value, highlight = false, loading = false }: { title: string; value: string; highlight?: boolean; loading?: boolean }) {
   return (
     <Card className={`border-0 shadow-sm ${highlight ? "bg-primary text-primary-foreground" : ""}`}>
       <CardContent className="p-5">
         <p className="text-xs font-medium opacity-80">{title}</p>
-        <p className="text-xl font-bold">{value}</p>
+        <p className="text-xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin opacity-60" /> : value}</p>
       </CardContent>
     </Card>
   )

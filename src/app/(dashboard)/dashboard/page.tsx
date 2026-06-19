@@ -10,6 +10,7 @@ import {
   ChevronRight,
   BarChart3,
   Landmark,
+  Loader2,
   Wallet,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -163,12 +164,14 @@ export default function DashboardPage() {
                   {card.label}
                 </p>
                 <p className="text-xl font-bold">
-                  {loading
-                    ? "..."
-                    : card.value.toLocaleString("pt-BR", {
-                        style: "currency",
-                        currency: "BRL",
-                      })}
+                  {loading ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  ) : (
+                    card.value.toLocaleString("pt-BR", {
+                      style: "currency",
+                      currency: "BRL",
+                    })
+                  )}
                 </p>
               </div>
             </CardContent>
@@ -182,7 +185,7 @@ export default function DashboardPage() {
             <div className="rounded-xl bg-white/20 p-3"><Landmark className="h-5 w-5 text-white" /></div>
             <div>
               <p className="text-xs font-medium opacity-80">Saldo em contas</p>
-              <p className="text-xl font-bold">{formatCurrency(bankTotal)}</p>
+              <p className="text-xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin opacity-60" /> : formatCurrency(bankTotal)}</p>
               <p className="text-[10px] opacity-60">Soma dos saldos bancários</p>
             </div>
           </CardContent>
@@ -192,7 +195,7 @@ export default function DashboardPage() {
             <div className="rounded-xl bg-red-100 p-3"><ArrowDown className="h-5 w-5 text-red-600" /></div>
             <div>
               <p className="text-xs font-medium text-muted-foreground">A pagar</p>
-              <p className="text-xl font-bold text-red-600">{formatCurrency(closing?.summary.totalToPay ?? 0)}</p>
+              <p className="text-xl font-bold text-red-600">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(closing?.summary.totalToPay ?? 0)}</p>
               <p className="text-[10px] text-muted-foreground/60">Faturas pendentes + contas fixas + avulsas</p>
             </div>
           </CardContent>
@@ -202,7 +205,7 @@ export default function DashboardPage() {
             <div className="rounded-xl bg-primary/10 p-3"><Banknote className="h-5 w-5 text-primary" /></div>
             <div>
               <p className="text-xs font-medium text-muted-foreground">Disponível</p>
-              <p className="text-xl font-bold">{formatCurrency(bankTotal - (closing?.summary.totalToPay ?? 0))}</p>
+              <p className="text-xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(bankTotal - (closing?.summary.totalToPay ?? 0))}</p>
               <p className="text-[10px] text-muted-foreground/60">Saldo − A pagar</p>
             </div>
           </CardContent>
@@ -212,7 +215,7 @@ export default function DashboardPage() {
             <div className="rounded-xl bg-red-100 p-3"><Banknote className="h-5 w-5 text-red-600" /></div>
             <div>
               <p className="text-xs font-medium text-muted-foreground">Gastos do mês</p>
-              <p className="text-xl font-bold text-red-600">{loading ? "..." : formatCurrency(closing?.summary.totalSpent ?? 0)}</p>
+              <p className="text-xl font-bold text-red-600">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(closing?.summary.totalSpent ?? 0)}</p>
               <p className="text-[10px] text-muted-foreground/60">Tudo que entrou na fatura + PIX + avulsas</p>
             </div>
           </CardContent>
@@ -243,19 +246,20 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-4">
-            <InsightCard title="Mês atual" value={formatCurrency(evolutionSummary.current)} description="Valor da métrica selecionada" />
+            <InsightCard title="Mês atual" value={formatCurrency(evolutionSummary.current)} description="Valor da métrica selecionada" loading={loading} />
             <InsightCard
               title="Vs mês anterior"
               value={formatChangePercent(evolutionSummary.changePercent)}
               description={evolutionSummary.changePercent === null ? "Sem base comparável" : formatCurrency(evolutionSummary.current - evolutionSummary.previous)}
               tone={(evolutionSummary.changePercent ?? 0) > 0 ? "bad" : "good"}
+              loading={loading}
             />
-            <InsightCard title="Média mensal" value={formatCurrency(evolutionSummary.average)} description="Média dos últimos 6 meses" />
-            <InsightCard title="Maior mês" value={evolutionSummary.highest?.label ?? "-"} description={formatCurrency(evolutionSummary.highest?.value ?? 0)} />
+            <InsightCard title="Média mensal" value={formatCurrency(evolutionSummary.average)} description="Média dos últimos 6 meses" loading={loading} />
+            <InsightCard title="Maior mês" value={evolutionSummary.highest?.label ?? "-"} description={formatCurrency(evolutionSummary.highest?.value ?? 0)} loading={loading} />
           </div>
         </CardHeader>
         <CardContent>
-          <MonthlyEvolutionChart data={evolution?.months ?? []} metric={evolutionMetric} />
+          {loading ? <div className="flex h-[280px] items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div> : <MonthlyEvolutionChart data={evolution?.months ?? []} metric={evolutionMetric} />}
         </CardContent>
       </Card>
 
@@ -281,19 +285,20 @@ export default function DashboardPage() {
             </select>
           </div>
           <div className="grid gap-3 sm:grid-cols-4">
-            <InsightCard title="Fatura atual" value={formatCurrency(cardSummary.current)} description={selectedCard?.name ?? "Todos os cartões"} />
+            <InsightCard title="Fatura atual" value={formatCurrency(cardSummary.current)} description={selectedCard?.name ?? "Todos os cartões"} loading={loading} />
             <InsightCard
               title="Vs mês anterior"
               value={formatChangePercent(cardSummary.changePercent)}
               description={cardSummary.changePercent === null ? "Sem base comparável" : formatCurrency(cardSummary.current - cardSummary.previous)}
               tone={(cardSummary.changePercent ?? 0) > 0 ? "bad" : "good"}
+              loading={loading}
             />
-            <InsightCard title="Média 6 meses" value={formatCurrency(cardSummary.average)} description="Média das faturas no período" />
-            <InsightCard title="Maior fatura" value={cardSummary.highest?.label ?? "-"} description={formatCurrency(cardSummary.highest?.value ?? 0)} />
+            <InsightCard title="Média 6 meses" value={formatCurrency(cardSummary.average)} description="Média das faturas no período" loading={loading} />
+            <InsightCard title="Maior fatura" value={cardSummary.highest?.label ?? "-"} description={formatCurrency(cardSummary.highest?.value ?? 0)} loading={loading} />
           </div>
         </CardHeader>
         <CardContent>
-          <CardInvoiceEvolutionChart data={cardEvolution?.months ?? []} cards={cardEvolution?.cards ?? []} cardId={selectedCardId} color={selectedCard?.color ?? "#2563EB"} />
+          {loading ? <div className="flex h-[280px] items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div> : <CardInvoiceEvolutionChart data={cardEvolution?.months ?? []} cards={cardEvolution?.cards ?? []} cardId={selectedCardId} color={selectedCard?.color ?? "#2563EB"} />}
         </CardContent>
       </Card>
 
@@ -306,7 +311,7 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <IncomeVsExpenseChart data={stats?.dailyTrend ?? []} />
+            {loading ? <div className="flex h-[280px] items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div> : <IncomeVsExpenseChart data={stats?.dailyTrend ?? []} />}
           </CardContent>
         </Card>
 
@@ -315,7 +320,7 @@ export default function DashboardPage() {
             <CardTitle className="text-base">Gastos por Categoria</CardTitle>
           </CardHeader>
           <CardContent>
-            <ExpenseByCategoryChart data={stats?.byCategory ?? []} />
+            {loading ? <div className="flex h-[280px] items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div> : <ExpenseByCategoryChart data={stats?.byCategory ?? []} />}
           </CardContent>
         </Card>
       </div>
@@ -326,7 +331,7 @@ export default function DashboardPage() {
             <CardTitle className="text-base">Evolução Diária</CardTitle>
           </CardHeader>
           <CardContent>
-            <DailyTrendChart data={stats?.dailyTrend ?? []} />
+            {loading ? <div className="flex h-[280px] items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div> : <DailyTrendChart data={stats?.dailyTrend ?? []} />}
           </CardContent>
         </Card>
 
@@ -335,7 +340,7 @@ export default function DashboardPage() {
             <CardTitle className="text-base">Transações Recentes</CardTitle>
           </CardHeader>
           <CardContent>
-            <RecentTransactions transactions={stats?.recentTransactions ?? []} />
+            {loading ? <div className="flex h-[280px] items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div> : <RecentTransactions transactions={stats?.recentTransactions ?? []} />}
           </CardContent>
         </Card>
       </div>
@@ -348,17 +353,19 @@ function InsightCard({
   value,
   description,
   tone = "neutral",
+  loading = false,
 }: {
   title: string
   value: string
   description: string
   tone?: "neutral" | "good" | "bad"
+  loading?: boolean
 }) {
   const toneClass = tone === "good" ? "text-emerald-600" : tone === "bad" ? "text-red-600" : "text-foreground"
   return (
     <div className="rounded-xl bg-muted p-4">
       <p className="text-xs font-medium text-muted-foreground">{title}</p>
-      <p className={`mt-1 text-lg font-bold ${toneClass}`}>{value}</p>
+      <p className={`mt-1 text-lg font-bold ${toneClass}`}>{loading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : value}</p>
       <p className="mt-1 text-[10px] text-muted-foreground/70">{description}</p>
     </div>
   )

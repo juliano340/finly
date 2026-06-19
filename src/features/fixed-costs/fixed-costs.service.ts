@@ -69,10 +69,11 @@ export async function updateFixedCost(
   const valid = await validateFixedCostRelations(
     userId,
     {
+      type: next.type,
       categoryId: next.categoryId,
-      cardId: next.cardId,
+      cardId: next.cardId ?? undefined,
       paidInsideCard: next.paidInsideCard,
-      bankAccountId: next.bankAccountId,
+      bankAccountId: next.bankAccountId ?? undefined,
     },
     db
   )
@@ -93,6 +94,14 @@ export async function updateFixedCost(
       ...(input.active !== undefined && { active: input.active }),
     },
     include: { category: true, card: true, bankAccount: true },
+  }).then(async (updated) => {
+    if (input.defaultAmount !== undefined) {
+      await db.fixedCostOccurrence.updateMany({
+        where: { fixedCostId: id, userId },
+        data: { amount: input.defaultAmount },
+      })
+    }
+    return updated
   })
 }
 

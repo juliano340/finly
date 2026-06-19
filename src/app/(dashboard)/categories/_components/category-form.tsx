@@ -118,7 +118,11 @@ export function CategoryForm({
               <Label>Ícone</Label>
               <Select value={icon} onValueChange={(value) => setIcon(value ?? "wallet")}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>
+                    {(value: string | null) =>
+                      value ? iconOptions.find((o) => o.value === value)?.label ?? "Selecione..." : "Selecione..."
+                    }
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {iconOptions.map((o) => (

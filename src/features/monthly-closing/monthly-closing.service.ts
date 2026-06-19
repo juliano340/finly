@@ -180,7 +180,7 @@ export async function ensureFixedCostOccurrences(
   for (const fixedCost of fixedCosts) {
     await db.fixedCostOccurrence.upsert({
       where: { fixedCostId_month_userId: { fixedCostId: fixedCost.id, month, userId } },
-      update: {},
+      update: { amount: fixedCost.defaultAmount },
       create: {
         fixedCostId: fixedCost.id,
         financialMonthId,
