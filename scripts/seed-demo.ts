@@ -1,5 +1,5 @@
 import { prisma as defaultPrisma } from "../src/lib/prisma"
-import type { PrismaClient } from "@/generated/prisma"
+import type { PrismaClient } from "@/generated/prisma/client"
 import { hash } from "bcryptjs"
 import { createBankAccount } from "../src/features/bank-accounts/bank-accounts.service"
 import { createCard } from "../src/features/cards/cards.service"
