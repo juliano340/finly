@@ -1,10 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, Wallet } from "lucide-react"
+import { Loader2, Plus, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCategories } from "@/hooks/use-categories"
 import { CategoryCard } from "./_components/category-card"
+import { CategoryTable } from "./_components/category-table"
 import { CategoryForm } from "./_components/category-form"
 import { DeleteDialog } from "./_components/delete-dialog"
 import { toast } from "sonner"
@@ -56,7 +57,7 @@ export default function CategoriesPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     )
   }
@@ -82,65 +83,82 @@ export default function CategoriesPage() {
         </Button>
       </div>
 
-      {categories.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-20">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-            <Wallet className="h-6 w-6 text-muted-foreground" />
+      {/* Tabela — Desktop */}
+      <CategoryTable
+        categories={categories}
+        loading={loading}
+        onEdit={(cat) => {
+          setEditing(cat)
+          setFormOpen(true)
+        }}
+        onDelete={(cat) => {
+          setDeleting(cat)
+          setDeleteOpen(true)
+        }}
+      />
+
+      {/* Cards — Mobile */}
+      <div className="md:hidden">
+        {categories.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 py-20">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+              <Wallet className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Nenhuma categoria ainda. Crie sua primeira!
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Nenhuma categoria ainda. Crie sua primeira!
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {incomes.length > 0 && (
-            <div className="space-y-3">
-              <h2 className="text-sm font-medium text-muted-foreground">
-                Receitas
-              </h2>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {incomes.map((cat) => (
-                  <CategoryCard
-                    key={cat.id}
-                    category={cat}
-                    onEdit={() => {
-                      setEditing(cat)
-                      setFormOpen(true)
-                    }}
-                    onDelete={() => {
-                      setDeleting(cat)
-                      setDeleteOpen(true)
-                    }}
-                  />
-                ))}
+        ) : (
+          <div className="space-y-6">
+            {incomes.length > 0 && (
+              <div className="space-y-3">
+                <h2 className="text-sm font-medium text-muted-foreground">
+                  Receitas
+                </h2>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {incomes.map((cat) => (
+                    <CategoryCard
+                      key={cat.id}
+                      category={cat}
+                      onEdit={() => {
+                        setEditing(cat)
+                        setFormOpen(true)
+                      }}
+                      onDelete={() => {
+                        setDeleting(cat)
+                        setDeleteOpen(true)
+                      }}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-          {expenses.length > 0 && (
-            <div className="space-y-3">
-              <h2 className="text-sm font-medium text-muted-foreground">
-                Despesas
-              </h2>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {expenses.map((cat) => (
-                  <CategoryCard
-                    key={cat.id}
-                    category={cat}
-                    onEdit={() => {
-                      setEditing(cat)
-                      setFormOpen(true)
-                    }}
-                    onDelete={() => {
-                      setDeleting(cat)
-                      setDeleteOpen(true)
-                    }}
-                  />
-                ))}
+            )}
+            {expenses.length > 0 && (
+              <div className="space-y-3">
+                <h2 className="text-sm font-medium text-muted-foreground">
+                  Despesas
+                </h2>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {expenses.map((cat) => (
+                    <CategoryCard
+                      key={cat.id}
+                      category={cat}
+                      onEdit={() => {
+                        setEditing(cat)
+                        setFormOpen(true)
+                      }}
+                      onDelete={() => {
+                        setDeleting(cat)
+                        setDeleteOpen(true)
+                      }}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
+      </div>
 
       <CategoryForm
         key={editing?.id ?? "new"}
