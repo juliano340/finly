@@ -59,6 +59,7 @@ next-env.d.ts
 
 # generated prisma client
 /src/generated/prisma
+/src/generated/prisma-sqlite
 
 # scripts de seed com dados pessoais
 /scripts/seed-*.local.ts
@@ -67,3 +68,5 @@ next-env.d.ts
 *.log
 logs/
 scripts/seed-accounts.ts
+
+.vercel

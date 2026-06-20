@@ -60,24 +60,14 @@ export default function DashboardPage() {
   const fetchStats = useCallback(async () => {
     setLoading(true)
     try {
-      const [statsRes, banksRes, closingRes, evolutionRes, cardEvolutionRes] = await Promise.all([
-        fetch(`/api/dashboard/stats?month=${month}`),
-        fetch("/api/bank-accounts"),
-        fetch(`/api/monthly-closing?month=${month}`),
-        fetch(`/api/dashboard/monthly-evolution?month=${month}&months=6`),
-        fetch(`/api/dashboard/card-invoice-evolution?month=${month}&months=6`),
-      ])
-      if (statsRes.ok) setStats(await statsRes.json())
-      if (banksRes.ok) {
-        const accounts = await banksRes.json()
-        setBankTotal(accounts.reduce((acc: number, a: { balance: number }) => acc + a.balance, 0))
-      }
-      if (closingRes.ok) {
-        const data = await closingRes.json()
-        setClosing(data)
-      }
-      if (evolutionRes.ok) setEvolution(await evolutionRes.json())
-      if (cardEvolutionRes.ok) setCardEvolution(await cardEvolutionRes.json())
+      const res = await fetch(`/api/dashboard/summary?month=${month}&months=6`)
+      if (!res.ok) return
+      const data = await res.json()
+      setStats(data.stats)
+      setBankTotal(data.bankTotal)
+      setClosing(data.closing)
+      setEvolution(data.evolution)
+      setCardEvolution(data.cardEvolution)
     } finally {
       setLoading(false)
     }

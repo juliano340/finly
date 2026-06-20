@@ -98,6 +98,65 @@ export async function getMonthlyClosing(
   }
 }
 
+export async function getMonthlyClosingSummary(
+  userId: string,
+  month: string,
+  client?: PrismaClient
+) {
+  const db = client ?? defaultPrisma
+  const financialMonth = await ensureFinancialMonth(userId, month, db)
+  await ensureFixedCostOccurrences(userId, month, financialMonth.id, db)
+
+  const [invoices, occurrences, looseExpenses, income] = await Promise.all([
+    db.cardInvoice.findMany({
+      where: { userId, month },
+      select: { amount: true, status: true },
+    }),
+    db.fixedCostOccurrence.findMany({
+      where: { userId, month },
+      select: {
+        amount: true,
+        status: true,
+        fixedCost: { select: { type: true, paidInsideCard: true } },
+      },
+    }),
+    aggregateTransactions(userId, month, "EXPENSE", db),
+    aggregateTransactions(userId, month, "INCOME", db),
+  ])
+
+  const cardInvoicesTotal = sum(invoices.filter((inv) => inv.status === "PENDING").map((inv) => inv.amount))
+  const allCardInvoices = sum(invoices.map((inv) => inv.amount))
+  const expenseOccurrences = occurrences.filter((item) => item.fixedCost.type === "EXPENSE")
+  const incomeOccurrences = occurrences.filter((item) => item.fixedCost.type === "INCOME")
+  const insideCard = expenseOccurrences.filter((item) => item.fixedCost.paidInsideCard)
+  const outsideCard = expenseOccurrences.filter((item) => !item.fixedCost.paidInsideCard)
+  const fixedCostsTotal = sum(expenseOccurrences.map((item) => item.amount))
+  const fixedIncomeTotal = sum(incomeOccurrences.map((item) => item.amount))
+  const fixedCostsInsideCardTotal = sum(insideCard.map((item) => item.amount))
+  const fixedCostsOutsideCardTotal = sum(outsideCard.filter((item) => item.status === "PENDING").map((item) => item.amount))
+  const fixedCostsOutsideCardTotalAll = sum(outsideCard.map((item) => item.amount))
+  const totalToPay = cardInvoicesTotal + fixedCostsOutsideCardTotal + looseExpenses
+  const totalSpent = allCardInvoices + fixedCostsOutsideCardTotalAll + looseExpenses
+  const incomeTotal = income + fixedIncomeTotal
+
+  return {
+    month,
+    cardInvoicesTotal,
+    cardInvoicesPaidTotal: allCardInvoices - cardInvoicesTotal,
+    fixedCostsTotal,
+    fixedCostsInsideCardTotal,
+    fixedCostsOutsideCardTotal,
+    fixedCostsOutsideCardTotalAll,
+    fixedIncomeTotal,
+    looseExpensesTotal: looseExpenses,
+    incomeTotal,
+    totalToPay,
+    totalSpent,
+    projectedBalance: incomeTotal - totalToPay,
+    estimatedInvoicesByCard: [],
+  } satisfies MonthlyClosingSummary
+}
+
 export async function payFixedCostOccurrence(
   occurrenceId: string,
   userId: string,
@@ -176,19 +235,46 @@ export async function ensureFixedCostOccurrences(
   financialMonthId: string,
   db: FixedCostOccurrenceClient
 ) {
-  const fixedCosts = await db.fixedCost.findMany({ where: { userId, active: true } })
-  for (const fixedCost of fixedCosts) {
-    await db.fixedCostOccurrence.upsert({
-      where: { fixedCostId_month_userId: { fixedCostId: fixedCost.id, month, userId } },
-      update: { amount: fixedCost.defaultAmount },
-      create: {
+  await ensureFixedCostOccurrencesForMonths(userId, [{ month, financialMonthId }], db)
+}
+
+export async function ensureFixedCostOccurrencesForMonths(
+  userId: string,
+  months: { month: string; financialMonthId: string }[],
+  db: FixedCostOccurrenceClient
+) {
+  if (months.length === 0) return
+
+  const monthKeys = months.map((item) => item.month)
+  const fixedCosts = await db.fixedCost.findMany({
+    where: { userId, active: true },
+    select: { id: true, defaultAmount: true },
+  })
+  if (fixedCosts.length === 0) return
+
+  const existingOccurrences = await db.fixedCostOccurrence.findMany({
+    where: { userId, month: { in: monthKeys } },
+    select: { fixedCostId: true, month: true },
+  })
+  const existingKeys = new Set(existingOccurrences.map((item) => `${item.fixedCostId}:${item.month}`))
+  const missingOccurrences = []
+
+  for (const item of months) {
+    for (const fixedCost of fixedCosts) {
+      const key = `${fixedCost.id}:${item.month}`
+      if (existingKeys.has(key)) continue
+      missingOccurrences.push({
         fixedCostId: fixedCost.id,
-        financialMonthId,
-        month,
+        financialMonthId: item.financialMonthId,
+        month: item.month,
         amount: fixedCost.defaultAmount,
         userId,
-      },
-    })
+      })
+    }
+  }
+
+  if (missingOccurrences.length > 0) {
+    await db.fixedCostOccurrence.createMany({ data: missingOccurrences, skipDuplicates: true })
   }
 }
 

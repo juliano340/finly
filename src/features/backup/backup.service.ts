@@ -55,13 +55,16 @@ export async function importData(
   mode: ImportMode,
   client: PrismaClient = defaultPrisma
 ): Promise<ImportResult> {
-  return client.$transaction(async (tx) => {
-    const db = tx as unknown as PrismaClient
-    if (mode === "replace") {
-      await deleteAllUserData(userId, db)
-    }
-    return insertAll(userId, data, mode, db)
-  })
+  return client.$transaction(
+    async (tx) => {
+      const db = tx as unknown as PrismaClient
+      if (mode === "replace") {
+        await deleteAllUserData(userId, db)
+      }
+      return insertAll(userId, data, mode, db)
+    },
+    { maxWait: 10_000, timeout: 120_000 }
+  )
 }
 
 async function deleteAllUserData(userId: string, db: PrismaClient) {

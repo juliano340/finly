@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { CheckCircle2, ChevronLeft, ChevronRight, Loader2, Pencil, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -74,6 +74,8 @@ export default function FixedCostsPage() {
   const [unpayingId, setUnpayingId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const inFlightUpdateRef = useRef(false)
+  const editFormRef = useRef<HTMLFormElement>(null)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -158,6 +160,8 @@ export default function FixedCostsPage() {
   }
 
   const handleUpdate = async (item: FixedCostData, formData: FormData) => {
+    if (inFlightUpdateRef.current) return
+    inFlightUpdateRef.current = true
     const paidInsideCard = item.type === "EXPENSE" && formData.get("paidInsideCard") === "on"
     setUpdateError("")
     setUpdatingId(item.id)
@@ -200,6 +204,7 @@ export default function FixedCostsPage() {
       setSelectedOccurrence(null)
     } finally {
       setUpdatingId(null)
+      inFlightUpdateRef.current = false
     }
   }
 
@@ -485,7 +490,7 @@ export default function FixedCostsPage() {
                       <p className="text-2xl font-bold">{formatCurrency(selectedTemplate.defaultAmount)}</p>
                     </div>
                   </div>
-                  <form action={(formData) => handleUpdate(selectedTemplate, formData)} className="space-y-4">
+                  <form ref={editFormRef} className="space-y-4">
                     <div className="space-y-1">
                       <label className="text-sm font-medium">Nome</label>
                       <Input name="name" defaultValue={selectedTemplate.name} required />
@@ -544,7 +549,7 @@ export default function FixedCostsPage() {
                       Ativo
                     </label>
                     {updateError && <p className="text-sm text-destructive">{updateError}</p>}
-                    <Button type="submit" className="w-full" disabled={updatingId === selectedTemplate.id}>
+                    <Button type="button" className="w-full" disabled={updatingId === selectedTemplate.id} onClick={() => handleUpdate(selectedTemplate, new FormData(editFormRef.current!))}>
                       {updatingId === selectedTemplate.id ? "Salvando..." : "Salvar alterações"}
                     </Button>
                   </form>

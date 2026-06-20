@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { getMonthlyClosing } from "@/features/monthly-closing/monthly-closing.service"
+import { getMonthlyClosing, getMonthlyClosingSummary } from "@/features/monthly-closing/monthly-closing.service"
 
 export async function GET(request: Request) {
   const session = await auth()
@@ -14,6 +14,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Mês inválido" }, { status: 400 })
   }
 
-  const closing = await getMonthlyClosing(session.user.id, month)
+  const summaryOnly = url.searchParams.get("summary") === "1"
+  const closing = summaryOnly
+    ? { summary: await getMonthlyClosingSummary(session.user.id, month) }
+    : await getMonthlyClosing(session.user.id, month)
   return NextResponse.json(closing)
 }

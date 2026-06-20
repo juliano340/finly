@@ -6,7 +6,16 @@ export async function getCards(userId: string, client?: PrismaClient) {
   const db = client ?? defaultPrisma
   return db.card.findMany({
     where: { userId },
-    include: { bankAccount: { select: { id: true, name: true, institution: true } } },
+    select: {
+      id: true,
+      name: true,
+      brand: true,
+      color: true,
+      closingDay: true,
+      dueDay: true,
+      bankAccountId: true,
+      bankAccount: { select: { id: true, name: true, institution: true } },
+    },
     orderBy: { name: "asc" },
   })
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { CreditCard, Pencil, Plus, Trash2 } from "lucide-react"
+import { CreditCard, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -32,14 +32,19 @@ export default function CardsPage() {
   const [selectedCard, setSelectedCard] = useState<CardItem | null>(null)
   const [creating, setCreating] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
   const fetchData = async () => {
-    const [cardsRes, accountsRes] = await Promise.all([
-      fetch("/api/cards"),
-      fetch("/api/bank-accounts"),
-    ])
-    if (cardsRes.ok) setCards(await cardsRes.json())
-    if (accountsRes.ok) setBankAccounts(await accountsRes.json())
+    try {
+      const [cardsRes, accountsRes] = await Promise.all([
+        fetch("/api/cards"),
+        fetch("/api/bank-accounts/options"),
+      ])
+      if (cardsRes.ok) setCards(await cardsRes.json())
+      if (accountsRes.ok) setBankAccounts(await accountsRes.json())
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -128,7 +133,9 @@ export default function CardsPage() {
             </tr>
           </thead>
           <tbody>
-            {cards.length === 0 ? (
+            {loading ? (
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground"><span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</span></td></tr>
+            ) : cards.length === 0 ? (
               <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Nenhum cartão cadastrado.</td></tr>
             ) : cards.map((card) => (
               <tr key={card.id} className="border-b transition-colors hover:bg-muted/50">
@@ -171,7 +178,9 @@ export default function CardsPage() {
       </div>
 
       <div className="space-y-2 md:hidden">
-        {cards.length === 0 ? (
+        {loading ? (
+          <Card className="border-0 shadow-sm"><CardContent className="flex items-center justify-center gap-2 p-8 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</CardContent></Card>
+        ) : cards.length === 0 ? (
           <Card className="border-0 shadow-sm"><CardContent className="p-8 text-center text-sm text-muted-foreground">Nenhum cartão cadastrado.</CardContent></Card>
         ) : cards.map((card) => (
           <div key={card.id} className="flex items-center gap-2">

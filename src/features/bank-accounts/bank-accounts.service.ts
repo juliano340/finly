@@ -30,6 +30,32 @@ export async function getBankAccounts(userId: string, client?: PrismaClient) {
   })
 }
 
+export async function getBankAccountsTotal(userId: string, client?: PrismaClient) {
+  const db = client ?? defaultPrisma
+  const [accounts, sums] = await Promise.all([
+    db.bankAccount.findMany({ where: { userId }, select: { initialBalance: true } }),
+    db.bankAccountMovement.groupBy({
+      by: ["type"],
+      where: { userId },
+      _sum: { amount: true },
+    }),
+  ])
+
+  const initialBalance = accounts.reduce((sum, account) => sum + account.initialBalance, 0)
+  const income = sums.find((sum) => sum.type === "INCOME")?._sum.amount ?? 0
+  const expense = sums.find((sum) => sum.type === "EXPENSE")?._sum.amount ?? 0
+  return initialBalance + income - expense
+}
+
+export async function getBankAccountOptions(userId: string, client?: PrismaClient) {
+  const db = client ?? defaultPrisma
+  return db.bankAccount.findMany({
+    where: { userId, active: true },
+    select: { id: true, name: true, institution: true },
+    orderBy: { name: "asc" },
+  })
+}
+
 export async function getBankAccountBalance(
   bankAccountId: string,
   userId: string,

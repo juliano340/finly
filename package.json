@@ -16,7 +16,9 @@
     "seed:accounts": "tsx scripts/seed-accounts.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
     "seed:demo:reset": "tsx scripts/seed-demo.ts --reset",
-    "postinstall": "prisma generate"
+    "prisma:generate": "prisma generate && prisma generate --schema prisma/schema.sqlite.prisma",
+    "db:push:sqlite": "prisma db push --schema prisma/schema.sqlite.prisma",
+    "postinstall": "npm run prisma:generate"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",

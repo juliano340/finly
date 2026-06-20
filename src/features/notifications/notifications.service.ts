@@ -1,7 +1,7 @@
 import { prisma as defaultPrisma } from "@/lib/prisma"
 import type { PrismaClient } from "@/generated/prisma/client"
 import { ensureFinancialMonth } from "@/features/financial-months/financial-months.service"
-import { ensureFixedCostOccurrences } from "@/features/monthly-closing/monthly-closing.service"
+import { ensureFixedCostOccurrencesForMonths } from "@/features/monthly-closing/monthly-closing.service"
 
 export type DueNotificationStatus = "OVERDUE" | "DUE_TODAY" | "DUE_SOON"
 
@@ -27,10 +27,12 @@ export async function getDueSoonNotifications(
   const endDate = addDaysUtc(today, daysAhead)
   const months = monthsBetween(today, endDate)
 
-  for (const month of months) {
-    const financialMonth = await ensureFinancialMonth(userId, month, db)
-    await ensureFixedCostOccurrences(userId, month, financialMonth.id, db)
-  }
+  const financialMonths = await Promise.all(months.map((month) => ensureFinancialMonth(userId, month, db)))
+  await ensureFixedCostOccurrencesForMonths(
+    userId,
+    financialMonths.map((financialMonth) => ({ month: financialMonth.month, financialMonthId: financialMonth.id })),
+    db
+  )
 
   const [invoices, occurrences] = await Promise.all([
     db.cardInvoice.findMany({

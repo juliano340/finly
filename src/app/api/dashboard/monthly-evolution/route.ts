@@ -10,12 +10,13 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url)
   const month = searchParams.get("month")
-  const months = Number(searchParams.get("months") ?? 6)
+  const monthsParam = Number(searchParams.get("months") ?? 6)
+  const months = Number.isFinite(monthsParam) ? Math.min(Math.max(monthsParam, 1), 24) : 6
 
   if (!month || !/^\d{4}-\d{2}$/.test(month)) {
     return NextResponse.json({ error: "Parâmetro 'month' obrigatório (YYYY-MM)" }, { status: 400 })
   }
 
-  const evolution = await getMonthlyEvolution(session.user.id, month, Number.isFinite(months) ? months : 6)
+  const evolution = await getMonthlyEvolution(session.user.id, month, months)
   return NextResponse.json(evolution)
 }
