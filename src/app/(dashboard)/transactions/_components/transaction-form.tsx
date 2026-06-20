@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { Trash2 } from "lucide-react"
 import {
   Sheet,
   SheetContent,
@@ -27,6 +28,7 @@ interface TransactionFormProps {
   categories: CategoryWithCount[]
   initial?: Partial<TransactionInput>
   title: string
+  onDelete?: () => void
 }
 
 export function TransactionForm({
@@ -36,6 +38,7 @@ export function TransactionForm({
   categories,
   initial,
   title,
+  onDelete,
 }: TransactionFormProps) {
   const [amount, setAmount] = useState(initial?.amount?.toString() ?? "")
   const [type, setType] = useState<"INCOME" | "EXPENSE">(initial?.type ?? "EXPENSE")
@@ -190,6 +193,11 @@ export function TransactionForm({
               {loading ? "Salvando..." : "Salvar"}
             </Button>
           </div>
+          {onDelete && (
+            <Button type="button" variant="destructive" className="mt-2 w-full" onClick={onDelete}>
+              <Trash2 className="mr-2 h-4 w-4" />Excluir transação
+            </Button>
+          )}
         </form>
       </SheetContent>
     </Sheet>

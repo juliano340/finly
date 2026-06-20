@@ -1,6 +1,6 @@
 "use client"
 
-import { Loader2, Pencil, Trash2 } from "lucide-react"
+import { Loader2, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency, formatDate } from "@/lib/utils"
@@ -121,24 +121,14 @@ export function TransactionTable({
                     </Badge>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        aria-label="Editar transação"
-                        onClick={() => onEdit(tx)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        aria-label="Excluir transação"
-                        onClick={() => onDelete(tx)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label="Editar transação"
+                      onClick={() => onEdit(tx)}
+                    >
+                      <Settings className="h-4 w-4" />
+                    </Button>
                   </td>
                 </tr>
               )

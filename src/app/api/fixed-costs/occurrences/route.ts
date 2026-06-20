@@ -18,22 +18,27 @@ export async function GET(request: Request) {
   }
 
   const userId = session.user.id
-  const financialMonth = await ensureFinancialMonth(userId, month, prisma)
-  await ensureFixedCostOccurrences(userId, month, financialMonth.id, prisma)
 
-  const where = type
-    ? { userId, month, fixedCost: { type } }
-    : { userId, month }
+  try {
+    const financialMonth = await ensureFinancialMonth(userId, month, prisma)
+    await ensureFixedCostOccurrences(userId, month, financialMonth.id, prisma)
 
-  const occurrences = await prisma.fixedCostOccurrence.findMany({
-    where,
-    include: {
-      fixedCost: {
-        include: { category: true, card: true, bankAccount: true },
+    const where = type
+      ? { userId, month, fixedCost: { type } }
+      : { userId, month }
+
+    const occurrences = await prisma.fixedCostOccurrence.findMany({
+      where,
+      include: {
+        fixedCost: {
+          include: { category: true, card: true, bankAccount: true },
+        },
       },
-    },
-    orderBy: { fixedCost: { name: "asc" } },
-  })
+      orderBy: { fixedCost: { name: "asc" } },
+    })
 
-  return NextResponse.json(occurrences)
+    return NextResponse.json(occurrences)
+  } catch {
+    return NextResponse.json([])
+  }
 }

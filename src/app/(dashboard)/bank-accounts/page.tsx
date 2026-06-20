@@ -2,7 +2,7 @@
 
 import type { FormEvent } from "react"
 import { useEffect, useRef, useState } from "react"
-import { AlertTriangle, ArrowLeftRight, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
+import { AlertTriangle, ArrowLeftRight, Loader2, Plus, Settings, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -40,6 +40,8 @@ export default function BankAccountsPage() {
   const [transferMethod, setTransferMethod] = useState("PIX")
   const [transferError, setTransferError] = useState("")
   const [transferSubmitting, setTransferSubmitting] = useState(false)
+  const [adjustTarget, setAdjustTarget] = useState("")
+  const [adjustSubmitting, setAdjustSubmitting] = useState(false)
   const [loading, setLoading] = useState(true)
 
   const fetchAccounts = async () => {
@@ -133,22 +135,28 @@ export default function BankAccountsPage() {
   }
 
   const handleAdjustment = async (accountId: string, formData: FormData) => {
-    const res = await fetch(`/api/bank-accounts/${accountId}/adjust`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        targetBalance: formData.get("targetBalance"),
-        description: formData.get("adjustDescription") || "AJUSTE MANUAL DE SALDO",
-        date: formData.get("adjustDate") || new Date(),
-      }),
-    })
-    if (res.ok) {
-      toast.success("Saldo ajustado com sucesso.")
-    } else {
-      const err = await res.json().catch(() => ({}))
-      toast.error(err.error ?? "Não foi possível ajustar o saldo.")
+    setAdjustSubmitting(true)
+    try {
+      const rawTarget = String(formData.get("targetBalance") ?? "").replace(/\./g, "").replace(",", ".")
+      const res = await fetch(`/api/bank-accounts/${accountId}/adjust`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetBalance: rawTarget,
+          description: formData.get("adjustDescription") || "AJUSTE MANUAL DE SALDO",
+          date: formData.get("adjustDate") || new Date(),
+        }),
+      })
+      if (res.ok) {
+        toast.success("Saldo ajustado com sucesso.")
+      } else {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.error ?? "Não foi possível ajustar o saldo.")
+      }
+      fetchAccounts()
+    } finally {
+      setAdjustSubmitting(false)
     }
-    fetchAccounts()
   }
 
   const handleTransfer = async (formData: FormData) => {
@@ -257,24 +265,14 @@ export default function BankAccountsPage() {
                 <td className="px-4 py-3 text-muted-foreground">{account.institution ?? "-"}</td>
                 <td className={`px-4 py-3 text-right font-medium ${account.balance < 0 ? "text-red-600" : ""}`}>{formatCurrency(account.balance)}</td>
                 <td className="px-4 py-3 text-right">
-                  <div className="flex justify-end gap-1">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      aria-label="Editar conta"
-                      onClick={() => openDetail(account)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      aria-label="Excluir conta"
-                      onClick={() => setConfirmDelete(account.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-red-600" />
-                    </Button>
-                  </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label="Editar conta"
+                    onClick={() => openDetail(account)}
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
                 </td>
               </tr>
             ))}
@@ -306,15 +304,7 @@ export default function BankAccountsPage() {
                 aria-label="Editar conta"
                 onClick={() => openDetail(account)}
               >
-                <Pencil className="h-4 w-4" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                aria-label="Excluir conta"
-                onClick={() => setConfirmDelete(account.id)}
-              >
-                <Trash2 className="h-4 w-4 text-red-600" />
+                <Settings className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -424,39 +414,94 @@ export default function BankAccountsPage() {
                   </div>
                 )}
 
-                {detailTab === "adjust" && (
+                {detailTab === "adjust" && selectedAccount && (
                   <div className="mt-4 space-y-4">
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-medium">Ajuste de saldo</p>
-                      <Button size="sm" variant="outline" onClick={() => setShowForm(showForm === "adjust" ? null : "adjust")}><Plus className="h-4 w-4" /></Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setShowForm(showForm === "adjust" ? null : "adjust")
+                          setAdjustTarget("")
+                        }}
+                      >
+                        {showForm === "adjust" ? <Trash2 className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                      </Button>
                     </div>
+
+                    {(() => {
+                      const raw = adjustTarget
+                      const targetNum = parseFloat(raw.replace(",", ".")) || 0
+                      const currentBalance = selectedAccount.balance
+                      const diff = targetNum - currentBalance
+                      const hasValidTarget = raw.length > 0 && !isNaN(parseFloat(raw.replace(",", ".")))
+                      return hasValidTarget ? (
+                        <div className="flex items-center justify-between rounded-lg bg-muted px-4 py-3">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Saldo atual</p>
+                            <p className="text-sm font-medium">{formatCurrency(currentBalance)}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground">Saldo correto</p>
+                            <p className="text-sm font-medium">{formatCurrency(targetNum)}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground">Diferença</p>
+                            <p className={`text-sm font-bold ${diff >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                              {diff >= 0 ? "+" : ""}{formatCurrency(diff)}
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="rounded-lg bg-muted px-4 py-3">
+                          <p className="text-xs text-muted-foreground">Saldo atual</p>
+                          <p className="text-2xl font-bold">{formatCurrency(currentBalance)}</p>
+                        </div>
+                      )
+                    })()}
+
                     {showForm === "adjust" && (
-                      <div className="rounded-lg border p-3 space-y-3">
-                        <p className="text-xs text-muted-foreground">Informe o valor correto que deveria aparecer na conta.</p>
-                        <form action={(formData) => { handleAdjustment(selectedAccount.id, formData); setShowForm(null) }} className="grid gap-2">
-                          <Input
-                            name="targetBalance"
-                            type="text"
-                            inputMode="decimal"
-                            placeholder="Saldo correto"
-                            required
-                            onChange={(e) => {
-                              e.target.value = e.target.value.replace(/[^\d,]/g, "")
-                            }}
-                            onBlur={(e) => {
-                              const raw = e.target.value
-                              if (!raw) return
-                              const num = parseFloat(raw.replace(",", "."))
-                              if (!isNaN(num)) {
-                                e.target.value = num.toFixed(2).replace(".", ",")
-                              }
-                            }}
-                          />
-                          <Input className="uppercase" name="adjustDescription" placeholder="Motivo do ajuste" onInput={uppercaseInput} />
-                          <Input name="adjustDate" type="date" />
+                      <div className="rounded-lg border p-4 space-y-4">
+                        <form action={(formData) => { handleAdjustment(selectedAccount.id, formData); setShowForm(null); setAdjustTarget("") }} className="space-y-4">
+                          <div className="space-y-1.5">
+                            <label className="text-sm font-medium">Saldo correto</label>
+                            <Input
+                              name="targetBalance"
+                              type="text"
+                              inputMode="decimal"
+                              placeholder="0,00"
+                              required
+                              value={adjustTarget}
+                              onChange={(e) => {
+                                const raw = e.target.value.replace(/[^\d,]/g, "")
+                                setAdjustTarget(raw)
+                              }}
+                              onBlur={(e) => {
+                                const raw = e.target.value
+                                if (!raw) return
+                                const num = parseFloat(raw.replace(",", "."))
+                                if (!isNaN(num)) {
+                                  setAdjustTarget(num.toFixed(2).replace(".", ","))
+                                }
+                              }}
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-sm font-medium">Motivo do ajuste</label>
+                            <Input className="uppercase" name="adjustDescription" placeholder="EX: AJUSTE MANUAL DE SALDO" onInput={uppercaseInput} />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-sm font-medium">Data do ajuste</label>
+                            <Input name="adjustDate" type="date" />
+                          </div>
                           <div className="flex gap-2">
-                            <Button type="submit" variant="outline">Ajustar saldo</Button>
-                            <Button type="button" variant="ghost" onClick={() => setShowForm(null)}>Cancelar</Button>
+                            <Button type="submit" className="flex-1" disabled={adjustSubmitting}>
+                              {adjustSubmitting ? "Ajustando..." : "Ajustar saldo"}
+                            </Button>
+                            <Button type="button" variant="outline" onClick={() => { setShowForm(null); setAdjustTarget("") }}>
+                              Cancelar
+                            </Button>
                           </div>
                         </form>
                       </div>

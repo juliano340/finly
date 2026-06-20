@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { CreditCard, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { CreditCard, Loader2, Plus, Settings, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -33,6 +33,9 @@ export default function CardsPage() {
   const [creating, setCreating] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const inFlightUpdateRef = useRef(false)
+  const editFormRef = useRef<HTMLFormElement>(null)
 
   const fetchData = async () => {
     try {
@@ -75,26 +78,34 @@ export default function CardsPage() {
   }
 
   const handleUpdate = async (cardId: string, formData: FormData) => {
-    const res = await fetch(`/api/cards/${cardId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: formData.get("name"),
-        brand: formData.get("brand") || null,
-        color: formData.get("color") || "#22C55E",
-        closingDay: formData.get("closingDay") || null,
-        dueDay: formData.get("dueDay") || null,
-        bankAccountId: formData.get("bankAccountId") || null,
-      }),
-    })
-    setSelectedCard(null)
-    if (res.ok) {
-      toast.success("Cartão atualizado com sucesso.")
-    } else {
-      const err = await res.json().catch(() => ({}))
-      toast.error(err.error ?? "Não foi possível atualizar o cartão.")
+    if (inFlightUpdateRef.current) return
+    inFlightUpdateRef.current = true
+    setUpdatingId(cardId)
+    try {
+      const res = await fetch(`/api/cards/${cardId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.get("name"),
+          brand: formData.get("brand") || null,
+          color: formData.get("color") || "#22C55E",
+          closingDay: formData.get("closingDay") || null,
+          dueDay: formData.get("dueDay") || null,
+          bankAccountId: formData.get("bankAccountId") || null,
+        }),
+      })
+      if (res.ok) {
+        toast.success("Cartão atualizado com sucesso.")
+        setSelectedCard(null)
+      } else {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.error ?? "Não foi possível atualizar o cartão.")
+      }
+      fetchData()
+    } finally {
+      setUpdatingId(null)
+      inFlightUpdateRef.current = false
     }
-    fetchData()
   }
 
   const handleDelete = async (cardId: string) => {
@@ -152,24 +163,14 @@ export default function CardsPage() {
                 <td className="px-4 py-3 text-center text-muted-foreground">{card.closingDay ?? "-"}</td>
                 <td className="px-4 py-3 text-center text-muted-foreground">{card.dueDay ?? "-"}</td>
                 <td className="px-4 py-3 text-right">
-                  <div className="flex justify-end gap-1">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      aria-label="Editar cartão"
-                      onClick={() => setSelectedCard(card)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      aria-label="Excluir cartão"
-                      onClick={() => setConfirmDelete(card.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-red-600" />
-                    </Button>
-                  </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label="Editar cartão"
+                    onClick={() => setSelectedCard(card)}
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
                 </td>
               </tr>
             ))}
@@ -196,22 +197,14 @@ export default function CardsPage() {
                 <span>{card.bankAccount?.name ?? "sem conta"}</span>
               </div>
             </button>
-            <div className="flex flex-col gap-1">
+            <div>
               <Button
                 size="icon"
                 variant="ghost"
                 aria-label="Editar cartão"
                 onClick={() => setSelectedCard(card)}
               >
-                <Pencil className="h-4 w-4" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                aria-label="Excluir cartão"
-                onClick={() => setConfirmDelete(card.id)}
-              >
-                <Trash2 className="h-4 w-4 text-red-600" />
+                <Settings className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -267,7 +260,7 @@ export default function CardsPage() {
                 </SheetTitle>
               </SheetHeader>
               <div className="flex-1 overflow-y-auto px-4 pb-4">
-                <form action={(formData) => handleUpdate(selectedCard.id, formData)} className="mt-4 space-y-4">
+                <form ref={editFormRef} className="mt-4 space-y-4">
                   <div className="grid gap-4">
                     <div className="space-y-1">
                       <label className="text-sm font-medium">Nome do cartão</label>
@@ -299,7 +292,9 @@ export default function CardsPage() {
                       <Input name="color" type="color" defaultValue={selectedCard.color} className="w-16" />
                     </div>
                   </div>
-                  <Button type="submit" className="w-full">Salvar alterações</Button>
+                  <Button type="button" className="w-full" disabled={updatingId === selectedCard.id} onClick={() => handleUpdate(selectedCard.id, new FormData(editFormRef.current!))}>
+                    {updatingId === selectedCard.id ? "Salvando..." : "Salvar alterações"}
+                  </Button>
                 </form>
                 <Button type="button" variant="destructive" className="mt-4 w-full" onClick={() => setConfirmDelete(selectedCard.id)}>
                   <Trash2 className="mr-2 h-4 w-4" />Excluir cartão

@@ -18,18 +18,16 @@ export interface ImportResult {
 }
 
 export async function exportData(userId: string, client: PrismaClient = defaultPrisma): Promise<BackupData> {
-  const [categories, financialMonths, bankAccounts, cards, transactions, budgets, bankAccountMovements, fixedCosts, cardInvoices, fixedCostOccurrences] = await Promise.all([
-    client.category.findMany({ where: { userId }, select: { id: true, name: true, icon: true, color: true, type: true } }),
-    client.financialMonth.findMany({ where: { userId }, select: { id: true, month: true, status: true } }),
-    client.bankAccount.findMany({ where: { userId }, select: { id: true, name: true, institution: true, type: true, color: true, initialBalance: true, active: true } }),
-    client.card.findMany({ where: { userId }, select: { id: true, name: true, brand: true, color: true, closingDay: true, dueDay: true, bankAccountId: true } }),
-    client.transaction.findMany({ where: { userId }, select: { id: true, amount: true, type: true, description: true, date: true, categoryId: true } }),
-    client.budget.findMany({ where: { userId }, select: { id: true, amount: true, month: true, categoryId: true } }),
-    client.bankAccountMovement.findMany({ where: { userId }, select: { id: true, bankAccountId: true, amount: true, type: true, description: true, date: true } }),
-    client.fixedCost.findMany({ where: { userId }, select: { id: true, name: true, type: true, defaultAmount: true, categoryId: true, paymentMethod: true, dueDay: true, paidInsideCard: true, cardId: true, bankAccountId: true, active: true } }),
-    client.cardInvoice.findMany({ where: { userId }, select: { id: true, cardId: true, financialMonthId: true, month: true, dueDate: true, amount: true, status: true, paidAt: true, paymentMethod: true, paymentBankAccountId: true, bankAccountMovementId: true } }),
-    client.fixedCostOccurrence.findMany({ where: { userId }, select: { id: true, fixedCostId: true, financialMonthId: true, month: true, amount: true, status: true, paidAt: true } }),
-  ])
+  const categories = await client.category.findMany({ where: { userId }, select: { id: true, name: true, icon: true, color: true, type: true } })
+  const financialMonths = await client.financialMonth.findMany({ where: { userId }, select: { id: true, month: true, status: true } })
+  const bankAccounts = await client.bankAccount.findMany({ where: { userId }, select: { id: true, name: true, institution: true, type: true, color: true, initialBalance: true, active: true } })
+  const cards = await client.card.findMany({ where: { userId }, select: { id: true, name: true, brand: true, color: true, closingDay: true, dueDay: true, bankAccountId: true } })
+  const transactions = await client.transaction.findMany({ where: { userId }, select: { id: true, amount: true, type: true, description: true, date: true, categoryId: true } })
+  const budgets = await client.budget.findMany({ where: { userId }, select: { id: true, amount: true, month: true, categoryId: true } })
+  const bankAccountMovements = await client.bankAccountMovement.findMany({ where: { userId }, select: { id: true, bankAccountId: true, amount: true, type: true, description: true, date: true } })
+  const fixedCosts = await client.fixedCost.findMany({ where: { userId }, select: { id: true, name: true, type: true, defaultAmount: true, categoryId: true, paymentMethod: true, dueDay: true, paidInsideCard: true, cardId: true, bankAccountId: true, active: true } })
+  const cardInvoices = await client.cardInvoice.findMany({ where: { userId }, select: { id: true, cardId: true, financialMonthId: true, month: true, dueDate: true, amount: true, status: true, paidAt: true, paymentMethod: true, paymentBankAccountId: true, bankAccountMovementId: true } })
+  const fixedCostOccurrences = await client.fixedCostOccurrence.findMany({ where: { userId }, select: { id: true, fixedCostId: true, financialMonthId: true, month: true, amount: true, status: true, paidAt: true } })
 
   return {
     version: 1,

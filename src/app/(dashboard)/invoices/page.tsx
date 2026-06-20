@@ -1,7 +1,7 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
-import { Calculator, CheckCircle2, ChevronLeft, ChevronRight, Loader2, Pencil, Trash2 } from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { Calculator, CheckCircle2, ChevronLeft, ChevronRight, Loader2, Settings, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -67,6 +67,9 @@ export default function InvoicesPage() {
   const [simAccountId, setSimAccountId] = useState("")
   const [simAmount, setSimAmount] = useState("")
   const [loading, setLoading] = useState(true)
+  const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const inFlightUpdateRef = useRef(false)
+  const editFormRef = useRef<HTMLFormElement>(null)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -139,17 +142,25 @@ export default function InvoicesPage() {
   }
 
   const handleUpdate = async (invoiceId: string, formData: FormData) => {
-    const res = await fetch(`/api/invoices/${invoiceId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cardId: formData.get("cardId"), dueDate: formData.get("dueDate"), amount: formData.get("amount"), status: formData.get("status") }),
-    })
-    if (res.ok) {
-      toast.success("Fatura atualizada!")
-      setSelectedInvoice(null)
-      fetchData()
-    } else {
-      toast.error("Erro ao atualizar fatura")
+    if (inFlightUpdateRef.current) return
+    inFlightUpdateRef.current = true
+    setUpdatingId(invoiceId)
+    try {
+      const res = await fetch(`/api/invoices/${invoiceId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cardId: formData.get("cardId"), dueDate: formData.get("dueDate"), amount: formData.get("amount"), status: formData.get("status") }),
+      })
+      if (res.ok) {
+        toast.success("Fatura atualizada!")
+        setSelectedInvoice(null)
+        fetchData()
+      } else {
+        toast.error("Erro ao atualizar fatura")
+      }
+    } finally {
+      setUpdatingId(null)
+      inFlightUpdateRef.current = false
     }
   }
 
@@ -262,15 +273,7 @@ export default function InvoicesPage() {
                       aria-label="Editar fatura"
                       onClick={() => setSelectedInvoice(invoice)}
                     >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      aria-label="Excluir fatura"
-                      onClick={() => setDeleteTarget(invoice.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-red-600" />
+                      <Settings className="h-4 w-4" />
                     </Button>
                   </div>
                 </td>
@@ -325,22 +328,14 @@ export default function InvoicesPage() {
                 )}
               </div>
             </button>
-            <div className="flex flex-col gap-1">
+            <div>
               <Button
                 size="icon"
                 variant="ghost"
                 aria-label="Editar fatura"
                 onClick={() => setSelectedInvoice(invoice)}
               >
-                <Pencil className="h-4 w-4" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                aria-label="Excluir fatura"
-                onClick={() => setDeleteTarget(invoice.id)}
-              >
-                <Trash2 className="h-4 w-4 text-red-600" />
+                <Settings className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -523,7 +518,7 @@ export default function InvoicesPage() {
                     <p className="text-xs text-muted-foreground">Valor</p>
                     <p className="text-2xl font-bold">{formatCurrency(selectedInvoice.amount)}</p>
                   </div>
-                  <form action={(formData) => handleUpdate(selectedInvoice.id, formData)} className="space-y-4">
+                  <form ref={editFormRef} className="space-y-4">
                     <div className="space-y-1">
                       <label className="text-sm font-medium">Cartão</label>
                       <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="cardId" defaultValue={selectedInvoice.card.id}>
@@ -546,7 +541,9 @@ export default function InvoicesPage() {
                       </select>
                     </div>
                     <div className="flex gap-2">
-                      <Button type="submit" className="flex-1">Salvar alterações</Button>
+                      <Button type="button" className="flex-1" disabled={updatingId === selectedInvoice.id} onClick={() => handleUpdate(selectedInvoice.id, new FormData(editFormRef.current!))}>
+                        {updatingId === selectedInvoice.id ? "Salvando..." : "Salvar alterações"}
+                      </Button>
                       <Button type="button" variant="outline" onClick={() => setDeleteTarget(selectedInvoice.id)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </form>

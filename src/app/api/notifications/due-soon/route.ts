@@ -6,6 +6,10 @@ export async function GET() {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
 
-  const notifications = await getDueSoonNotifications(session.user.id)
-  return NextResponse.json(notifications)
+  try {
+    const notifications = await getDueSoonNotifications(session.user.id)
+    return NextResponse.json(notifications)
+  } catch {
+    return NextResponse.json([])
+  }
 }

@@ -239,6 +239,7 @@ export default function TransactionsPage() {
             : undefined
         }
         title={editing ? "Editar transação" : "Nova transação"}
+        onDelete={editing ? () => { setFormOpen(false); setDeleting(editing); setDeleteOpen(true) } : undefined}
       />
 
       <DeleteDialog

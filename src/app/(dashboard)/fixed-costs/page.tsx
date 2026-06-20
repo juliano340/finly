@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { CheckCircle2, ChevronLeft, ChevronRight, Loader2, Pencil, Trash2 } from "lucide-react"
+import { CheckCircle2, ChevronLeft, ChevronRight, Loader2, Settings, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -74,8 +74,11 @@ export default function FixedCostsPage() {
   const [unpayingId, setUnpayingId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [creatingLoading, setCreatingLoading] = useState(false)
   const inFlightUpdateRef = useRef(false)
+  const inFlightCreateRef = useRef(false)
   const editFormRef = useRef<HTMLFormElement>(null)
+  const createFormRef = useRef<HTMLFormElement>(null)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -130,33 +133,41 @@ export default function FixedCostsPage() {
   const filteredCategories = categories.filter((c) => c.type === activeTab)
 
   const handleCreate = async (formData: FormData) => {
+    if (inFlightCreateRef.current) return
+    inFlightCreateRef.current = true
+    setCreatingLoading(true)
     const paidInsideCard = activeTab === "EXPENSE" && formData.get("paidInsideCard") === "on"
     setCreateError("")
-    const res = await fetch("/api/fixed-costs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: formData.get("name"),
-        type: activeTab,
-        defaultAmount: String(formData.get("defaultAmount") ?? "").replace(",", "."),
-        categoryId: formData.get("categoryId"),
-        paymentMethod: paidInsideCard ? "CREDIT_CARD" : formData.get("paymentMethod"),
-        dueDay: formData.get("dueDay") || null,
-        paidInsideCard,
-        cardId: paidInsideCard ? formData.get("cardId") : null,
-        bankAccountId: formData.get("bankAccountId") || null,
-        active: true,
-      }),
-    })
-    if (!res.ok) {
-      const err = await res.json()
-      setCreateError(err.error ?? "Erro ao salvar")
-      toast.error(err.error ?? "Erro ao criar custo fixo")
-      return
+    try {
+      const res = await fetch("/api/fixed-costs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.get("name"),
+          type: activeTab,
+          defaultAmount: String(formData.get("defaultAmount") ?? "").replace(",", "."),
+          categoryId: formData.get("categoryId"),
+          paymentMethod: paidInsideCard ? "CREDIT_CARD" : formData.get("paymentMethod"),
+          dueDay: formData.get("dueDay") || null,
+          paidInsideCard,
+          cardId: paidInsideCard ? formData.get("cardId") : null,
+          bankAccountId: formData.get("bankAccountId") || null,
+          active: true,
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        setCreateError(err.error ?? "Erro ao salvar")
+        toast.error(err.error ?? "Erro ao criar custo fixo")
+        return
+      }
+      toast.success(activeTab === "EXPENSE" ? "Custo fixo criado com sucesso." : "Receita fixa criada com sucesso.")
+      setCreating(false)
+      await fetchData()
+    } finally {
+      setCreatingLoading(false)
+      inFlightCreateRef.current = false
     }
-    toast.success(activeTab === "EXPENSE" ? "Custo fixo criado com sucesso." : "Receita fixa criada com sucesso.")
-    setCreating(false)
-    fetchData()
   }
 
   const handleUpdate = async (item: FixedCostData, formData: FormData) => {
@@ -315,24 +326,14 @@ export default function FixedCostsPage() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        aria-label="Editar custo fixo"
-                        onClick={() => openEditSheet(occ)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        aria-label="Excluir custo fixo"
-                        onClick={() => setConfirmDelete(occ.fixedCost.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-600" />
-                      </Button>
-                    </div>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label="Editar custo fixo"
+                      onClick={() => openEditSheet(occ)}
+                    >
+                      <Settings className="h-4 w-4" />
+                    </Button>
                   </td>
                 </tr>
               )
@@ -386,24 +387,16 @@ export default function FixedCostsPage() {
                   )}
                 </div>
               </button>
-              <div className="flex flex-col gap-1">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  aria-label="Editar custo fixo"
-                  onClick={() => openEditSheet(occ)}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  aria-label="Excluir custo fixo"
-                  onClick={() => setConfirmDelete(occ.fixedCost.id)}
-                >
-                  <Trash2 className="h-4 w-4 text-red-600" />
-                </Button>
-              </div>
+            <div>
+              <Button
+                size="icon"
+                variant="ghost"
+                aria-label="Editar custo fixo"
+                onClick={() => openEditSheet(occ)}
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </div>
             </div>
           )
         })}
@@ -414,7 +407,7 @@ export default function FixedCostsPage() {
           {creating ? (
             <>
               <SheetHeader><SheetTitle>Novo {activeTab === "EXPENSE" ? "custo fixo" : "receita fixa"}</SheetTitle></SheetHeader>
-              <form action={handleCreate} className="flex-1 overflow-y-auto px-4 pb-4">
+              <form ref={createFormRef} className="flex-1 overflow-y-auto px-4 pb-4">
                 <div className="mt-4 grid gap-4">
                   <div className="space-y-1">
                     <label className="text-sm font-medium">Nome</label>
@@ -470,7 +463,9 @@ export default function FixedCostsPage() {
                   </div>
                 </div>
                 {createError && <p className="text-sm text-destructive">{createError}</p>}
-                <Button type="submit" className="mt-6 w-full">Salvar</Button>
+                <Button type="button" className="mt-6 w-full" disabled={creatingLoading} onClick={() => handleCreate(new FormData(createFormRef.current!))}>
+                  {creatingLoading ? "Salvando..." : "Salvar"}
+                </Button>
               </form>
             </>
           ) : selectedOccurrence && selectedTemplate ? (
