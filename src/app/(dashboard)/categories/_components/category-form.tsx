@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { Trash2 } from "lucide-react"
 import {
   Sheet,
   SheetContent,
@@ -25,6 +26,7 @@ interface CategoryFormProps {
   onSubmit: (input: CategoryInput) => Promise<void>
   initial?: Partial<CategoryInput>
   title: string
+  onDelete?: () => void
 }
 
 const iconOptions = [
@@ -58,6 +60,7 @@ export function CategoryForm({
   onSubmit,
   initial,
   title,
+  onDelete,
 }: CategoryFormProps) {
   const [name, setName] = useState(initial?.name ?? "")
   const [type, setType] = useState<"Despesa" | "Receita">(initial?.type === "INCOME" ? "Receita" : "Despesa")
@@ -165,6 +168,17 @@ export function CategoryForm({
               {loading ? "Salvando..." : "Salvar"}
             </Button>
           </div>
+          {onDelete && (
+            <Button
+              type="button"
+              variant="destructive"
+              className="mt-4 w-full gap-2"
+              onClick={onDelete}
+            >
+              <Trash2 className="h-4 w-4" />
+              Excluir categoria
+            </Button>
+          )}
         </form>
       </SheetContent>
     </Sheet>

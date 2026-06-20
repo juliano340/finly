@@ -1,6 +1,6 @@
 "use client"
 
-import { Pencil, Trash2 } from "lucide-react"
+import { Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import type { CategoryWithCount } from "@/features/categories/categories.types"
@@ -8,7 +8,6 @@ import type { CategoryWithCount } from "@/features/categories/categories.types"
 interface CategoryCardProps {
   category: CategoryWithCount
   onEdit: () => void
-  onDelete: () => void
 }
 
 const iconMap: Record<string, string> = {
@@ -25,7 +24,7 @@ const iconMap: Record<string, string> = {
   wallet: "💳",
 }
 
-export function CategoryCard({ category, onEdit, onDelete }: CategoryCardProps) {
+export function CategoryCard({ category, onEdit }: CategoryCardProps) {
   const emoji = iconMap[category.icon] ?? "📌"
 
   return (
@@ -56,14 +55,9 @@ export function CategoryCard({ category, onEdit, onDelete }: CategoryCardProps) 
             ` · ${category._count.budgets} orçamento${category._count.budgets > 1 ? "s" : ""}`}
         </p>
       </div>
-      <div className="flex gap-1">
-        <Button variant="ghost" size="icon" onClick={onEdit}>
-          <Pencil className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="icon" onClick={onDelete}>
-          <Trash2 className="h-4 w-4 text-destructive" />
-        </Button>
-      </div>
+      <Button variant="ghost" size="icon" onClick={onEdit}>
+        <Settings className="h-4 w-4" />
+      </Button>
     </div>
   )
 }

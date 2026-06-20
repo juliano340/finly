@@ -1,6 +1,6 @@
 "use client"
 
-import { Loader2, Pencil, Trash2 } from "lucide-react"
+import { Loader2, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { CategoryWithCount } from "@/features/categories/categories.types"
 
@@ -8,7 +8,6 @@ interface CategoryTableProps {
   categories: CategoryWithCount[]
   loading: boolean
   onEdit: (category: CategoryWithCount) => void
-  onDelete: (category: CategoryWithCount) => void
 }
 
 const iconMap: Record<string, string> = {
@@ -29,7 +28,6 @@ export function CategoryTable({
   categories,
   loading,
   onEdit,
-  onDelete,
 }: CategoryTableProps) {
   const isEmpty = !loading && categories.length === 0
 
@@ -106,24 +104,14 @@ export function CategoryTable({
                     {cat._count?.budgets ?? 0}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        aria-label="Editar categoria"
-                        onClick={() => onEdit(cat)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        aria-label="Excluir categoria"
-                        onClick={() => onDelete(cat)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label="Gerenciar categoria"
+                      onClick={() => onEdit(cat)}
+                    >
+                      <Settings className="h-4 w-4" />
+                    </Button>
                   </td>
                 </tr>
               )

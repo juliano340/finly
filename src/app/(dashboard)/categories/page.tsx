@@ -91,10 +91,6 @@ export default function CategoriesPage() {
           setEditing(cat)
           setFormOpen(true)
         }}
-        onDelete={(cat) => {
-          setDeleting(cat)
-          setDeleteOpen(true)
-        }}
       />
 
       {/* Cards — Mobile */}
@@ -124,10 +120,6 @@ export default function CategoriesPage() {
                         setEditing(cat)
                         setFormOpen(true)
                       }}
-                      onDelete={() => {
-                        setDeleting(cat)
-                        setDeleteOpen(true)
-                      }}
                     />
                   ))}
                 </div>
@@ -146,10 +138,6 @@ export default function CategoriesPage() {
                       onEdit={() => {
                         setEditing(cat)
                         setFormOpen(true)
-                      }}
-                      onDelete={() => {
-                        setDeleting(cat)
-                        setDeleteOpen(true)
                       }}
                     />
                   ))}
@@ -179,6 +167,14 @@ export default function CategoriesPage() {
             : undefined
         }
         title={editing ? "Editar categoria" : "Nova categoria"}
+        onDelete={
+          editing
+            ? () => {
+                setDeleting(editing)
+                setDeleteOpen(true)
+              }
+            : undefined
+        }
       />
 
       <DeleteDialog
