@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
   Sheet,
   SheetContent,
@@ -46,18 +46,37 @@ export function TransactionForm({
   )
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const inFlightRef = useRef(false)
+
+  useEffect(() => {
+    if (open) {
+      inFlightRef.current = false
+      setLoading(false)
+      setError("")
+      setAmount(initial?.amount?.toString() ?? "")
+      setType(initial?.type ?? "EXPENSE")
+      setDescription(initial?.description ?? "")
+      setCategoryId(initial?.categoryId ?? "")
+      setDate(
+        initial?.date ? new Date(initial.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0]
+      )
+    }
+  }, [open, initial])
 
   const filteredCategories = categories.filter((c) => c.type === type)
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleSubmit() {
+    if (inFlightRef.current) return
+    inFlightRef.current = true
     const numAmount = parseFloat(amount.replace(",", "."))
     if (!numAmount || numAmount <= 0) {
       setError("Valor deve ser maior que zero")
+      inFlightRef.current = false
       return
     }
     if (!categoryId) {
       setError("Selecione uma categoria")
+      inFlightRef.current = false
       return
     }
     setError("")
@@ -73,8 +92,8 @@ export function TransactionForm({
       onOpenChange(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao salvar")
-    } finally {
       setLoading(false)
+      inFlightRef.current = false
     }
   }
 
@@ -84,16 +103,26 @@ export function TransactionForm({
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>
         </SheetHeader>
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-4 pb-4">
+        <form className="flex-1 overflow-y-auto px-4 pb-4">
           <div className="mt-4 space-y-4">
             <div className="space-y-1">
               <Label>Valor</Label>
               <Input
-                type="number"
-                step="0.01"
+                type="text"
+                inputMode="decimal"
                 placeholder="0,00"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/[^\d,]/g, "")
+                  setAmount(raw)
+                }}
+                onBlur={() => {
+                  if (!amount) return
+                  const num = parseFloat(amount.replace(",", "."))
+                  if (!isNaN(num)) {
+                    setAmount(num.toFixed(2).replace(".", ","))
+                  }
+                }}
                 required
               />
             </div>
@@ -157,7 +186,7 @@ export function TransactionForm({
             <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" className="flex-1" disabled={loading}>
+            <Button type="button" className="flex-1" disabled={loading} onClick={handleSubmit}>
               {loading ? "Salvando..." : "Salvar"}
             </Button>
           </div>

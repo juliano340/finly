@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, Wallet } from "lucide-react"
+import { Loader2, Plus, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -13,9 +13,11 @@ import {
 import { useTransactions } from "@/hooks/use-transactions"
 import { useCategories } from "@/hooks/use-categories"
 import { TransactionRow } from "./_components/transaction-row"
+import { TransactionTable } from "./_components/transaction-table"
 import { TransactionForm } from "./_components/transaction-form"
 import { DeleteDialog } from "./_components/delete-dialog"
 import { toast } from "sonner"
+import { formatCurrency } from "@/lib/utils"
 import type { TransactionWithRelations } from "@/features/transactions/transactions.types"
 import type { TransactionInput } from "@/features/transactions/transactions.schema"
 
@@ -73,7 +75,7 @@ export default function TransactionsPage() {
   if (loading && transactions.length === 0) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     )
   }
@@ -144,19 +146,37 @@ export default function TransactionsPage() {
         </Select>
       </div>
 
-      {/* Lista */}
-      {transactions.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-20">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-            <Wallet className="h-6 w-6 text-muted-foreground" />
+      {/* Tabela — Desktop */}
+      <TransactionTable
+        transactions={transactions}
+        loading={loading}
+        total={total}
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        onEdit={(tx) => {
+          setEditing(tx)
+          setFormOpen(true)
+        }}
+        onDelete={(tx) => {
+          setDeleting(tx)
+          setDeleteOpen(true)
+        }}
+      />
+
+      {/* Cards — Mobile */}
+      <div className="space-y-3 md:hidden">
+        {transactions.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 py-20">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+              <Wallet className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Nenhuma transação ainda. Comece adicionando sua primeira!
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Nenhuma transação ainda. Comece adicionando sua primeira!
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {transactions.map((tx) => (
+        ) : (
+          transactions.map((tx) => (
             <TransactionRow
               key={tx.id}
               transaction={tx}
@@ -169,34 +189,34 @@ export default function TransactionsPage() {
                 setDeleteOpen(true)
               }}
             />
-          ))}
-        </div>
-      )}
+          ))
+        )}
 
-      {/* Paginação */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page === 1}
-            onClick={() => setPage((p) => p - 1)}
-          >
-            Anterior
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            Página {page} de {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page === totalPages}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Próxima
-          </Button>
-        </div>
-      )}
+        {/* Paginação — Mobile */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === 1}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              Anterior
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Página {page} de {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === totalPages}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Próxima
+            </Button>
+          </div>
+        )}
+      </div>
 
       <TransactionForm
         key={editing?.id ?? "new"}
@@ -227,7 +247,7 @@ export default function TransactionsPage() {
         onConfirm={handleDelete}
         description={
           deleting?.description ??
-          `${deleting?.category.name} - R$ ${deleting?.amount}`
+          `${deleting?.category.name} - ${formatCurrency(deleting?.amount ?? 0)}`
         }
         loading={actionLoading}
       />
