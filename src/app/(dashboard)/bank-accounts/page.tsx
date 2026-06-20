@@ -434,7 +434,24 @@ export default function BankAccountsPage() {
                       <div className="rounded-lg border p-3 space-y-3">
                         <p className="text-xs text-muted-foreground">Informe o valor correto que deveria aparecer na conta.</p>
                         <form action={(formData) => { handleAdjustment(selectedAccount.id, formData); setShowForm(null) }} className="grid gap-2">
-                          <Input name="targetBalance" type="number" step="0.01" placeholder="Saldo correto" required />
+                          <Input
+                            name="targetBalance"
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="Saldo correto"
+                            required
+                            onChange={(e) => {
+                              e.target.value = e.target.value.replace(/[^\d,]/g, "")
+                            }}
+                            onBlur={(e) => {
+                              const raw = e.target.value
+                              if (!raw) return
+                              const num = parseFloat(raw.replace(",", "."))
+                              if (!isNaN(num)) {
+                                e.target.value = num.toFixed(2).replace(".", ",")
+                              }
+                            }}
+                          />
                           <Input className="uppercase" name="adjustDescription" placeholder="Motivo do ajuste" onInput={uppercaseInput} />
                           <Input name="adjustDate" type="date" />
                           <div className="flex gap-2">
