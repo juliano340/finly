@@ -209,7 +209,6 @@ async function ensureMonthlyEvolutionData(userId: string, months: string[], db: 
   if (missingMonths.length > 0) {
     await db.financialMonth.createMany({
       data: missingMonths.map((month) => ({ month, userId })),
-      skipDuplicates: true,
     })
     const createdMonths = await db.financialMonth.findMany({
       where: { userId, month: { in: missingMonths } },
@@ -248,7 +247,7 @@ async function ensureMonthlyEvolutionData(userId: string, months: string[], db: 
   }
 
   if (missingOccurrences.length > 0) {
-    await db.fixedCostOccurrence.createMany({ data: missingOccurrences, skipDuplicates: true })
+    await db.fixedCostOccurrence.createMany({ data: missingOccurrences })
   }
 }
 

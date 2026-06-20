@@ -97,7 +97,7 @@ export async function updateFixedCost(
   }).then(async (updated) => {
     if (input.defaultAmount !== undefined) {
       await db.fixedCostOccurrence.updateMany({
-        where: { fixedCostId: id, userId },
+        where: { fixedCostId: id, userId, status: "PENDING" },
         data: { amount: input.defaultAmount },
       })
     }

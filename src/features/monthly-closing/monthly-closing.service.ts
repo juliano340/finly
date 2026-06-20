@@ -274,7 +274,7 @@ export async function ensureFixedCostOccurrencesForMonths(
   }
 
   if (missingOccurrences.length > 0) {
-    await db.fixedCostOccurrence.createMany({ data: missingOccurrences, skipDuplicates: true })
+    await db.fixedCostOccurrence.createMany({ data: missingOccurrences })
   }
 }
 
