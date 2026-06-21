@@ -36,13 +36,13 @@ test.describe("Categorias", () => {
     await page.fill('input[id="cat-name"]', "Lazer E2E")
     await page.click('button:has-text("Salvar")')
 
-    await expect(page.locator("text=Lazer E2E")).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole("cell", { name: /Lazer E2E/ })).toBeVisible({ timeout: 10000 })
 
-    await page.locator("text=Lazer E2E").locator("..").locator("..").locator("..").locator("button").first().click()
+    await page.getByRole("row", { name: /Lazer E2E/ }).getByRole("button").first().click()
 
     await page.fill('input[id="cat-name"]', "Lazer Editado")
     await page.click('button:has-text("Salvar")')
 
-    await expect(page.locator("text=Lazer Editado")).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole("cell", { name: /Lazer Editado/ })).toBeVisible({ timeout: 10000 })
   })
 })

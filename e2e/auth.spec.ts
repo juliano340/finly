@@ -33,8 +33,11 @@ test.describe("Autenticação", () => {
     await page.waitForURL("**/dashboard**", { timeout: 20000 })
     await expect(page.locator("h1")).toContainText("Dashboard")
 
-    await page.click('button:has-text("Sair")')
-    await expect(page).toHaveURL("/login")
+    await page.getByRole("button", { name: "Sair" }).click()
+    await expect(page.getByRole("heading", { name: "Sair da conta" })).toBeVisible()
+    await page.getByRole("button", { name: "Sair" }).last().click()
+    await page.waitForURL("**/login**", { timeout: 20000 })
+    await expect(page).toHaveURL(/login/)
   })
 
   test("visitante acessa /dashboard → redirecionado para login", async ({

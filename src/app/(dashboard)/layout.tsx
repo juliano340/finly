@@ -70,7 +70,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const handleLogout = () => {
     setLogoutOpen(false)
-    signOut({ redirect: false }).then(() => { window.location.href = "/login" })
+    signOut({ callbackUrl: "/login", redirect: true })
   }
 
   useEffect(() => {

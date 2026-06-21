@@ -31,7 +31,7 @@ test.describe("Dashboard", () => {
 
     await expect(page.locator("h1")).toContainText("Dashboard")
 
-    await expect(page.locator("text=Saldo atual")).toBeVisible()
+    await expect(page.locator("text=Resultado líquido")).toBeVisible()
     await expect(page.locator("text=Receitas do mês")).toBeVisible()
     await expect(page.locator("text=Despesas do mês")).toBeVisible()
 

@@ -33,7 +33,7 @@ test.describe("Orçamentos", () => {
     await page.click('button:has-text("Nova categoria")')
     await page.fill('input[id="cat-name"]', "Alimentação E2E")
     await page.click('button:has-text("Salvar")')
-    await expect(page.locator("text=Alimentação E2E")).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole("cell", { name: /Alimentação E2E/ })).toBeVisible({ timeout: 10000 })
 
     await page.goto("/budgets")
     await expect(page.locator("h1")).toContainText("Orçamentos")
@@ -44,10 +44,10 @@ test.describe("Orçamentos", () => {
     await page.waitForSelector('input[id="amount"]', { timeout: 5000 })
     await page.fill('input[id="amount"]', "500")
     await page.click('button:has-text("Selecione...")')
-    await page.click('text=Alimentação E2E')
+    await page.getByText("Alimentação E2E", { exact: true }).click()
     await page.click('button:has-text("Criar")')
     await expect(page.locator("text=Orçamento criado")).toBeVisible({ timeout: 10000 })
 
-    await expect(page.locator("text=Alimentação E2E")).toBeVisible()
+    await expect(page.getByText("Alimentação E2E", { exact: true }).first()).toBeVisible()
   })
 })
