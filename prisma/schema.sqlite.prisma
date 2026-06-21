@@ -207,6 +207,7 @@ model BankAccount {
   type           BankAccountType @default(CHECKING)
   color          String          @default("#22C55E")
   initialBalance Float           @default(0)
+  overdraftLimit Float           @default(0)
   active         Boolean         @default(true)
   userId         String
   createdAt      DateTime        @default(now())
@@ -306,6 +307,7 @@ model FixedCostOccurrence {
   amount           Float
   status           PaymentStatus @default(PENDING)
   paidAt           DateTime?
+  deletedAt        DateTime?
   userId           String
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
