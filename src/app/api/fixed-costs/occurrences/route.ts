@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { ensureFinancialMonth } from "@/features/financial-months/financial-months.service"
+import { ensureFixedCostOccurrences } from "@/features/monthly-closing/monthly-closing.service"
 
 export async function GET(request: Request) {
   const session = await auth()
@@ -18,9 +20,12 @@ export async function GET(request: Request) {
   const userId = session.user.id
 
   try {
+    const financialMonth = await ensureFinancialMonth(userId, month, prisma)
+    await ensureFixedCostOccurrences(userId, month, financialMonth.id, prisma)
+
     const where = type
-      ? { userId, month, fixedCost: { type } }
-      : { userId, month }
+      ? { userId, month, deletedAt: null, fixedCost: { type } }
+      : { userId, month, deletedAt: null }
 
     const occurrences = await prisma.fixedCostOccurrence.findMany({
       where,
@@ -33,7 +38,8 @@ export async function GET(request: Request) {
     })
 
     return NextResponse.json(occurrences)
-  } catch {
-    return NextResponse.json([])
+  } catch (err) {
+    console.error("[GET /api/fixed-costs/occurrences] error:", err)
+    return NextResponse.json({ error: "Erro ao buscar ocorrências" }, { status: 500 })
   }
 }

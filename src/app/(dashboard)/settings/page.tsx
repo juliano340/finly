@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useTheme } from "next-themes"
-import { Download, Loader2, LogOut, Moon, Save, Sun, Upload } from "lucide-react"
+import { Download, Loader2, LogOut, Moon, Save, Sun, Trash2, Upload } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -32,6 +32,8 @@ export default function SettingsPage() {
   const [restoreFile, setRestoreFile] = useState<File | null>(null)
   const [restoring, setRestoring] = useState(false)
   const [confirmRestore, setConfirmRestore] = useState(false)
+  const [confirmResetFixedExpenses, setConfirmResetFixedExpenses] = useState(false)
+  const [resettingFixedExpenses, setResettingFixedExpenses] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -116,6 +118,25 @@ export default function SettingsPage() {
       toast.error("Arquivo inválido ou corrompido.")
     } finally {
       setRestoring(false)
+    }
+  }
+
+  async function handleResetFixedExpenses() {
+    setResettingFixedExpenses(true)
+    try {
+      const res = await fetch("/api/fixed-costs/reset-expenses", { method: "POST" })
+      if (res.ok) {
+        const result = await res.json() as { fixedCostsDeleted: number; occurrencesDeleted: number }
+        toast.success(
+          `${result.fixedCostsDeleted} despesa${result.fixedCostsDeleted !== 1 ? "s" : ""} fixa${result.fixedCostsDeleted !== 1 ? "s" : ""} e ${result.occurrencesDeleted} ocorrência${result.occurrencesDeleted !== 1 ? "s" : ""} apagada${result.occurrencesDeleted !== 1 ? "s" : ""}.`
+        )
+        setConfirmResetFixedExpenses(false)
+      } else {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.error ?? "Não foi possível zerar despesas fixas.")
+      }
+    } finally {
+      setResettingFixedExpenses(false)
     }
   }
 
@@ -300,6 +321,25 @@ export default function SettingsPage() {
               </Button>
             </CardContent>
           </Card>
+
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base">Zerar despesas fixas</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Apague todos os lançamentos fixos de despesas e suas ocorrências em todos os meses. Receitas fixas e movimentos bancários já gerados permanecem intactos.
+              </p>
+              <Button
+                variant="destructive"
+                onClick={() => setConfirmResetFixedExpenses(true)}
+                disabled={resettingFixedExpenses}
+              >
+                {resettingFixedExpenses ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                {resettingFixedExpenses ? "Zerando..." : "Zerar despesas fixas"}
+              </Button>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
@@ -310,6 +350,15 @@ export default function SettingsPage() {
         description="Todos os dados atuais serão apagados e substituídos pelo backup. Esta ação não pode ser desfeita."
         confirmText="Sim, substituir"
         onConfirm={handleRestore}
+      />
+      <ConfirmDialog
+        open={confirmResetFixedExpenses}
+        onOpenChange={setConfirmResetFixedExpenses}
+        title="Zerar despesas fixas?"
+        description="Todos os lançamentos fixos de despesas e suas ocorrências serão apagados de todos os meses. Movimentos bancários já gerados permanecerão no extrato. Esta ação não pode ser desfeita."
+        confirmText="Sim, zerar"
+        loading={resettingFixedExpenses}
+        onConfirm={handleResetFixedExpenses}
       />
     </div>
   )

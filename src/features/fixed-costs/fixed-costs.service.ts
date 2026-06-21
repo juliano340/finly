@@ -1,8 +1,14 @@
 import { prisma as defaultPrisma } from "@/lib/prisma"
 import type { PrismaClient } from "@/generated/prisma/client"
 import type { FixedCostInput } from "./fixed-costs.schema"
-import { ensureFixedCostOccurrencesForMonths } from "@/features/monthly-closing/monthly-closing.service"
 import { ensureFinancialMonth } from "@/features/financial-months/financial-months.service"
+import { ensureFixedCostOccurrences } from "@/features/monthly-closing/monthly-closing.service"
+
+export class DuplicateFixedCostNameError extends Error {
+  constructor() {
+    super("Já existe um lançamento fixo com este nome")
+  }
+}
 
 async function validateFixedCostRelations(
   userId: string,
@@ -39,6 +45,12 @@ export async function createFixedCost(
   const valid = await validateFixedCostRelations(userId, input, db)
   if (!valid) return null
 
+  const existing = await db.fixedCost.findUnique({
+    where: { name_userId: { name: input.name, userId } },
+    select: { id: true },
+  })
+  if (existing) throw new DuplicateFixedCostNameError()
+
   const created = await db.fixedCost.create({
     data: {
       name: input.name,
@@ -66,7 +78,7 @@ export async function createFixedCost(
   const now = new Date()
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
   const fm = await ensureFinancialMonth(userId, currentMonth, db)
-  await ensureFixedCostOccurrencesForMonths(userId, [{ month: currentMonth, financialMonthId: fm.id }], db)
+  await ensureFixedCostOccurrences(userId, currentMonth, fm.id, db)
 
   return created
 }
@@ -80,6 +92,14 @@ export async function updateFixedCost(
   const db = client ?? defaultPrisma
   const fixedCost = await db.fixedCost.findUnique({ where: { id } })
   if (!fixedCost || fixedCost.userId !== userId) return null
+
+  if (input.name !== undefined && input.name !== fixedCost.name) {
+    const existing = await db.fixedCost.findUnique({
+      where: { name_userId: { name: input.name, userId } },
+      select: { id: true },
+    })
+    if (existing && existing.id !== id) throw new DuplicateFixedCostNameError()
+  }
 
   const next = { ...fixedCost, ...input }
   const valid = await validateFixedCostRelations(
@@ -142,4 +162,31 @@ export async function deleteFixedCost(
 
   await db.fixedCost.delete({ where: { id } })
   return true
+}
+
+export async function resetExpenseFixedCosts(userId: string, client?: PrismaClient) {
+  const db = client ?? defaultPrisma
+  const fixedCosts = await db.fixedCost.findMany({
+    where: { userId, type: "EXPENSE" },
+    select: { id: true },
+  })
+  const fixedCostIds = fixedCosts.map((item) => item.id)
+
+  if (fixedCostIds.length === 0) {
+    return { fixedCostsDeleted: 0, occurrencesDeleted: 0 }
+  }
+
+  return db.$transaction(async (tx) => {
+    const occurrences = await tx.fixedCostOccurrence.deleteMany({
+      where: { userId, fixedCostId: { in: fixedCostIds } },
+    })
+    const fixedCostsDeleted = await tx.fixedCost.deleteMany({
+      where: { userId, type: "EXPENSE", id: { in: fixedCostIds } },
+    })
+
+    return {
+      fixedCostsDeleted: fixedCostsDeleted.count,
+      occurrencesDeleted: occurrences.count,
+    }
+  })
 }

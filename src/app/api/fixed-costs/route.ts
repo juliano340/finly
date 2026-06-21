@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { fixedCostSchema } from "@/features/fixed-costs/fixed-costs.schema"
-import { createFixedCost, getFixedCosts } from "@/features/fixed-costs/fixed-costs.service"
+import { createFixedCost, DuplicateFixedCostNameError, getFixedCosts } from "@/features/fixed-costs/fixed-costs.service"
 
 export async function GET(request: Request) {
   const session = await auth()
@@ -24,11 +24,9 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  console.log("[POST /api/fixed-costs] body:", JSON.stringify(body))
 
   const parsed = fixedCostSchema.safeParse(body)
   if (!parsed.success) {
-    console.log("[POST /api/fixed-costs] validation error:", parsed.error.format())
     return NextResponse.json({ error: "Dados inválidos", details: parsed.error.format() }, { status: 400 })
   }
 
@@ -39,7 +37,10 @@ export async function POST(request: Request) {
     }
     return NextResponse.json(fixedCost, { status: 201 })
   } catch (err) {
+    if (err instanceof DuplicateFixedCostNameError) {
+      return NextResponse.json({ error: err.message }, { status: 409 })
+    }
     console.error("[POST /api/fixed-costs] error:", err)
-    return NextResponse.json({ error: err instanceof Error ? err.message : "Erro interno" }, { status: 500 })
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 })
   }
 }

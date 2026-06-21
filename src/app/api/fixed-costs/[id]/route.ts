@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { fixedCostPartialSchema } from "@/features/fixed-costs/fixed-costs.schema"
-import { deleteFixedCost, updateFixedCost } from "@/features/fixed-costs/fixed-costs.service"
+import { deleteFixedCost, DuplicateFixedCostNameError, updateFixedCost } from "@/features/fixed-costs/fixed-costs.service"
 
 export async function PUT(
   request: Request,
@@ -18,7 +18,16 @@ export async function PUT(
   }
 
   const { id } = await params
-  const fixedCost = await updateFixedCost(id, session.user.id, parsed.data)
+  let fixedCost
+  try {
+    fixedCost = await updateFixedCost(id, session.user.id, parsed.data)
+  } catch (err) {
+    if (err instanceof DuplicateFixedCostNameError) {
+      return NextResponse.json({ error: err.message }, { status: 409 })
+    }
+    console.error("[PUT /api/fixed-costs/:id] error:", err)
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 })
+  }
   if (!fixedCost) {
     return NextResponse.json({ error: "Custo fixo não encontrado" }, { status: 404 })
   }
