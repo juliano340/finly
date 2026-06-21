@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useRef, useState } from "react"
 import { AlertTriangle, ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -42,10 +42,12 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
   const [amount, setAmount] = useState("")
   const [method, setMethod] = useState("PIX")
   const [description, setDescription] = useState("")
-  const [date, setDate] = useState("")
+  const [date, setDate] = useState(today)
   const [error, setError] = useState("")
   const [submitting, setSubmitting] = useState(false)
 
+  const fromAccounts = accounts.filter((a) => a.id !== toId)
+  const toAccounts = accounts.filter((a) => a.id !== fromId)
   const fromAccount = accounts.find((a) => a.id === fromId)
   const toAccount = accounts.find((a) => a.id === toId)
   const parsedAmount = parseFloat(amount) || 0
@@ -55,14 +57,8 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
 
   const isStep1Valid = !!fromId && !!toId
   const isStep2Valid = parsedAmount > 0
-  const isStep3Valid = !!date
-
   const d = new Date()
   const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
-
-  useEffect(() => {
-    setDate(today)
-  }, [open])
 
   function resetForm() {
     setStep(0)
@@ -156,14 +152,11 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
                   <select
                     className="w-full rounded-md border bg-background px-3 py-2 text-sm"
                     value={fromId}
-                    onChange={(e) => {
-                      setFromId(e.target.value)
-                      if (e.target.value === toId) setToId("")
-                    }}
+                    onChange={(e) => setFromId(e.target.value)}
                   >
                     <option value="">Selecione</option>
-                    {accounts.map((a) => (
-                      <option key={a.id} value={a.id} disabled={a.id === toId}>
+                    {fromAccounts.map((a) => (
+                      <option key={a.id} value={a.id}>
                         {a.name} — {formatCurrency(a.balance)}
                       </option>
                     ))}
@@ -181,14 +174,11 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
                   <select
                     className="w-full rounded-md border bg-background px-3 py-2 text-sm"
                     value={toId}
-                    onChange={(e) => {
-                      setToId(e.target.value)
-                      if (e.target.value === fromId) setFromId("")
-                    }}
+                    onChange={(e) => setToId(e.target.value)}
                   >
                     <option value="">Selecione</option>
-                    {accounts.map((a) => (
-                      <option key={a.id} value={a.id} disabled={a.id === fromId}>
+                    {toAccounts.map((a) => (
+                      <option key={a.id} value={a.id}>
                         {a.name} — {formatCurrency(a.balance)}
                       </option>
                     ))}
