@@ -209,6 +209,7 @@ async function ensureMonthlyEvolutionData(userId: string, months: string[], db: 
   if (missingMonths.length > 0) {
     await db.financialMonth.createMany({
       data: missingMonths.map((month) => ({ month, userId })),
+      skipDuplicates: true,
     })
     const createdMonths = await db.financialMonth.findMany({
       where: { userId, month: { in: missingMonths } },
