@@ -36,6 +36,8 @@ interface TransferWizardProps {
 
 export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: TransferWizardProps) {
   const transferSubmittingRef = useRef(false)
+  const d = new Date()
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
   const [step, setStep] = useState(0)
   const [fromId, setFromId] = useState("")
   const [toId, setToId] = useState("")
@@ -57,8 +59,6 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
 
   const isStep1Valid = !!fromId && !!toId
   const isStep2Valid = parsedAmount > 0
-  const d = new Date()
-  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
 
   function resetForm() {
     setStep(0)
