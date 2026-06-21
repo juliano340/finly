@@ -263,18 +263,22 @@ export function InvoicesTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div><h2 className="text-xl font-bold tracking-tight">Faturas</h2><p className="text-sm text-muted-foreground">Valor final lançado manualmente por cartão.</p></div>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={openCopyDialog} disabled={copiando}>
-            <Copy className="mr-1.5 h-3.5 w-3.5" />
-            Copiar de {previousMonth(month)}
-          </Button>
           <div className="flex items-center gap-1 rounded-md border bg-background px-2 py-1">
             <Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(previousMonth(month))}><ChevronLeft className="size-4" /></Button>
             <span className="min-w-28 text-center text-sm font-medium capitalize">{monthLabel(month)}</span>
             <Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(nextMonth(month))}><ChevronRight className="size-4" /></Button>
           </div>
+          {month !== currentMonth() && (
+            <Button size="sm" variant="ghost" onClick={() => setMonth(currentMonth())}>Hoje</Button>
+          )}
+          <div className="h-5 w-px bg-border" />
+          <Button size="sm" variant="outline" onClick={openCopyDialog} disabled={copiando}>
+            <Copy className="mr-1.5 h-3.5 w-3.5" />
+            Copiar
+          </Button>
           <Button variant="outline" size="sm" onClick={() => { setSimulatorOpen(true); setSimInvoiceId(""); setSimAccountId(""); setSimAmount("") }}>
             <Calculator className="mr-1 h-4 w-4" /> Simular
           </Button>
