@@ -10,13 +10,25 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
+function getInitialEmail(): string {
+  if (typeof window === "undefined") return ""
+  try { return localStorage.getItem("rememberedEmail") ?? "" } catch { return "" }
+}
+
+function getInitialRemember(): boolean {
+  if (typeof window === "undefined") return true
+  try {
+    const saved = localStorage.getItem("rememberChoice")
+    return saved !== null ? saved === "true" : true
+  } catch { return true }
+}
+
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(getInitialEmail);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [remember, setRemember] = useState(true);
-  const [hydrated, setHydrated] = useState(false);
+  const [remember, setRemember] = useState(getInitialRemember);
   const [loading, setLoading] = useState(false);
   const passwordRef = useRef<HTMLInputElement>(null);
   const [revealSecondsLeft, setRevealSecondsLeft] = useState(0);
@@ -35,18 +47,6 @@ export default function LoginPage() {
     }, 50)
     return () => window.clearInterval(interval)
   }, [revealSecondsLeft])
-
-  useEffect(() => {
-    const savedEmail = localStorage.getItem("rememberedEmail");
-    if (savedEmail) {
-      setEmail(savedEmail);
-    }
-    const savedRemember = localStorage.getItem("rememberChoice");
-    if (savedRemember !== null) {
-      setRemember(savedRemember === "true");
-    }
-    setHydrated(true);
-  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -176,16 +176,13 @@ export default function LoginPage() {
 
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                {hydrated ? (
                   <input
                     type="checkbox"
                     checked={remember}
                     onChange={(e) => handleRememberChange(e.target.checked)}
                     className="h-4 w-4 rounded border-border"
+                    suppressHydrationWarning
                   />
-                ) : (
-                  <span className="inline-block h-4 w-4 rounded border border-border" aria-hidden />
-                )}
                 Lembrar de mim
               </label>
               <a href="#" className="text-sm text-primary hover:underline">

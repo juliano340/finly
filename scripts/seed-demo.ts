@@ -1,5 +1,4 @@
 import { prisma as defaultPrisma } from "../src/lib/prisma"
-import type { PrismaClient } from "@/generated/prisma/client"
 import { hash } from "bcryptjs"
 import { createBankAccount } from "../src/features/bank-accounts/bank-accounts.service"
 import { createCard } from "../src/features/cards/cards.service"
@@ -224,6 +223,9 @@ async function main() {
       cardId: paidInsideCard && fc.cardName ? cardByName.get(fc.cardName)?.id ?? null : null,
       bankAccountId: !paidInsideCard && fc.bankAccountName ? accountByName.get(fc.bankAccountName) ?? null : null,
       active: true,
+      startDate: new Date().toISOString().split("T")[0],
+      frequency: "MONTHLY",
+      endType: "NONE",
     })
     if (created) fixedCostByName.set(fc.name, created.id)
   }
@@ -448,8 +450,8 @@ async function main() {
       const fixedCostId = fixedCostByName.get(fc.name)
       if (!fixedCostId) continue
       const financialMonth = await ensureFinancialMonth(userId, month, db)
-      const existing = await db.fixedCostOccurrence.findUnique({
-        where: { fixedCostId_month_userId: { fixedCostId, month, userId } },
+      const existing = await db.fixedCostOccurrence.findFirst({
+        where: { fixedCostId, month, userId },
       })
       if (existing) continue
       const dueDate = dateInMonth(month, fc.dueDay)
@@ -458,6 +460,7 @@ async function main() {
           fixedCostId,
           financialMonthId: financialMonth.id,
           month,
+          dueDate,
           amount: fc.amount,
           status: "PAID",
           paidAt: dueDate,

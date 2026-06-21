@@ -82,8 +82,6 @@ test("Claro Net: mesmo valor na tabela e no input", async ({ page }) => {
 
 test("ciclo completo: criar → editar → validar → excluir despesa fixa", async ({ page }) => {
   const name = uniqueName()
-  const initialAmount = "123,45"
-  const updatedAmount = "234,56"
 
   const created = await page.evaluate(async (itemName) => {
     const catRes = await fetch("/api/categories")

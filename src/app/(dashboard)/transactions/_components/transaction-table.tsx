@@ -14,7 +14,6 @@ interface TransactionTableProps {
   totalPages: number
   onPageChange: (page: number) => void
   onEdit: (transaction: TransactionWithRelations) => void
-  onDelete: (transaction: TransactionWithRelations) => void
 }
 
 function CategoryIcon({ icon }: { icon: string }) {
@@ -41,7 +40,6 @@ export function TransactionTable({
   totalPages,
   onPageChange,
   onEdit,
-  onDelete,
 }: TransactionTableProps) {
   const isEmpty = !loading && transactions.length === 0
 

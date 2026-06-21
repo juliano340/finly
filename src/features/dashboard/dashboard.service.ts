@@ -351,24 +351,6 @@ export async function getCardInvoiceEvolution(
   }
 }
 
-async function aggregateTransactions(
-  userId: string,
-  month: string,
-  type: "INCOME" | "EXPENSE",
-  db: PrismaClient
-) {
-  const [year, m] = month.split("-").map(Number)
-  const result = await db.transaction.aggregate({
-    where: {
-      userId,
-      type,
-      date: { gte: new Date(year, m - 1, 1), lt: new Date(year, m, 1) },
-    },
-    _sum: { amount: true },
-  })
-  return result._sum.amount ?? 0
-}
-
 function previousMonths(endMonth: string, count: number) {
   const [year, month] = endMonth.split("-").map(Number)
   const months: string[] = []

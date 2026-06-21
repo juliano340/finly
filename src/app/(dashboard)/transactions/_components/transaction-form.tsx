@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useRef, useState } from "react"
 import { Trash2 } from "lucide-react"
 import {
   Sheet,
@@ -50,21 +50,6 @@ export function TransactionForm({
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const inFlightRef = useRef(false)
-
-  useEffect(() => {
-    if (open) {
-      inFlightRef.current = false
-      setLoading(false)
-      setError("")
-      setAmount(initial?.amount?.toString() ?? "")
-      setType(initial?.type ?? "EXPENSE")
-      setDescription(initial?.description ?? "")
-      setCategoryId(initial?.categoryId ?? "")
-      setDate(
-        initial?.date ? new Date(initial.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0]
-      )
-    }
-  }, [open, initial])
 
   const filteredCategories = categories.filter((c) => c.type === type)
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -43,14 +43,17 @@ export default function MonthlyClosingPage() {
   const [data, setData] = useState<ClosingData | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const fetchClosing = useCallback(async () => {
-    setLoading(true)
-    fetch(`/api/monthly-closing?month=${month}`).then((res) => res.json()).then((d) => { setData(d); setLoading(false) })
-  }, [month])
-
   useEffect(() => {
-    fetchClosing()
-  }, [fetchClosing])
+    let cancelled = false
+    ;(async () => {
+      fetch(`/api/monthly-closing?month=${month}`).then((res) => res.json()).then((d) => {
+        if (cancelled) return
+        setData(d)
+        setLoading(false)
+      })
+    })()
+    return () => { cancelled = true }
+  }, [month])
 
   const handlePayFixedCost = async (id: string) => {
     await fetch(`/api/fixed-cost-occurrences/${id}/pay`, { method: "POST" })
@@ -88,7 +91,7 @@ export default function MonthlyClosingPage() {
             ))}
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            Custos fixos dentro do cartão não somam de novo (já estão na fatura). Gastos já pagos também são excluídos do "a pagar".
+            Custos fixos dentro do cartão não somam de novo (já estão na fatura). Gastos já pagos também são excluídos do &ldquo;a pagar&rdquo;.
           </p>
         </CardContent>
       </Card>

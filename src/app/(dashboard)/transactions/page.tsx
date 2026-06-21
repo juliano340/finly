@@ -158,10 +158,6 @@ export default function TransactionsPage() {
           setEditing(tx)
           setFormOpen(true)
         }}
-        onDelete={(tx) => {
-          setDeleting(tx)
-          setDeleteOpen(true)
-        }}
       />
 
       {/* Cards — Mobile */}
@@ -219,7 +215,7 @@ export default function TransactionsPage() {
       </div>
 
       <TransactionForm
-        key={editing?.id ?? "new"}
+        key={`${editing?.id ?? "new"}-${formOpen}`}
         open={formOpen}
         onOpenChange={(open) => {
           setFormOpen(open)

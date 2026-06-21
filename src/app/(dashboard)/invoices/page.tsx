@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Calculator, CheckCircle2, ChevronLeft, ChevronRight, Loader2, Settings, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -71,20 +71,22 @@ export default function InvoicesPage() {
   const inFlightUpdateRef = useRef(false)
   const editFormRef = useRef<HTMLFormElement>(null)
 
-  const fetchData = useCallback(async () => {
-    setLoading(true)
-    const [cardsRes, invoicesRes, accountsRes] = await Promise.all([
-      fetch("/api/cards"),
-      fetch(`/api/invoices?month=${month}`),
-      fetch("/api/bank-accounts"),
-    ])
-    if (cardsRes.ok) setCards(await cardsRes.json())
-    if (invoicesRes.ok) setInvoices(await invoicesRes.json())
-    if (accountsRes.ok) setBankAccounts(await accountsRes.json())
-    setLoading(false)
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const [cardsRes, invoicesRes, accountsRes] = await Promise.all([
+        fetch("/api/cards"),
+        fetch(`/api/invoices?month=${month}`),
+        fetch("/api/bank-accounts"),
+      ])
+      if (cancelled) return
+      if (cardsRes.ok) setCards(await cardsRes.json())
+      if (invoicesRes.ok) setInvoices(await invoicesRes.json())
+      if (accountsRes.ok) setBankAccounts(await accountsRes.json())
+      setLoading(false)
+    })()
+    return () => { cancelled = true }
   }, [month])
-
-  useEffect(() => { fetchData() }, [fetchData])
 
   const openPayDialog = (invoice: Invoice) => {
     setPayingInvoice(invoice)

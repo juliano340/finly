@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useTheme } from "next-themes"
-import { Database, Download, Loader2, LogOut, Moon, Save, Sun, Upload } from "lucide-react"
+import { Download, Loader2, LogOut, Moon, Save, Sun, Upload } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"

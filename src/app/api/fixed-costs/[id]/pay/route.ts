@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { ensureFinancialMonth } from "@/features/financial-months/financial-months.service"
 import { payFixedCostOccurrence } from "@/features/monthly-closing/monthly-closing.service"
+import { ensureFixedCostOccurrences } from "@/features/monthly-closing/monthly-closing.service"
 
 function currentMonth() {
   const now = new Date()
@@ -26,18 +27,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   const financialMonth = await ensureFinancialMonth(userId, month, prisma)
+  await ensureFixedCostOccurrences(userId, month, financialMonth.id, prisma)
 
-  const occurrence = await prisma.fixedCostOccurrence.upsert({
-    where: { fixedCostId_month_userId: { fixedCostId: id, month, userId } },
-    update: {},
-    create: {
-      fixedCostId: id,
-      financialMonthId: financialMonth.id,
-      month,
-      amount: fixedCost.defaultAmount,
-      userId,
-    },
+  const occurrence = await prisma.fixedCostOccurrence.findFirst({
+    where: { fixedCostId: id, month, userId, status: "PENDING" },
+    orderBy: { dueDate: { sort: "asc", nulls: "last" } },
   })
+
+  if (!occurrence) {
+    return NextResponse.json({ error: "Nenhuma ocorrência pendente encontrada" }, { status: 404 })
+  }
 
   const paid = await payFixedCostOccurrence(occurrence.id, userId, prisma)
   if (!paid) {
