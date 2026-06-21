@@ -71,21 +71,25 @@ export default function InvoicesPage() {
   const inFlightUpdateRef = useRef(false)
   const editFormRef = useRef<HTMLFormElement>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      const [cardsRes, invoicesRes, accountsRes] = await Promise.all([
-        fetch("/api/cards"),
-        fetch(`/api/invoices?month=${month}`),
-        fetch("/api/bank-accounts"),
-      ])
-      if (cancelled) return
+  function fetchData() {
+    return Promise.all([
+      fetch("/api/cards"),
+      fetch(`/api/invoices?month=${month}`),
+      fetch("/api/bank-accounts"),
+    ]).then(async ([cardsRes, invoicesRes, accountsRes]) => {
       if (cardsRes.ok) setCards(await cardsRes.json())
       if (invoicesRes.ok) setInvoices(await invoicesRes.json())
       if (accountsRes.ok) setBankAccounts(await accountsRes.json())
-      setLoading(false)
-    })()
+    })
+  }
+
+  useEffect(() => {
+    let cancelled = false
+    fetchData().then(() => {
+      if (!cancelled) setLoading(false)
+    })
     return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [month])
 
   const openPayDialog = (invoice: Invoice) => {

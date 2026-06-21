@@ -43,16 +43,19 @@ export default function MonthlyClosingPage() {
   const [data, setData] = useState<ClosingData | null>(null)
   const [loading, setLoading] = useState(true)
 
+  function fetchClosing() {
+    return fetch(`/api/monthly-closing?month=${month}`)
+      .then((res) => res.json())
+      .then((d) => setData(d))
+  }
+
   useEffect(() => {
     let cancelled = false
-    ;(async () => {
-      fetch(`/api/monthly-closing?month=${month}`).then((res) => res.json()).then((d) => {
-        if (cancelled) return
-        setData(d)
-        setLoading(false)
-      })
-    })()
+    fetchClosing().then(() => {
+      if (!cancelled) setLoading(false)
+    })
     return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [month])
 
   const handlePayFixedCost = async (id: string) => {
