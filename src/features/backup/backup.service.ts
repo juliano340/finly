@@ -25,9 +25,9 @@ export async function exportData(userId: string, client: PrismaClient = defaultP
   const transactions = await client.transaction.findMany({ where: { userId }, select: { id: true, amount: true, type: true, description: true, date: true, categoryId: true } })
   const budgets = await client.budget.findMany({ where: { userId }, select: { id: true, amount: true, month: true, categoryId: true } })
   const bankAccountMovements = await client.bankAccountMovement.findMany({ where: { userId }, select: { id: true, bankAccountId: true, amount: true, type: true, description: true, date: true } })
-  const fixedCosts = await client.fixedCost.findMany({ where: { userId }, select: { id: true, name: true, type: true, defaultAmount: true, categoryId: true, paymentMethod: true, dueDay: true, paidInsideCard: true, cardId: true, bankAccountId: true, active: true } })
+  const fixedCosts = await client.fixedCost.findMany({ where: { userId }, select: { id: true, name: true, type: true, defaultAmount: true, categoryId: true, paymentMethod: true, dueDay: true, paidInsideCard: true, cardId: true, bankAccountId: true, active: true, startDate: true, frequency: true, customInterval: true, customUnit: true, endType: true, endDate: true, endAfterCount: true } })
   const cardInvoices = await client.cardInvoice.findMany({ where: { userId }, select: { id: true, cardId: true, financialMonthId: true, month: true, dueDate: true, amount: true, status: true, paidAt: true, paymentMethod: true, paymentBankAccountId: true, bankAccountMovementId: true } })
-  const fixedCostOccurrences = await client.fixedCostOccurrence.findMany({ where: { userId }, select: { id: true, fixedCostId: true, financialMonthId: true, month: true, amount: true, status: true, paidAt: true } })
+  const fixedCostOccurrences = await client.fixedCostOccurrence.findMany({ where: { userId }, select: { id: true, fixedCostId: true, financialMonthId: true, month: true, dueDate: true, amount: true, status: true, paidAt: true } })
 
   return {
     version: 1,
@@ -236,11 +236,11 @@ async function insertAll(
     const financialMonthId = idMaps.financialMonth.get(item.financialMonthId)
     if (!financialMonthId) continue
     if (mode === "merge") {
-      const existing = await db.fixedCostOccurrence.findUnique({ where: { fixedCostId_month_userId: { fixedCostId, month: item.month, userId } } })
+      const existing = await db.fixedCostOccurrence.findFirst({ where: { fixedCostId, month: item.month, userId } })
       if (existing) continue
     }
     await db.fixedCostOccurrence.create({
-      data: { fixedCostId, financialMonthId, month: item.month, amount: item.amount, status: item.status, paidAt: item.paidAt, userId },
+      data: { fixedCostId, financialMonthId, month: item.month, dueDate: item.dueDate, amount: item.amount, status: item.status, paidAt: item.paidAt, userId },
     })
     counts.fixedCostOccurrences++
   }

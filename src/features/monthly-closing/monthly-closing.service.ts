@@ -1,6 +1,8 @@
+import { endOfMonth, parseISO, startOfDay } from "date-fns"
 import { prisma as defaultPrisma } from "@/lib/prisma"
 import type { PrismaClient } from "@/generated/prisma/client"
 import { ensureFinancialMonth } from "@/features/financial-months/financial-months.service"
+import { computeRecurrenceDates, occurrenceDueDate, type RecurrenceConfig } from "@/lib/recurrence"
 
 type FixedCostOccurrenceClient = Pick<PrismaClient, "fixedCost" | "fixedCostOccurrence">
 
@@ -245,32 +247,76 @@ export async function ensureFixedCostOccurrencesForMonths(
 ) {
   if (months.length === 0) return
 
-  const monthKeys = months.map((item) => item.month)
   const fixedCosts = await db.fixedCost.findMany({
     where: { userId, active: true },
-    select: { id: true, defaultAmount: true },
+    select: {
+      id: true,
+      defaultAmount: true,
+      dueDay: true,
+      startDate: true,
+      frequency: true,
+      customInterval: true,
+      customUnit: true,
+      endType: true,
+      endDate: true,
+      endAfterCount: true,
+    },
   })
   if (fixedCosts.length === 0) return
 
+  const maxMonth = months.reduce((a, b) => (a.month > b.month ? a : b)).month
+  const maxDate = endOfMonth(parseISO(`${maxMonth}-01`))
+
+  const allDates: { fixedCostId: string; date: Date; month: string }[] = []
+
+  for (const fc of fixedCosts) {
+    const config: RecurrenceConfig = {
+      startDate: fc.startDate.toISOString().split("T")[0],
+      frequency: fc.frequency as RecurrenceConfig["frequency"],
+      customInterval: fc.customInterval,
+      customUnit: fc.customUnit as RecurrenceConfig["customUnit"],
+      endType: fc.endType as RecurrenceConfig["endType"],
+      endDate: fc.endDate?.toISOString().split("T")[0] ?? null,
+      endAfterCount: fc.endAfterCount,
+    }
+    const dates = computeRecurrenceDates(config, maxDate)
+    for (const date of dates) {
+      const due = occurrenceDueDate(date, fc.dueDay)
+      const m = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, "0")}`
+      if (months.some((item) => item.month === m)) {
+        allDates.push({ fixedCostId: fc.id, date: due, month: m })
+      }
+    }
+  }
+
+  if (allDates.length === 0) return
+
   const existingOccurrences = await db.fixedCostOccurrence.findMany({
-    where: { userId, month: { in: monthKeys } },
-    select: { fixedCostId: true, month: true },
+    where: { userId, month: { in: months.map((item) => item.month) } },
+    select: { fixedCostId: true, dueDate: true },
   })
-  const existingKeys = new Set(existingOccurrences.map((item) => `${item.fixedCostId}:${item.month}`))
+  const existingKeys = new Set(
+    existingOccurrences
+      .filter((item) => item.dueDate)
+      .map((item) => `${item.fixedCostId}:${startOfDay(item.dueDate!).toISOString()}`)
+  )
+
+  const monthMap = new Map(months.map((item) => [item.month, item.financialMonthId]))
   const missingOccurrences = []
 
-  for (const item of months) {
-    for (const fixedCost of fixedCosts) {
-      const key = `${fixedCost.id}:${item.month}`
-      if (existingKeys.has(key)) continue
-      missingOccurrences.push({
-        fixedCostId: fixedCost.id,
-        financialMonthId: item.financialMonthId,
-        month: item.month,
-        amount: fixedCost.defaultAmount,
-        userId,
-      })
-    }
+  for (const item of allDates) {
+    const key = `${item.fixedCostId}:${startOfDay(item.date).toISOString()}`
+    if (existingKeys.has(key)) continue
+    const fc = fixedCosts.find((f) => f.id === item.fixedCostId)
+    if (!fc) continue
+    missingOccurrences.push({
+      fixedCostId: item.fixedCostId,
+      financialMonthId: monthMap.get(item.month)!,
+      month: item.month,
+      dueDate: item.date,
+      amount: fc.defaultAmount,
+      userId,
+    })
   }
 
   if (missingOccurrences.length > 0) {

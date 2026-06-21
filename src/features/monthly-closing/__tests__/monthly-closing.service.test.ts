@@ -88,16 +88,16 @@ describe("monthly-closing.service", () => {
 
     await markCardInvoiceFixedCostsPaid(userId, invoice, new Date("2026-07-09T12:00:00"), prisma)
 
-    const paidOccurrence = await prisma.fixedCostOccurrence.findUnique({
-      where: { fixedCostId_month_userId: { fixedCostId: fixedCost.id, month, userId } },
+    const paidOccurrence = await prisma.fixedCostOccurrence.findFirst({
+      where: { fixedCostId: fixedCost.id, month, userId },
     })
     expect(paidOccurrence?.status).toBe("PAID")
     expect(paidOccurrence?.paidAt).not.toBeNull()
 
     await markCardInvoiceFixedCostsPending(userId, invoice, prisma)
 
-    const pendingOccurrence = await prisma.fixedCostOccurrence.findUnique({
-      where: { fixedCostId_month_userId: { fixedCostId: fixedCost.id, month, userId } },
+    const pendingOccurrence = await prisma.fixedCostOccurrence.findFirst({
+      where: { fixedCostId: fixedCost.id, month, userId },
     })
     expect(pendingOccurrence?.status).toBe("PENDING")
     expect(pendingOccurrence?.paidAt).toBeNull()

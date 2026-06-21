@@ -35,6 +35,31 @@ enum FixedCostPaymentMethod {
   CASH
 }
 
+enum Frequency {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  BIMONTHLY
+  QUARTERLY
+  SEMIANNUAL
+  ANNUAL
+  CUSTOM
+}
+
+enum IntervalUnit {
+  DAYS
+  WEEKS
+  MONTHS
+  YEARS
+}
+
+enum EndType {
+  NONE
+  DATE
+  COUNT
+}
+
 enum BankAccountType {
   CHECKING
   SAVINGS
@@ -251,6 +276,13 @@ model FixedCost {
   cardId         String?
   bankAccountId  String?
   active         Boolean                @default(true)
+  startDate      DateTime               @default(now())
+  frequency      Frequency              @default(MONTHLY)
+  customInterval Int?
+  customUnit     IntervalUnit?
+  endType        EndType                @default(NONE)
+  endDate        DateTime?
+  endAfterCount  Int?
   userId         String
   createdAt      DateTime               @default(now())
   updatedAt      DateTime               @updatedAt
@@ -270,6 +302,7 @@ model FixedCostOccurrence {
   fixedCostId      String
   financialMonthId String
   month            String
+  dueDate          DateTime?
   amount           Float
   status           PaymentStatus @default(PENDING)
   paidAt           DateTime?
@@ -281,9 +314,10 @@ model FixedCostOccurrence {
   financialMonth FinancialMonth @relation(fields: [financialMonthId], references: [id], onDelete: Cascade)
   user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([fixedCostId, month, userId])
+  @@index([fixedCostId, dueDate])
   @@index([userId, month])
   @@index([userId, status, month])
+  @@index([fixedCostId, month])
 }
 
 model Budget {

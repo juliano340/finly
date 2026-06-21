@@ -23,15 +23,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
 
-  const parsed = fixedCostSchema.safeParse(await request.json())
+  const body = await request.json()
+  console.log("[POST /api/fixed-costs] body:", JSON.stringify(body))
+
+  const parsed = fixedCostSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: "Dados inválidos" }, { status: 400 })
+    console.log("[POST /api/fixed-costs] validation error:", parsed.error.format())
+    return NextResponse.json({ error: "Dados inválidos", details: parsed.error.format() }, { status: 400 })
   }
 
-  const fixedCost = await createFixedCost(session.user.id, parsed.data)
-  if (!fixedCost) {
-    return NextResponse.json({ error: "Categoria ou cartão inválido" }, { status: 400 })
+  try {
+    const fixedCost = await createFixedCost(session.user.id, parsed.data)
+    if (!fixedCost) {
+      return NextResponse.json({ error: "Categoria ou cartão inválido" }, { status: 400 })
+    }
+    return NextResponse.json(fixedCost, { status: 201 })
+  } catch (err) {
+    console.error("[POST /api/fixed-costs] error:", err)
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Erro interno" }, { status: 500 })
   }
-
-  return NextResponse.json(fixedCost, { status: 201 })
 }

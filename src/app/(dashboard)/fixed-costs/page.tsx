@@ -13,12 +13,13 @@ import { formatCurrency } from "@/lib/utils"
 interface Category { id: string; name: string; type: string }
 interface CardItem { id: string; name: string; color: string }
 interface BankAccountItem { id: string; name: string }
-interface FixedCostData { id: string; name: string; type: "INCOME" | "EXPENSE"; defaultAmount: number; categoryId: string; paymentMethod: string; dueDay: number | null; paidInsideCard: boolean; cardId: string | null; bankAccountId: string | null; active: boolean; category: Category; card: CardItem | null; bankAccount: BankAccountItem | null }
+interface FixedCostData { id: string; name: string; type: "INCOME" | "EXPENSE"; defaultAmount: number; categoryId: string; paymentMethod: string; dueDay: number | null; paidInsideCard: boolean; cardId: string | null; bankAccountId: string | null; active: boolean; startDate: string | null; frequency: string | null; customInterval: number | null; customUnit: string | null; endType: string | null; endDate: string | null; endAfterCount: number | null; category: Category; card: CardItem | null; bankAccount: BankAccountItem | null }
 
 interface Occurrence {
   id: string
   fixedCostId: string
   month: string
+  dueDate: string | null
   amount: number
   status: "PENDING" | "PAID"
   paidAt: string | null
@@ -70,15 +71,44 @@ export default function FixedCostsPage() {
   const [updateError, setUpdateError] = useState("")
   const [createError, setCreateError] = useState("")
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [recStartDate, setRecStartDate] = useState("")
+  const [recFrequency, setRecFrequency] = useState("MONTHLY")
+  const [recFrequencyType, setRecFrequencyType] = useState<"standard" | "custom">("standard")
+  const [recCustomInterval, setRecCustomInterval] = useState("")
+  const [recCustomUnit, setRecCustomUnit] = useState("MONTHS")
+  const [recEndType, setRecEndType] = useState("NONE")
+  const [recEndDate, setRecEndDate] = useState("")
+  const [recEndAfterCount, setRecEndAfterCount] = useState("")
   const [payingId, setPayingId] = useState<string | null>(null)
   const [unpayingId, setUnpayingId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [creatingLoading, setCreatingLoading] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [confirmBatchDelete, setConfirmBatchDelete] = useState(false)
+  const [batchDeleting, setBatchDeleting] = useState(false)
   const inFlightUpdateRef = useRef(false)
   const inFlightCreateRef = useRef(false)
   const editFormRef = useRef<HTMLFormElement>(null)
   const createFormRef = useRef<HTMLFormElement>(null)
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function selectAll() {
+    const all = filteredOccurrences.map((o) => o.id)
+    const allSelected = all.every((id) => selectedIds.has(id))
+    if (allSelected) setSelectedIds(new Set())
+    else setSelectedIds(new Set(all))
+  }
+
+  function clearSelection() { setSelectedIds(new Set()) }
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -153,6 +183,13 @@ export default function FixedCostsPage() {
           cardId: paidInsideCard ? formData.get("cardId") : null,
           bankAccountId: formData.get("bankAccountId") || null,
           active: true,
+          startDate: recStartDate,
+          frequency: recFrequencyType === "custom" ? "CUSTOM" : recFrequency,
+          customInterval: recFrequencyType === "custom" ? (Number(recCustomInterval) || null) : null,
+          customUnit: recFrequencyType === "custom" ? recCustomUnit : null,
+          endType: recEndType,
+          endDate: recEndType === "DATE" ? recEndDate : null,
+          endAfterCount: recEndType === "COUNT" ? (Number(recEndAfterCount) || null) : null,
         }),
       })
       if (!res.ok) {
@@ -191,6 +228,13 @@ export default function FixedCostsPage() {
           cardId: paidInsideCard ? formData.get("cardId") : null,
           bankAccountId: formData.get("bankAccountId") || null,
           active: formData.get("active") === "on",
+          startDate: recStartDate,
+          frequency: recFrequencyType === "custom" ? "CUSTOM" : recFrequency,
+          customInterval: recFrequencyType === "custom" ? (Number(recCustomInterval) || null) : null,
+          customUnit: recFrequencyType === "custom" ? recCustomUnit : null,
+          endType: recEndType,
+          endDate: recEndType === "DATE" ? recEndDate : null,
+          endAfterCount: recEndType === "COUNT" ? (Number(recEndAfterCount) || null) : null,
         }),
       })
       if (!res.ok) {
@@ -231,9 +275,35 @@ export default function FixedCostsPage() {
     fetchData()
   }
 
+  const handleBatchDelete = async () => {
+    setBatchDeleting(true)
+    const ids = Array.from(selectedIds)
+    const res = await fetch("/api/fixed-cost-occurrences/batch-delete", {
+      method: "POST",
+      body: JSON.stringify({ ids }),
+    })
+    setBatchDeleting(false)
+    setConfirmBatchDelete(false)
+    if (res.ok) {
+      toast.success(`${ids.length} ocorrência${ids.length !== 1 ? "s" : ""} excluída${ids.length !== 1 ? "s" : ""}.`)
+      clearSelection()
+    } else {
+      toast.error("Não foi possível excluir as ocorrências.")
+    }
+    fetchData()
+  }
+
   const openEditSheet = (occurrence: Occurrence) => {
     setInsideCard(occurrence.fixedCost.paidInsideCard)
     setSelectedOccurrence(occurrence)
+    setRecStartDate(occurrence.fixedCost.startDate?.split("T")[0] ?? new Date().toISOString().split("T")[0])
+    setRecFrequency(occurrence.fixedCost.frequency ?? "MONTHLY")
+    setRecFrequencyType(occurrence.fixedCost.frequency === "CUSTOM" ? "custom" : "standard")
+    setRecCustomInterval(occurrence.fixedCost.customInterval?.toString() ?? "")
+    setRecCustomUnit(occurrence.fixedCost.customUnit ?? "MONTHS")
+    setRecEndType(occurrence.fixedCost.endType ?? "NONE")
+    setRecEndDate(occurrence.fixedCost.endDate?.split("T")[0] ?? "")
+    setRecEndAfterCount(occurrence.fixedCost.endAfterCount?.toString() ?? "")
   }
 
   const selectedTemplate = selectedOccurrence?.fixedCost ?? null
@@ -253,13 +323,24 @@ export default function FixedCostsPage() {
             <Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(nextMonth(month))}><ChevronRight className="size-4" /></Button>
           </div>
           <Input className="w-32" type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
-          <Button onClick={() => { setInsideCard(false); setCreating(true) }}>Novo {activeTab === "EXPENSE" ? "custo fixo" : "receita fixa"}</Button>
+          <Button onClick={() => {
+            setInsideCard(false)
+            setCreating(true)
+            setRecStartDate(new Date().toISOString().split("T")[0])
+            setRecFrequency("MONTHLY")
+            setRecFrequencyType("standard")
+            setRecCustomInterval("")
+            setRecCustomUnit("MONTHS")
+            setRecEndType("NONE")
+            setRecEndDate("")
+            setRecEndAfterCount("")
+          }}>Novo {activeTab === "EXPENSE" ? "custo fixo" : "receita fixa"}</Button>
         </div>
       </div>
 
       <div className="flex gap-1 rounded-md border bg-background p-1 w-fit">
-        <button type="button" onClick={() => setActiveTab("EXPENSE")} className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${activeTab === "EXPENSE" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Despesas</button>
-        <button type="button" onClick={() => setActiveTab("INCOME")} className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${activeTab === "INCOME" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Receitas</button>
+        <button type="button" onClick={() => { setActiveTab("EXPENSE"); clearSelection() }} className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${activeTab === "EXPENSE" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Despesas</button>
+        <button type="button" onClick={() => { setActiveTab("INCOME"); clearSelection() }} className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${activeTab === "INCOME" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Receitas</button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -268,10 +349,23 @@ export default function FixedCostsPage() {
         <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-xs text-muted-foreground">A pagar</p><p className="text-2xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(totalPending)}</p></CardContent></Card>
       </div>
 
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2">
+          <span className="text-sm font-medium">{selectedIds.size} selecionado{selectedIds.size !== 1 ? "s" : ""}</span>
+          <Button size="sm" variant="destructive" className="gap-2" onClick={() => setConfirmBatchDelete(true)}>
+            <Trash2 className="h-4 w-4" /> Excluir selecionados
+          </Button>
+          <Button size="sm" variant="outline" onClick={clearSelection}>Limpar</Button>
+        </div>
+      )}
+
       <div className="hidden overflow-hidden rounded-lg border md:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/50">
+              <th className="w-10 px-3 py-3 text-center">
+                <input type="checkbox" className="h-4 w-4" checked={filteredOccurrences.length > 0 && filteredOccurrences.every((o) => selectedIds.has(o.id))} onChange={selectAll} />
+              </th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Nome</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Categoria</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Origem</th>
@@ -283,13 +377,16 @@ export default function FixedCostsPage() {
           </thead>
           <tbody>
             {filteredOccurrences.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+              <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
                 {loading ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</span> : "Nenhum lançamento fixo neste mês."}
               </td></tr>
             ) : filteredOccurrences.map((occ) => {
               const isLoading = payingId === occ.fixedCostId || unpayingId === occ.fixedCostId
               return (
                 <tr key={occ.id} className="border-b transition-colors hover:bg-muted/50">
+                  <td className="w-10 px-3 py-3 text-center">
+                    <input type="checkbox" className="h-4 w-4" checked={selectedIds.has(occ.id)} onChange={() => toggleSelect(occ.id)} />
+                  </td>
                   <td className="px-4 py-3">
                     <button type="button" onClick={() => openEditSheet(occ)} className="text-left font-medium hover:underline">
                       {occ.fixedCost.name}
@@ -302,7 +399,7 @@ export default function FixedCostsPage() {
                       : <span className="font-medium text-foreground">Fora do cartão{occ.fixedCost.bankAccount ? ` · ${occ.fixedCost.bankAccount.name}` : ""}</span>
                     }
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">{formatDueDate(occ.fixedCost.dueDay, occ.month)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{occ.dueDate ? new Date(occ.dueDate).toLocaleDateString("pt-BR") : formatDueDate(occ.fixedCost.dueDay, occ.month)}</td>
                   <td className="px-4 py-3 text-right font-medium">{formatCurrency(occ.amount)}</td>
                   <td className="px-4 py-3 text-center">
                     {occ.fixedCost.paidInsideCard ? (
@@ -351,6 +448,7 @@ export default function FixedCostsPage() {
           const isLoading = payingId === occ.fixedCostId || unpayingId === occ.fixedCostId
           return (
             <div key={occ.id} className="flex items-center gap-2">
+              <input type="checkbox" className="h-4 w-4 shrink-0" checked={selectedIds.has(occ.id)} onChange={() => toggleSelect(occ.id)} />
               <button type="button" onClick={() => openEditSheet(occ)} className="w-full rounded-lg border bg-card p-4 text-left text-sm transition-colors hover:bg-muted/50">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -359,7 +457,7 @@ export default function FixedCostsPage() {
                   </div>
                   <strong>{formatCurrency(occ.amount)}</strong>
                 </div>
-                <p className="mt-0.5 pl-12 text-xs text-muted-foreground">{occ.fixedCost.category.name} · {occ.fixedCost.paidInsideCard ? `Cartão ${occ.fixedCost.card?.name ?? "-"}` : "Fora do cartão"} · {occ.fixedCost.dueDay ? `vence em ${formatDueDate(occ.fixedCost.dueDay, occ.month)}` : "sem vencimento"}</p>
+                <p className="mt-0.5 pl-12 text-xs text-muted-foreground">{occ.fixedCost.category.name} · {occ.fixedCost.paidInsideCard ? `Cartão ${occ.fixedCost.card?.name ?? "-"}` : "Fora do cartão"} · {occ.dueDate ? `vence em ${new Date(occ.dueDate).toLocaleDateString("pt-BR")}` : occ.fixedCost.dueDay ? `vence em ${formatDueDate(occ.fixedCost.dueDay, occ.month)}` : "sem vencimento"}</p>
                 <div className="mt-1 pl-12">
                   {occ.fixedCost.paidInsideCard ? (
                     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${occ.status === "PAID" ? "bg-emerald-500/10 text-emerald-600" : "bg-blue-500/10 text-blue-600"}`}>
@@ -461,6 +559,73 @@ export default function FixedCostsPage() {
                       {bankAccounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
                     </select>
                   </div>
+                  <div className="border-t pt-4">
+                    <p className="mb-3 text-sm font-medium">Recorrência</p>
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium">Data de início</label>
+                        <input type="date" className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recStartDate} onChange={(e) => setRecStartDate(e.target.value)} required />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium">Tipo</label>
+                        <div className="flex gap-2">
+                          <button type="button" onClick={() => setRecFrequencyType("standard")} className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${recFrequencyType === "standard" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>Padrão</button>
+                          <button type="button" onClick={() => setRecFrequencyType("custom")} className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${recFrequencyType === "custom" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>Personalizada</button>
+                        </div>
+                      </div>
+                      {recFrequencyType === "standard" ? (
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium">Frequência</label>
+                          <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recFrequency} onChange={(e) => setRecFrequency(e.target.value)}>
+                            <option value="DAILY">Diária</option>
+                            <option value="WEEKLY">Semanal</option>
+                            <option value="BIWEEKLY">Quinzenal</option>
+                            <option value="MONTHLY">Mensal</option>
+                            <option value="BIMONTHLY">Bimestral</option>
+                            <option value="QUARTERLY">Trimestral</option>
+                            <option value="SEMIANNUAL">Semestral</option>
+                            <option value="ANNUAL">Anual</option>
+                          </select>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <div className="flex-1 space-y-1">
+                            <label className="text-sm font-medium">A cada</label>
+                            <Input type="number" min="1" className="w-full" value={recCustomInterval} onChange={(e) => setRecCustomInterval(e.target.value)} placeholder="1" />
+                          </div>
+                          <div className="flex-[2] space-y-1">
+                            <label className="text-sm font-medium">Unidade</label>
+                            <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recCustomUnit} onChange={(e) => setRecCustomUnit(e.target.value)}>
+                              <option value="DAYS">Dias</option>
+                              <option value="WEEKS">Semanas</option>
+                              <option value="MONTHS">Meses</option>
+                              <option value="YEARS">Anos</option>
+                            </select>
+                          </div>
+                        </div>
+                      )}
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium">Término</label>
+                        <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recEndType} onChange={(e) => setRecEndType(e.target.value)}>
+                          <option value="NONE">Sem data final</option>
+                          <option value="DATE">Encerrar em uma data</option>
+                          <option value="COUNT">Após N ocorrências</option>
+                        </select>
+                      </div>
+                      {recEndType === "DATE" && (
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium">Data de término</label>
+                          <input type="date" className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recEndDate} onChange={(e) => setRecEndDate(e.target.value)} />
+                        </div>
+                      )}
+                      {recEndType === "COUNT" && (
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium">Número de ocorrências</label>
+                          <Input type="number" min="1" className="w-full" value={recEndAfterCount} onChange={(e) => setRecEndAfterCount(e.target.value)} placeholder="Ex: 12" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 {createError && <p className="text-sm text-destructive">{createError}</p>}
                 <Button type="button" className="mt-6 w-full" disabled={creatingLoading} onClick={() => handleCreate(new FormData(createFormRef.current!))}>
@@ -539,6 +704,73 @@ export default function FixedCostsPage() {
                         {bankAccounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
                       </select>
                     </div>
+                    <div className="border-t pt-4">
+                      <p className="mb-3 text-sm font-medium">Recorrência</p>
+                      <div className="space-y-3">
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium">Data de início</label>
+                          <input type="date" className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recStartDate} onChange={(e) => setRecStartDate(e.target.value)} required />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium">Tipo</label>
+                          <div className="flex gap-2">
+                            <button type="button" onClick={() => setRecFrequencyType("standard")} className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${recFrequencyType === "standard" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>Padrão</button>
+                            <button type="button" onClick={() => setRecFrequencyType("custom")} className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${recFrequencyType === "custom" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>Personalizada</button>
+                          </div>
+                        </div>
+                        {recFrequencyType === "standard" ? (
+                          <div className="space-y-1">
+                            <label className="text-sm font-medium">Frequência</label>
+                            <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recFrequency} onChange={(e) => setRecFrequency(e.target.value)}>
+                              <option value="DAILY">Diária</option>
+                              <option value="WEEKLY">Semanal</option>
+                              <option value="BIWEEKLY">Quinzenal</option>
+                              <option value="MONTHLY">Mensal</option>
+                              <option value="BIMONTHLY">Bimestral</option>
+                              <option value="QUARTERLY">Trimestral</option>
+                              <option value="SEMIANNUAL">Semestral</option>
+                              <option value="ANNUAL">Anual</option>
+                            </select>
+                          </div>
+                        ) : (
+                          <div className="flex gap-2">
+                            <div className="flex-1 space-y-1">
+                              <label className="text-sm font-medium">A cada</label>
+                              <Input type="number" min="1" className="w-full" value={recCustomInterval} onChange={(e) => setRecCustomInterval(e.target.value)} placeholder="1" />
+                            </div>
+                            <div className="flex-[2] space-y-1">
+                              <label className="text-sm font-medium">Unidade</label>
+                              <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recCustomUnit} onChange={(e) => setRecCustomUnit(e.target.value)}>
+                                <option value="DAYS">Dias</option>
+                                <option value="WEEKS">Semanas</option>
+                                <option value="MONTHS">Meses</option>
+                                <option value="YEARS">Anos</option>
+                              </select>
+                            </div>
+                          </div>
+                        )}
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium">Término</label>
+                          <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recEndType} onChange={(e) => setRecEndType(e.target.value)}>
+                            <option value="NONE">Sem data final</option>
+                            <option value="DATE">Encerrar em uma data</option>
+                            <option value="COUNT">Após N ocorrências</option>
+                          </select>
+                        </div>
+                        {recEndType === "DATE" && (
+                          <div className="space-y-1">
+                            <label className="text-sm font-medium">Data de término</label>
+                            <input type="date" className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recEndDate} onChange={(e) => setRecEndDate(e.target.value)} />
+                          </div>
+                        )}
+                        {recEndType === "COUNT" && (
+                          <div className="space-y-1">
+                            <label className="text-sm font-medium">Número de ocorrências</label>
+                            <Input type="number" min="1" className="w-full" value={recEndAfterCount} onChange={(e) => setRecEndAfterCount(e.target.value)} placeholder="Ex: 12" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
                     <label className="flex items-center gap-2 text-sm">
                       <input type="checkbox" defaultChecked={selectedTemplate.active} name="active" />
                       Ativo
@@ -565,6 +797,16 @@ export default function FixedCostsPage() {
         description="Tem certeza? Esta ação não pode ser desfeita."
         confirmText="Excluir"
         onConfirm={() => confirmDelete && handleDelete(confirmDelete)}
+      />
+
+      <ConfirmDialog
+        open={confirmBatchDelete}
+        onOpenChange={setConfirmBatchDelete}
+        title="Excluir ocorrências selecionadas"
+        description={`Tem certeza? ${selectedIds.size} ocorrência${selectedIds.size !== 1 ? "s" : ""} será${selectedIds.size !== 1 ? "ão" : "á"} excluída${selectedIds.size !== 1 ? "s" : ""}.`}
+        confirmText={batchDeleting ? "Excluindo..." : "Excluir"}
+        loading={batchDeleting}
+        onConfirm={handleBatchDelete}
       />
     </div>
   )
