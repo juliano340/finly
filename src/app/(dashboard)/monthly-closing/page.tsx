@@ -1,9 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Info, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { formatCurrency, formatDate } from "@/lib/utils"
 
   interface ClosingData {
@@ -73,6 +74,9 @@ export default function MonthlyClosingPage() {
 
   const paidTotal = (summary?.totalSpent ?? 0) - (summary?.totalToPay ?? 0)
 
+  const outsideCardCosts = data?.fixedCosts?.filter((fc) => !fc.fixedCost.paidInsideCard) ?? []
+  const insideCardCosts = data?.fixedCosts?.filter((fc) => fc.fixedCost.paidInsideCard) ?? []
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between"><div><h1 className="text-2xl font-bold tracking-tight">Fechamento Mensal</h1><p className="text-muted-foreground">Gastos do mês: realizado vs. a pagar.</p></div><div className="flex items-center gap-1 rounded-md border bg-background px-2 py-1"><Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(previousMonth(month))}><ChevronLeft className="size-4" /></Button><span className="min-w-28 text-center text-sm font-medium capitalize">{monthLabel(month)}</span><Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(nextMonth(month))}><ChevronRight className="size-4" /></Button></div></div>
@@ -100,12 +104,12 @@ export default function MonthlyClosingPage() {
       </Card>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <Metric title="Faturas totais" value={(summary?.cardInvoicesTotal ?? 0) + (summary?.cardInvoicesPaidTotal ?? 0)} description={`${formatCurrency(summary?.cardInvoicesPaidTotal ?? 0)} já pago · ${formatCurrency(summary?.cardInvoicesTotal ?? 0)} pendente`} loading={loading} />
-        <Metric title="Fixos fora do cartão" value={summary?.fixedCostsOutsideCardTotalAll ?? 0} description={`${formatCurrency(summary?.fixedCostsOutsideCardTotal ?? 0)} pendente · ${formatCurrency((summary?.fixedCostsOutsideCardTotalAll ?? 0) - (summary?.fixedCostsOutsideCardTotal ?? 0))} já pago`} loading={loading} />
+        <Metric title="Faturas totais" value={(summary?.cardInvoicesTotal ?? 0) + (summary?.cardInvoicesPaidTotal ?? 0)} description={`${formatCurrency(summary?.cardInvoicesPaidTotal ?? 0)} já pago · ${formatCurrency(summary?.cardInvoicesTotal ?? 0)} pendente`} loading={loading} detailItems={data?.invoices.map((inv) => ({ name: `${inv.card.name} — ${formatDate(inv.dueDate)}`, amount: inv.amount, status: inv.status }))} />
+        <Metric title="Fixos fora do cartão" value={summary?.fixedCostsOutsideCardTotalAll ?? 0} description={`${formatCurrency(summary?.fixedCostsOutsideCardTotal ?? 0)} pendente · ${formatCurrency((summary?.fixedCostsOutsideCardTotalAll ?? 0) - (summary?.fixedCostsOutsideCardTotal ?? 0))} já pago`} loading={loading} detailItems={outsideCardCosts.map((fc) => ({ name: fc.fixedCost.name, amount: fc.amount, status: fc.status }))} />
         <Metric title="Despesas avulsas" value={summary?.looseExpensesTotal ?? 0} description="Transações não recorrentes" loading={loading} />
         <Metric title="Receitas do mês" value={summary?.incomeTotal ?? 0} description={`${formatCurrency(summary?.fixedIncomeTotal ?? 0)} fixas · ${formatCurrency((summary?.incomeTotal ?? 0) - (summary?.fixedIncomeTotal ?? 0))} avulsas`} loading={loading} />
-        <Metric title="Fixos totais" value={summary?.fixedCostsTotal ?? 0} description="Dentro + fora do cartão" loading={loading} />
-        <Metric title="Fixos dentro do cartão" value={summary?.fixedCostsInsideCardTotal ?? 0} description="Previstos na fatura" loading={loading} />
+        <Metric title="Fixos totais" value={summary?.fixedCostsTotal ?? 0} description="Dentro + fora do cartão" loading={loading} detailItems={data?.fixedCosts.map((fc) => ({ name: fc.fixedCost.name, amount: fc.amount, status: fc.status }))} />
+        <Metric title="Fixos dentro do cartão" value={summary?.fixedCostsInsideCardTotal ?? 0} description="Previstos na fatura" loading={loading} detailItems={insideCardCosts.map((fc) => ({ name: fc.fixedCost.name, amount: fc.amount, status: fc.status }))} />
         <Metric title="Saldo projetado" value={summary?.projectedBalance ?? 0} description="Receitas - total a pagar" loading={loading} />
       </div>
       <section className="grid gap-4 lg:grid-cols-2">
@@ -117,6 +121,29 @@ export default function MonthlyClosingPage() {
   )
 }
 
-function Metric({ title, value, description, highlight = false, loading = false }: { title: string; value: number; description?: string; highlight?: boolean; loading?: boolean }) {
-  return <Card className={`border-0 shadow-sm ${highlight ? "bg-primary text-primary-foreground" : ""}`}><CardContent className="p-5"><p className="text-xs font-medium opacity-80">{title}</p><p className="text-xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin opacity-60" /> : formatCurrency(value)}</p>{description && <p className="mt-1 text-xs opacity-75">{description}</p>}</CardContent></Card>
+function Metric({ title, value, description, highlight = false, loading = false, detailItems }: { title: string; value: number; description?: string; highlight?: boolean; loading?: boolean; detailItems?: { name: string; amount: number; status: string }[] }) {
+  return <Card className={`border-0 shadow-sm ${highlight ? "bg-primary text-primary-foreground" : ""}`}><CardContent className="p-5">
+    <p className="text-xs font-medium opacity-80 flex items-center gap-1.5">
+      {title}
+      {detailItems && detailItems.length > 0 && !loading && (
+        <Tooltip>
+          <TooltipTrigger>
+            <span tabIndex={0} className="inline-flex cursor-help"><Info className="size-3.5" /></span>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" align="start" className="p-0">
+            <div className="max-h-48 overflow-y-auto py-1.5">
+              {detailItems.map((item, i) => (
+                <div key={i} className="flex items-center justify-between gap-6 px-3 py-1 text-sm">
+                  <span className="max-w-40 truncate">{item.name}</span>
+                  <span className="tabular-nums whitespace-nowrap font-medium">{formatCurrency(item.amount)}</span>
+                </div>
+              ))}
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      )}
+    </p>
+    <p className="text-xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin opacity-60" /> : formatCurrency(value)}</p>
+    {description && <p className="mt-1 text-xs opacity-75">{description}</p>}
+  </CardContent></Card>
 }
