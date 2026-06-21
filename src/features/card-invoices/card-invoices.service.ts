@@ -91,12 +91,17 @@ export async function copyCardInvoices(
   fromMonth: string,
   toMonth: string,
   userId: string,
+  invoiceIds?: string[],
   client?: PrismaClient
 ) {
   const db = client ?? defaultPrisma
 
   const sourceInvoices = await db.cardInvoice.findMany({
-    where: { userId, month: fromMonth },
+    where: {
+      userId,
+      month: fromMonth,
+      ...(invoiceIds && invoiceIds.length > 0 ? { id: { in: invoiceIds } } : {}),
+    },
   })
 
   if (sourceInvoices.length === 0) return []

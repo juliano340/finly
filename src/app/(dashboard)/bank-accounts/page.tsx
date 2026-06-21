@@ -2,12 +2,13 @@
 
 import type { FormEvent } from "react"
 import { useEffect, useState } from "react"
-import { ArrowLeftRight, Loader2, Plus, Settings, Trash2 } from "lucide-react"
+import { ArrowLeftRight, Info, Loader2, Plus, Settings, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { TransferWizard } from "@/features/bank-accounts/components/transfer-wizard"
 import { formatCurrency, formatDate } from "@/lib/utils"
@@ -184,7 +185,26 @@ export default function BankAccountsPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <SummaryCard title="Saldo total" value={formatCurrency(totalBalance)} highlight loading={loading} />
+        <SummaryCard
+          title="Saldo total"
+          value={formatCurrency(totalBalance)}
+          highlight
+          loading={loading}
+          infoContent={
+            <div className="space-y-1.5">
+              <p className="font-medium">Composição do saldo:</p>
+              {accounts.filter((a) => a.balance > 0).map((a) => (
+                <div key={a.id} className="flex items-center justify-between gap-4">
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: a.color }} />
+                    {a.name}
+                  </span>
+                  <span>{formatCurrency(a.balance)}</span>
+                </div>
+              ))}
+            </div>
+          }
+        />
         <SummaryCard title="Contas ativas" value={String(activeAccounts)} loading={loading} />
         <SummaryCard title="Cartões vinculados" value={String(linkedCards)} loading={loading} />
         <SummaryCard title="Contas negativas" value={String(negativeAccounts)} loading={loading} />
@@ -553,11 +573,25 @@ function formatMovementDescription(description: string | null, type: "INCOME" | 
   return description
 }
 
-function SummaryCard({ title, value, highlight = false, loading = false }: { title: string; value: string; highlight?: boolean; loading?: boolean }) {
+function SummaryCard({ title, value, highlight = false, loading = false, infoContent }: { title: string; value: string; highlight?: boolean; loading?: boolean; infoContent?: React.ReactNode }) {
   return (
     <Card className={`border-0 shadow-sm ${highlight ? "bg-primary text-primary-foreground" : ""}`}>
       <CardContent className="p-5">
-        <p className="text-xs font-medium opacity-80">{title}</p>
+        <div className="flex items-center gap-1.5">
+          <p className="text-xs font-medium opacity-80">{title}</p>
+          {infoContent && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger className="opacity-60 hover:opacity-100 transition-opacity">
+                  <Info className="h-3.5 w-3.5" />
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs">
+                  {infoContent}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
         <p className="text-xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin opacity-60" /> : value}</p>
       </CardContent>
     </Card>

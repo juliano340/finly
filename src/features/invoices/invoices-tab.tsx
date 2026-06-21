@@ -49,7 +49,7 @@ const paymentMethods = [
 
 const methodLabels: Record<string, string> = { PIX: "Pix", TED: "TED", DEBIT: "Débito", CASH: "Dinheiro", BANK_SLIP: "Boleto" }
 
-export default function InvoicesPage() {
+export function InvoicesTab() {
   const [cards, setCards] = useState<CardItem[]>([])
   const [bankAccounts, setBankAccounts] = useState<BankAccountItem[]>([])
   const [invoices, setInvoices] = useState<Invoice[]>([])
@@ -264,7 +264,7 @@ export default function InvoicesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-2xl font-bold tracking-tight">Faturas</h1><p className="text-muted-foreground">Valor final lançado manualmente por cartão.</p></div>
+        <div><h2 className="text-xl font-bold tracking-tight">Faturas</h2><p className="text-sm text-muted-foreground">Valor final lançado manualmente por cartão.</p></div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={openCopyDialog} disabled={copiando}>
             <Copy className="mr-1.5 h-3.5 w-3.5" />

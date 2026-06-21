@@ -8,6 +8,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { InvoicesTab } from "@/features/invoices/invoices-tab"
 
 interface CardItem {
   id: string
@@ -123,13 +125,21 @@ export default function CardsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Cartões</h1>
-          <p className="text-muted-foreground">Cadastre cartões usados nas faturas mensais.</p>
-        </div>
-        <Button onClick={() => setCreating(true)}><Plus className="mr-2 h-4 w-4" />Novo cartão</Button>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Cartões e Faturas</h1>
+        <p className="text-muted-foreground">Gerencie seus cartões de crédito e faturas mensais.</p>
       </div>
+
+      <Tabs defaultValue="cards" className="w-full">
+        <TabsList>
+          <TabsTrigger value="cards">Cartões</TabsTrigger>
+          <TabsTrigger value="invoices">Faturas</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="cards" className="w-full space-y-6">
+          <div className="flex items-center justify-end">
+            <Button onClick={() => setCreating(true)}><Plus className="mr-2 h-4 w-4" />Novo cartão</Button>
+          </div>
 
       <div className="hidden overflow-hidden rounded-lg border md:block">
         <table className="w-full text-sm">
@@ -313,6 +323,12 @@ export default function CardsPage() {
         confirmText="Excluir"
         onConfirm={() => confirmDelete && handleDelete(confirmDelete)}
       />
+        </TabsContent>
+
+        <TabsContent value="invoices" className="w-full">
+          <InvoicesTab />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

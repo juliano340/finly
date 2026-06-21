@@ -8,11 +8,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
 
-  const { fromMonth, toMonth } = await request.json()
+  const { fromMonth, toMonth, invoiceIds } = await request.json()
   if (!fromMonth || !toMonth) {
     return NextResponse.json({ error: "fromMonth e toMonth são obrigatórios" }, { status: 400 })
   }
 
-  const invoices = await copyCardInvoices(fromMonth, toMonth, session.user.id)
+  const invoices = await copyCardInvoices(fromMonth, toMonth, session.user.id, invoiceIds)
   return NextResponse.json(invoices)
 }
