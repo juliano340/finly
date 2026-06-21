@@ -55,6 +55,9 @@ describe("fixed-costs.service - update amount propagation", () => {
       paidInsideCard: false,
       bankAccountId,
       active: true,
+      startDate: "2099-01-01",
+      frequency: "MONTHLY",
+      endType: "NONE",
     }, prisma)
     expect(created).not.toBeNull()
     if (!created) return
@@ -110,6 +113,9 @@ describe("fixed-costs.service - update amount propagation", () => {
       paidInsideCard: false,
       bankAccountId,
       active: true,
+      startDate: "2099-01-01",
+      frequency: "MONTHLY",
+      endType: "NONE",
     }, prisma)
     expect(created).not.toBeNull()
     if (!created) return

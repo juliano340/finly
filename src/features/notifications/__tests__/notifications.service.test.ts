@@ -70,7 +70,7 @@ describe("notifications.service", () => {
   it("ajusta vencimento dia 31 para último dia de mês curto", async () => {
     await createFixedCost(
       userId,
-      { name: `Fevereiro Notify ${Date.now()}`, defaultAmount: 90, categoryId, paymentMethod: "BANK_SLIP", dueDay: 31, paidInsideCard: false, cardId: null, bankAccountId: null, active: true },
+      { name: `Fevereiro Notify ${Date.now()}`, defaultAmount: 90, categoryId, paymentMethod: "BANK_SLIP", dueDay: 31, paidInsideCard: false, cardId: null, bankAccountId: null, active: true, startDate: "2026-01-01", frequency: "MONTHLY", endType: "NONE" },
       prisma
     )
 
