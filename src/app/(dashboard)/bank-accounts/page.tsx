@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { TransferWizard } from "@/features/bank-accounts/components/transfer-wizard"
 import { formatCurrency, formatDate } from "@/lib/utils"
+import { isAccountNegative, getAvailableBalance } from "@/lib/balance"
 
 interface BankAccount {
   id: string
@@ -19,6 +20,7 @@ interface BankAccount {
   type: string
   color: string
   initialBalance: number
+  overdraftLimit: number
   balance: number
   active: boolean
   cards: { id: string; name: string; brand: string | null }[]
@@ -62,6 +64,7 @@ export default function BankAccountsPage() {
         type: formData.get("type"),
         color: formData.get("color") || "#22C55E",
         initialBalance: formData.get("initialBalance") || 0,
+        overdraftLimit: formData.get("overdraftLimit") || 0,
       }),
     })
     setCreating(false)
@@ -83,6 +86,7 @@ export default function BankAccountsPage() {
         institution: formData.get("institution") || null,
         type: formData.get("type"),
         color: formData.get("color") || "#22C55E",
+        overdraftLimit: formData.get("overdraftLimit") || 0,
       }),
     })
     if (res.ok) {
@@ -159,7 +163,7 @@ export default function BankAccountsPage() {
   const totalBalance = accounts.reduce((acc, a) => acc + a.balance, 0)
   const activeAccounts = accounts.filter((a) => a.active).length
   const linkedCards = accounts.reduce((acc, a) => acc + a.cards.length, 0)
-  const negativeAccounts = accounts.filter((a) => a.balance < 0).length
+  const negativeAccounts = accounts.filter((a) => isAccountNegative(a.balance, a.overdraftLimit)).length
 
   const openDetail = (account: BankAccount) => {
     setDetailTab("overview")
@@ -213,7 +217,7 @@ export default function BankAccountsPage() {
                   </button>
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">{account.institution ?? "-"}</td>
-                <td className={`px-4 py-3 text-right font-medium ${account.balance < 0 ? "text-red-600" : ""}`}>{formatCurrency(account.balance)}</td>
+                <td className={`px-4 py-3 text-right font-medium ${isAccountNegative(account.balance, account.overdraftLimit) ? "text-red-600" : ""}`}>{formatCurrency(account.balance)}</td>
                 <td className="px-4 py-3 text-right">
                   <Button
                     size="icon"
@@ -243,7 +247,7 @@ export default function BankAccountsPage() {
                   <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: account.color }} />
                   <span className="font-medium">{account.name}</span>
                 </div>
-                <strong className={account.balance < 0 ? "text-red-600" : ""}>{formatCurrency(account.balance)}</strong>
+                  <strong className={isAccountNegative(account.balance, account.overdraftLimit) ? "text-red-600" : ""}>{formatCurrency(account.balance)}</strong>
               </div>
               <p className="pl-6 text-xs text-muted-foreground">{account.institution ?? "Sem instituição"} · {account.cards.length} {account.cards.length === 1 ? "cartão" : "cartões"}</p>
             </button>
@@ -290,6 +294,11 @@ export default function BankAccountsPage() {
                     <label className="text-sm font-medium">Saldo inicial</label>
                     <Input name="initialBalance" type="number" step="0.01" placeholder="0,00" defaultValue="0" />
                   </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Limite cheque especial</label>
+                    <Input name="overdraftLimit" type="number" step="0.01" placeholder="0,00" defaultValue="0" />
+                    <p className="text-xs text-muted-foreground">0 = sem cheque especial</p>
+                  </div>
                   <div className="flex items-center gap-2">
                     <label className="text-sm font-medium">Cor:</label>
                     <Input name="color" type="color" defaultValue="#22C55E" className="w-16" />
@@ -320,8 +329,23 @@ export default function BankAccountsPage() {
                     <div className="grid gap-3">
                       <div className="rounded-lg bg-muted p-4">
                         <p className="text-xs text-muted-foreground">Saldo atual</p>
-                        <p className="text-2xl font-bold">{formatCurrency(selectedAccount.balance)}</p>
+                        <p className={`text-2xl font-bold ${isAccountNegative(selectedAccount.balance, selectedAccount.overdraftLimit) ? "text-red-600" : ""}`}>{formatCurrency(selectedAccount.balance)}</p>
                       </div>
+                      {selectedAccount.overdraftLimit > 0 && (
+                        <div className="rounded-lg border bg-card p-3">
+                          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Cheque especial</p>
+                          <div className="mt-2 space-y-1 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Limite</span>
+                              <span className="font-medium">{formatCurrency(selectedAccount.overdraftLimit)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Disponível</span>
+                              <span className={getAvailableBalance(selectedAccount.balance, selectedAccount.overdraftLimit) < 0 ? "font-medium text-red-600" : "font-medium text-emerald-600"}>{formatCurrency(getAvailableBalance(selectedAccount.balance, selectedAccount.overdraftLimit))}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       <div className="grid grid-cols-2 gap-3">
                         <div className="rounded-lg bg-muted p-3"><p className="text-xs text-muted-foreground">Instituição</p><p className="font-medium">{selectedAccount.institution ?? "-"}</p></div>
                         <div className="rounded-lg bg-muted p-3"><p className="text-xs text-muted-foreground">Saldo inicial</p><p className="font-medium">{formatCurrency(selectedAccount.initialBalance)}</p></div>
@@ -479,6 +503,11 @@ export default function BankAccountsPage() {
                           <option value="CASH">Dinheiro</option>
                           <option value="INVESTMENT">Investimento</option>
                         </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium">Limite cheque especial</label>
+                        <Input name="overdraftLimit" type="number" step="0.01" placeholder="0,00" defaultValue={selectedAccount.overdraftLimit.toFixed(2)} />
+                        <p className="text-xs text-muted-foreground">0 = sem cheque especial</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <label className="text-sm font-medium">Cor:</label>

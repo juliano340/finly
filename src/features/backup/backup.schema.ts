@@ -32,6 +32,7 @@ export const backupSchema = z.object({
       type: z.enum(["CHECKING", "SAVINGS", "DIGITAL", "CASH", "INVESTMENT"]).default("CHECKING"),
       color: z.string().default("#22C55E"),
       initialBalance: z.number().default(0),
+      overdraftLimit: z.number().default(0),
       active: z.boolean().default(true),
     })),
     cards: z.array(z.object({

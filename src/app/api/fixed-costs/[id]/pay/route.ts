@@ -30,7 +30,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   await ensureFixedCostOccurrences(userId, month, financialMonth.id, prisma)
 
   const occurrence = await prisma.fixedCostOccurrence.findFirst({
-    where: { fixedCostId: id, month, userId, status: "PENDING" },
+    where: { fixedCostId: id, month, userId, status: "PENDING", deletedAt: null },
     orderBy: { dueDate: { sort: "asc", nulls: "last" } },
   })
 

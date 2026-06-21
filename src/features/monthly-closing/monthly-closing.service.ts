@@ -1,8 +1,9 @@
-import { endOfMonth, parseISO, startOfDay } from "date-fns"
+import { endOfMonth, parseISO } from "date-fns"
 import { prisma as defaultPrisma } from "@/lib/prisma"
 import type { PrismaClient } from "@/generated/prisma/client"
 import { ensureFinancialMonth } from "@/features/financial-months/financial-months.service"
 import { computeRecurrenceDates, occurrenceDueDate, type RecurrenceConfig } from "@/lib/recurrence"
+import { validateExpenseLimit } from "@/features/bank-accounts/bank-accounts.service"
 
 type FixedCostOccurrenceClient = Pick<PrismaClient, "fixedCost" | "fixedCostOccurrence">
 
@@ -52,7 +53,7 @@ export async function getMonthlyClosing(
       orderBy: { dueDate: "asc" },
     }),
     db.fixedCostOccurrence.findMany({
-      where: { userId, month },
+      where: { userId, month, deletedAt: null },
       include: { fixedCost: { include: { category: true, card: true, bankAccount: true } } },
       orderBy: { fixedCost: { name: "asc" } },
     }),
@@ -107,6 +108,7 @@ export async function getMonthlyClosingSummary(
 ) {
   const db = client ?? defaultPrisma
   const financialMonth = await ensureFinancialMonth(userId, month, db)
+
   await ensureFixedCostOccurrences(userId, month, financialMonth.id, db)
 
   const [invoices, occurrences, looseExpenses, income] = await Promise.all([
@@ -115,7 +117,7 @@ export async function getMonthlyClosingSummary(
       select: { amount: true, status: true },
     }),
     db.fixedCostOccurrence.findMany({
-      where: { userId, month },
+      where: { userId, month, deletedAt: null },
       select: {
         amount: true,
         status: true,
@@ -169,8 +171,13 @@ export async function payFixedCostOccurrence(
     where: { id: occurrenceId },
     include: { fixedCost: { include: { bankAccount: true } } },
   })
-  if (!occurrence || occurrence.userId !== userId) return null
+  if (!occurrence || occurrence.userId !== userId || occurrence.deletedAt) return null
   if (occurrence.status === "PAID") return occurrence
+
+  if (occurrence.fixedCost.type === "EXPENSE" && occurrence.fixedCost.bankAccountId) {
+    const check = await validateExpenseLimit(occurrence.fixedCost.bankAccountId, userId, occurrence.amount, client)
+    if (!check.allowed) return null
+  }
 
   return db.$transaction(async (tx) => {
     if (occurrence.fixedCost.bankAccountId) {
@@ -204,7 +211,7 @@ export async function unpayFixedCostOccurrence(
     where: { id: occurrenceId },
     include: { fixedCost: { include: { bankAccount: true } } },
   })
-  if (!occurrence || occurrence.userId !== userId) return null
+  if (!occurrence || occurrence.userId !== userId || occurrence.deletedAt) return null
   if (occurrence.status !== "PAID") return occurrence
 
   return db.$transaction(async (tx) => {
@@ -293,19 +300,17 @@ export async function ensureFixedCostOccurrencesForMonths(
 
   const existingOccurrences = await db.fixedCostOccurrence.findMany({
     where: { userId, month: { in: months.map((item) => item.month) } },
-    select: { fixedCostId: true, dueDate: true },
+    select: { fixedCostId: true, month: true },
   })
   const existingKeys = new Set(
-    existingOccurrences
-      .filter((item) => item.dueDate)
-      .map((item) => `${item.fixedCostId}:${startOfDay(item.dueDate!).toISOString()}`)
+    existingOccurrences.map((item) => `${item.fixedCostId}:${item.month}`)
   )
 
   const monthMap = new Map(months.map((item) => [item.month, item.financialMonthId]))
   const missingOccurrences = []
 
   for (const item of allDates) {
-    const key = `${item.fixedCostId}:${startOfDay(item.date).toISOString()}`
+    const key = `${item.fixedCostId}:${item.month}`
     if (existingKeys.has(key)) continue
     const fc = fixedCosts.find((f) => f.id === item.fixedCostId)
     if (!fc) continue
@@ -337,6 +342,7 @@ export async function markCardInvoiceFixedCostsPaid(
       userId,
       month: invoice.month,
       status: "PENDING",
+      deletedAt: null,
       fixedCost: {
         paidInsideCard: true,
         cardId: invoice.cardId,
@@ -359,6 +365,7 @@ export async function markCardInvoiceFixedCostsPending(
       userId,
       month: invoice.month,
       status: "PAID",
+      deletedAt: null,
       fixedCost: {
         paidInsideCard: true,
         cardId: invoice.cardId,

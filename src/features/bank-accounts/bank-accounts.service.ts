@@ -88,6 +88,7 @@ export async function createBankAccount(
       type: input.type,
       color: input.color,
       initialBalance: input.initialBalance,
+      overdraftLimit: input.overdraftLimit,
       active: input.active,
       userId,
     },
@@ -112,6 +113,7 @@ export async function updateBankAccount(
       ...(input.type !== undefined && { type: input.type }),
       ...(input.color !== undefined && { color: input.color }),
       ...(input.initialBalance !== undefined && { initialBalance: input.initialBalance }),
+      ...(input.overdraftLimit !== undefined && { overdraftLimit: input.overdraftLimit }),
       ...(input.active !== undefined && { active: input.active }),
     },
   })
@@ -130,6 +132,37 @@ export async function deleteBankAccount(
   return true
 }
 
+export async function validateExpenseLimit(
+  bankAccountId: string,
+  userId: string,
+  amount: number,
+  client?: PrismaClient
+): Promise<{ allowed: false; reason: string } | { allowed: true; balance: number; overdraftLimit: number }> {
+  const db = client ?? defaultPrisma
+  const account = await db.bankAccount.findUnique({ where: { id: bankAccountId } })
+  if (!account || account.userId !== userId) {
+    return { allowed: false, reason: "Conta não encontrada" }
+  }
+
+  const balance = await getBankAccountBalance(bankAccountId, userId, db)
+  if (balance === null) {
+    return { allowed: false, reason: "Conta não encontrada" }
+  }
+
+  const minBalance = -(account.overdraftLimit)
+  const balanceAfter = balance - amount
+
+  if (balanceAfter < minBalance) {
+    const needed = Math.abs(balanceAfter - minBalance)
+    return {
+      allowed: false,
+      reason: `Saldo insuficiente. Necessário mais R$ ${needed.toFixed(2)}. Saldo disponível: R$ ${(balance + account.overdraftLimit).toFixed(2)}.`,
+    }
+  }
+
+  return { allowed: true, balance, overdraftLimit: account.overdraftLimit }
+}
+
 export async function createBankAccountMovement(
   bankAccountId: string,
   userId: string,
@@ -139,6 +172,11 @@ export async function createBankAccountMovement(
   const db = client ?? defaultPrisma
   const account = await db.bankAccount.findUnique({ where: { id: bankAccountId } })
   if (!account || account.userId !== userId) return null
+
+  if (input.type === "EXPENSE") {
+    const check = await validateExpenseLimit(bankAccountId, userId, input.amount, db)
+    if (!check.allowed) return null
+  }
 
   return db.bankAccountMovement.create({
     data: {
@@ -164,6 +202,10 @@ export async function adjustBankAccountBalance(
 
   const diff = Number((input.targetBalance - currentBalance).toFixed(2))
   if (diff === 0) return null
+  if (diff < 0) {
+    const check = await validateExpenseLimit(bankAccountId, userId, Math.abs(diff), db)
+    if (!check.allowed) return null
+  }
 
   return db.bankAccountMovement.create({
     data: {
@@ -184,6 +226,9 @@ export async function transferBetweenBankAccounts(
 ) {
   const db = client ?? defaultPrisma
   if (input.fromAccountId === input.toAccountId) return null
+
+  const check = await validateExpenseLimit(input.fromAccountId, userId, input.amount, db)
+  if (!check.allowed) return null
 
   return db.$transaction(async (tx) => {
     const accounts = await tx.bankAccount.findMany({

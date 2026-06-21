@@ -1,5 +1,7 @@
 import { prisma as defaultPrisma } from "@/lib/prisma"
 import type { PrismaClient } from "@/generated/prisma/client"
+import { ensureFinancialMonth } from "@/features/financial-months/financial-months.service"
+import { ensureFixedCostOccurrencesForMonths } from "@/features/monthly-closing/monthly-closing.service"
 
 export interface DashboardStats {
   balance: number
@@ -159,6 +161,7 @@ export async function getMonthlyEvolution(
 ): Promise<MonthlyEvolutionStats> {
   const db = client ?? defaultPrisma
   const months = previousMonths(endMonth, monthsCount)
+
   await ensureMonthlyEvolutionData(userId, months, db)
 
   const [invoiceTotals, fixedCostTotals, looseExpenseTotals] = await Promise.all([
@@ -199,56 +202,13 @@ export async function getMonthlyEvolution(
 }
 
 async function ensureMonthlyEvolutionData(userId: string, months: string[], db: PrismaClient) {
-  const existingMonths = await db.financialMonth.findMany({
-    where: { userId, month: { in: months } },
-    select: { id: true, month: true },
-  })
-  const monthMap = new Map(existingMonths.map((item) => [item.month, item.id]))
-  const missingMonths = months.filter((month) => !monthMap.has(month))
-
-  if (missingMonths.length > 0) {
-    for (const month of missingMonths) {
-      const record = await db.financialMonth.upsert({
-        where: { month_userId: { month, userId } },
-        create: { month, userId },
-        update: {},
-      })
-      monthMap.set(record.month, record.id)
-    }
-  }
-
-  const fixedCosts = await db.fixedCost.findMany({
-    where: { userId, active: true },
-    select: { id: true, defaultAmount: true },
-  })
-  if (fixedCosts.length === 0) return
-
-  const existingOccurrences = await db.fixedCostOccurrence.findMany({
-    where: { userId, month: { in: months } },
-    select: { fixedCostId: true, month: true },
-  })
-  const existingKeys = new Set(existingOccurrences.map((item) => `${item.fixedCostId}:${item.month}`))
-  const missingOccurrences = []
-
-  for (const month of months) {
-    const financialMonthId = monthMap.get(month)
-    if (!financialMonthId) continue
-    for (const fixedCost of fixedCosts) {
-      const key = `${fixedCost.id}:${month}`
-      if (existingKeys.has(key)) continue
-      missingOccurrences.push({
-        fixedCostId: fixedCost.id,
-        financialMonthId,
-        month,
-        amount: fixedCost.defaultAmount,
-        userId,
-      })
-    }
-  }
-
-  if (missingOccurrences.length > 0) {
-    await db.fixedCostOccurrence.createMany({ data: missingOccurrences })
-  }
+  const monthEntries = await Promise.all(
+    months.map(async (m) => {
+      const fm = await ensureFinancialMonth(userId, m, db)
+      return { month: m, financialMonthId: fm.id }
+    })
+  )
+  await ensureFixedCostOccurrencesForMonths(userId, monthEntries, db)
 }
 
 async function getInvoiceTotalsByMonth(userId: string, months: string[], db: PrismaClient) {
@@ -262,7 +222,7 @@ async function getInvoiceTotalsByMonth(userId: string, months: string[], db: Pri
 
 async function getFixedCostTotalsByMonth(userId: string, months: string[], db: PrismaClient) {
   const occurrences = await db.fixedCostOccurrence.findMany({
-    where: { userId, month: { in: months } },
+    where: { userId, month: { in: months }, deletedAt: null },
     select: {
       amount: true,
       month: true,

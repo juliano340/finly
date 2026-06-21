@@ -14,7 +14,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const month = url.searchParams.get("month")
   const userId = session.user.id
 
-  const where: Record<string, unknown> = { fixedCostId: id, userId, status: "PAID" }
+  const where: Record<string, unknown> = { fixedCostId: id, userId, status: "PAID", deletedAt: null }
   if (month) where.month = month
 
   const occurrence = await prisma.fixedCostOccurrence.findFirst({

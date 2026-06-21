@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { markCardInvoiceFixedCostsPaid } from "@/features/monthly-closing/monthly-closing.service"
+import { validateExpenseLimit } from "@/features/bank-accounts/bank-accounts.service"
 
 export async function POST(
   request: Request,
@@ -36,6 +37,11 @@ export async function POST(
       const account = await prisma.bankAccount.findUnique({ where: { id: realBankAccountId } })
       if (!account || account.userId !== userId) {
         return NextResponse.json({ error: "Conta não encontrada" }, { status: 400 })
+      }
+
+      const check = await validateExpenseLimit(realBankAccountId, userId, invoice.amount, prisma)
+      if (!check.allowed) {
+        return NextResponse.json({ error: check.reason }, { status: 400 })
       }
     }
 

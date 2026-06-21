@@ -124,4 +124,105 @@ describe("bank-accounts.service", () => {
     await prisma.bankAccount.deleteMany({ where: { userId: otherUserId } })
     await prisma.user.delete({ where: { id: otherUserId } })
   })
+
+  // ─── Overdraft / Cheque Especial ──────────────────────────────
+
+  it("permite despesa quando saldo cobre (sem overdraft)", async () => {
+    const account = await createBankAccount(
+      userId,
+      { name: `Cobertura ${Date.now()}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 500, active: true },
+      prisma
+    )
+    const movement = await createBankAccountMovement(account.id, userId, { amount: 200, type: "EXPENSE", description: "teste", date: new Date() }, prisma)
+    expect(movement).not.toBeNull()
+  })
+
+  it("permite despesa dentro do cheque especial", async () => {
+    const account = await createBankAccount(
+      userId,
+      { name: `Cheque ${Date.now()}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 100, overdraftLimit: 200, active: true },
+      prisma
+    )
+    const movement = await createBankAccountMovement(account.id, userId, { amount: 250, type: "EXPENSE", description: "usando cheque", date: new Date() }, prisma)
+    expect(movement).not.toBeNull()
+  })
+
+  it("bloqueia despesa que excede cheque especial", async () => {
+    const account = await createBankAccount(
+      userId,
+      { name: `Estoura ${Date.now()}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 100, overdraftLimit: 200, active: true },
+      prisma
+    )
+    const movement = await createBankAccountMovement(account.id, userId, { amount: 301, type: "EXPENSE", description: "estourando", date: new Date() }, prisma)
+    expect(movement).toBeNull()
+  })
+
+  it("permite ajuste para baixo usando parte do cheque especial", async () => {
+    const account = await createBankAccount(
+      userId,
+      { name: `AjusteCheque ${Date.now()}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 300, overdraftLimit: 200, active: true },
+      prisma
+    )
+    const result = await adjustBankAccountBalance(account.id, userId, { targetBalance: -100, description: "AJUSTE", date: new Date() }, prisma)
+    expect(result).not.toBeNull()
+
+    const accounts = await getBankAccounts(userId, prisma)
+    expect(accounts.find((a) => a.id === account.id)?.balance).toBe(-100)
+  })
+
+  it("bloqueia ajuste para baixo que excede cheque especial", async () => {
+    const account = await createBankAccount(
+      userId,
+      { name: `AjusteEstoura ${Date.now()}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 300, overdraftLimit: 200, active: true },
+      prisma
+    )
+    const result = await adjustBankAccountBalance(account.id, userId, { targetBalance: -500, description: "AJUSTE", date: new Date() }, prisma)
+    expect(result).toBeNull()
+  })
+
+  it("permite transferência que deixa saldo negativo dentro do limite", async () => {
+    const suffix = Date.now()
+    const from = await createBankAccount(
+      userId,
+      { name: `TransfOrigemCheque ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 100, overdraftLimit: 200, active: true },
+      prisma
+    )
+    const to = await createBankAccount(
+      userId,
+      { name: `TransfDestinoCheque ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 50, active: true },
+      prisma
+    )
+
+    const result = await transferBetweenBankAccounts(
+      userId,
+      { fromAccountId: from.id, toAccountId: to.id, amount: 250, method: "PIX", description: "usando cheque", date: new Date() },
+      prisma
+    )
+    expect(result).not.toBeNull()
+
+    const accounts = await getBankAccounts(userId, prisma)
+    expect(accounts.find((a) => a.id === from.id)?.balance).toBe(-150)
+    expect(accounts.find((a) => a.id === to.id)?.balance).toBe(300)
+  })
+
+  it("bloqueia transferência que excede cheque especial", async () => {
+    const suffix = Date.now()
+    const from = await createBankAccount(
+      userId,
+      { name: `TransfEstoura ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 100, overdraftLimit: 200, active: true },
+      prisma
+    )
+    const to = await createBankAccount(
+      userId,
+      { name: `TransfDestinoEst ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 50, active: true },
+      prisma
+    )
+
+    const result = await transferBetweenBankAccounts(
+      userId,
+      { fromAccountId: from.id, toAccountId: to.id, amount: 301, method: "PIX", description: "estourando", date: new Date() },
+      prisma
+    )
+    expect(result).toBeNull()
+  })
 })

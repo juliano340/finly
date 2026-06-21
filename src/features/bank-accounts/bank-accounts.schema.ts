@@ -6,6 +6,7 @@ export const bankAccountSchema = z.object({
   type: z.enum(["CHECKING", "SAVINGS", "DIGITAL", "CASH", "INVESTMENT"]).default("CHECKING"),
   color: z.string().default("#22C55E"),
   initialBalance: z.coerce.number().default(0),
+  overdraftLimit: z.coerce.number().default(0),
   active: z.coerce.boolean().default(true),
 })
 

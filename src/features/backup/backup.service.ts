@@ -20,7 +20,7 @@ export interface ImportResult {
 export async function exportData(userId: string, client: PrismaClient = defaultPrisma): Promise<BackupData> {
   const categories = await client.category.findMany({ where: { userId }, select: { id: true, name: true, icon: true, color: true, type: true } })
   const financialMonths = await client.financialMonth.findMany({ where: { userId }, select: { id: true, month: true, status: true } })
-  const bankAccounts = await client.bankAccount.findMany({ where: { userId }, select: { id: true, name: true, institution: true, type: true, color: true, initialBalance: true, active: true } })
+  const bankAccounts = await client.bankAccount.findMany({ where: { userId }, select: { id: true, name: true, institution: true, type: true, color: true, initialBalance: true, overdraftLimit: true, active: true } })
   const cards = await client.card.findMany({ where: { userId }, select: { id: true, name: true, brand: true, color: true, closingDay: true, dueDay: true, bankAccountId: true } })
   const transactions = await client.transaction.findMany({ where: { userId }, select: { id: true, amount: true, type: true, description: true, date: true, categoryId: true } })
   const budgets = await client.budget.findMany({ where: { userId }, select: { id: true, amount: true, month: true, categoryId: true } })
@@ -129,7 +129,7 @@ async function insertAll(
       if (existing) { idMaps.bankAccount.set(item.id, existing.id); continue }
     }
     const created = await db.bankAccount.create({
-      data: { name: item.name, institution: item.institution, type: item.type, color: item.color, initialBalance: item.initialBalance, active: item.active, userId },
+      data: { name: item.name, institution: item.institution, type: item.type, color: item.color, initialBalance: item.initialBalance, overdraftLimit: item.overdraftLimit, active: item.active, userId },
     })
     idMaps.bankAccount.set(item.id, created.id)
     counts.bankAccounts++
@@ -192,7 +192,7 @@ async function insertAll(
     const cardId = item.cardId ? idMaps.card.get(item.cardId) ?? null : null
     const bankAccountId = item.bankAccountId ? idMaps.bankAccount.get(item.bankAccountId) ?? null : null
     const created = await db.fixedCost.create({
-      data: { name: item.name, type: item.type, defaultAmount: item.defaultAmount, categoryId, paymentMethod: item.paymentMethod, dueDay: item.dueDay, paidInsideCard: item.paidInsideCard, cardId, bankAccountId, active: item.active, userId },
+      data: { name: item.name, type: item.type, defaultAmount: item.defaultAmount, categoryId, paymentMethod: item.paymentMethod, dueDay: item.dueDay, paidInsideCard: item.paidInsideCard, cardId, bankAccountId, active: item.active, startDate: item.startDate, frequency: item.frequency, customInterval: item.customInterval, customUnit: item.customUnit, endType: item.endType, endDate: item.endDate, endAfterCount: item.endAfterCount, userId },
     })
     idMaps.fixedCost.set(item.id, created.id)
     counts.fixedCosts++

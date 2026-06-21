@@ -10,9 +10,10 @@ import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { toast } from "sonner"
 import { formatCurrency, formatDate } from "@/lib/utils"
+import { isAccountNegative, getAvailableBalance } from "@/lib/balance"
 
 interface CardItem { id: string; name: string; color: string }
-interface BankAccountItem { id: string; name: string; balance: number }
+interface BankAccountItem { id: string; name: string; balance: number; overdraftLimit: number }
 interface Invoice { id: string; month: string; dueDate: string; amount: number; status: "PENDING" | "PAID"; card: CardItem; paymentMethod?: string | null; paymentBankAccountId?: string | null }
 
 function currentMonth() {
@@ -386,11 +387,40 @@ export default function InvoicesPage() {
                   >
                     <option value="">Selecione uma conta</option>
                     {bankAccounts.map((acc) => (
-                      <option key={acc.id} value={acc.id}>{acc.name}</option>
+                      <option key={acc.id} value={acc.id}>{acc.name} ({formatCurrency(acc.balance)})</option>
                     ))}
                   </select>
                 </div>
               )}
+
+              {(() => {
+                if (!currentMethod?.needsAccount || !payAccountId) return null
+                const acc = bankAccounts.find((a) => a.id === payAccountId)
+                if (!acc) return null
+                const after = acc.balance - payingInvoice.amount
+                const available = getAvailableBalance(acc.balance, acc.overdraftLimit)
+                return (
+                  <div className="space-y-1 rounded-lg bg-muted p-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Saldo</span>
+                      <span className={isAccountNegative(acc.balance, acc.overdraftLimit) ? "font-medium text-red-600" : "font-medium"}>{formatCurrency(acc.balance)}</span>
+                    </div>
+                    {acc.overdraftLimit > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Disponível (c/ cheque)</span>
+                        <span className={available < 0 ? "font-medium text-red-600" : "font-medium text-emerald-600"}>{formatCurrency(available)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between border-t pt-1">
+                      <span className="text-muted-foreground">Após pagamento</span>
+                      <span className={isAccountNegative(after, acc.overdraftLimit) ? "font-bold text-destructive" : "font-bold text-emerald-600"}>{formatCurrency(after)}</span>
+                    </div>
+                    {isAccountNegative(after, acc.overdraftLimit) && (
+                      <p className="text-xs text-destructive">Saldo insuficiente (considerando cheque especial).</p>
+                    )}
+                  </div>
+                )
+              })()}
 
               {payError && <p className="text-sm text-destructive">{payError}</p>}
 
@@ -454,24 +484,31 @@ export default function InvoicesPage() {
               const amount = Number.parseFloat(simAmount) || 0
               if (!simInv || !simAcc || amount <= 0) return null
               const after = simAcc.balance - amount
+              const available = getAvailableBalance(simAcc.balance, simAcc.overdraftLimit)
               return (
                 <div className="space-y-2 rounded-lg bg-muted p-4 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Saldo atual</span>
-                    <span className="font-medium">{formatCurrency(simAcc.balance)}</span>
+                    <span className={isAccountNegative(simAcc.balance, simAcc.overdraftLimit) ? "font-medium text-red-600" : "font-medium"}>{formatCurrency(simAcc.balance)}</span>
                   </div>
+                  {simAcc.overdraftLimit > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Disponível (c/ cheque)</span>
+                      <span className={available < 0 ? "font-medium text-red-600" : "font-medium text-emerald-600"}>{formatCurrency(available)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Pagamento</span>
                     <span className="font-medium text-destructive">-{formatCurrency(amount)}</span>
                   </div>
                   <div className="flex justify-between border-t pt-2">
                     <span className="text-muted-foreground">Saldo após</span>
-                    <span className={`font-bold ${after >= 0 ? "text-emerald-600" : "text-destructive"}`}>
+                    <span className={`font-bold ${isAccountNegative(after, simAcc.overdraftLimit) ? "text-destructive" : "text-emerald-600"}`}>
                       {formatCurrency(after)}
                     </span>
                   </div>
-                  {after < 0 && (
-                    <p className="text-xs text-destructive">Saldo insuficiente após o pagamento.</p>
+                  {isAccountNegative(after, simAcc.overdraftLimit) && (
+                    <p className="text-xs text-destructive">Saldo insuficiente (considerando cheque especial).</p>
                   )}
                 </div>
               )

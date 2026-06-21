@@ -68,11 +68,21 @@ describe("notifications.service", () => {
   })
 
   it("ajusta vencimento dia 31 para último dia de mês curto", async () => {
-    await createFixedCost(
+    const created = await createFixedCost(
       userId,
       { name: `Fevereiro Notify ${Date.now()}`, defaultAmount: 90, categoryId, paymentMethod: "BANK_SLIP", dueDay: 31, paidInsideCard: false, cardId: null, bankAccountId: null, active: true, startDate: "2026-01-01", frequency: "MONTHLY", endType: "NONE" },
       prisma
     )
+    if (!created) return
+
+    const febFM = await prisma.financialMonth.upsert({
+      where: { month_userId: { month: "2026-02", userId } },
+      create: { month: "2026-02", userId },
+      update: {},
+    })
+    await prisma.fixedCostOccurrence.create({
+      data: { fixedCostId: created.id, financialMonthId: febFM.id, month: "2026-02", dueDate: new Date("2026-02-28T12:00:00"), amount: 90, status: "PENDING", userId },
+    })
 
     const notifications = await getDueSoonNotifications(userId, 7, prisma, new Date("2026-02-26T12:00:00"))
 

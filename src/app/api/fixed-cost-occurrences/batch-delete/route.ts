@@ -13,8 +13,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Nenhum ID informado" }, { status: 400 })
   }
 
-  const result = await prisma.fixedCostOccurrence.deleteMany({
-    where: { id: { in: ids }, userId: session.user.id },
+  const result = await prisma.fixedCostOccurrence.updateMany({
+    where: { id: { in: ids }, userId: session.user.id, deletedAt: null },
+    data: { deletedAt: new Date() },
   })
 
   return NextResponse.json({ deleted: result.count })

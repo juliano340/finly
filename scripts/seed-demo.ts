@@ -178,6 +178,7 @@ async function main() {
       type: acc.type,
       color: acc.color,
       initialBalance: acc.initialBalance,
+      overdraftLimit: 0,
       active: true,
     })
     if (created) accountByName.set(acc.name, created.id)

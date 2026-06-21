@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest"
 import { getTestClient } from "@/__tests__/prisma"
 import { registerUser } from "@/features/auth/auth.service"
-import { getMonthlyClosing, markCardInvoiceFixedCostsPaid, markCardInvoiceFixedCostsPending } from "../monthly-closing.service"
+import { getMonthlyClosing, markCardInvoiceFixedCostsPaid, markCardInvoiceFixedCostsPending, payFixedCostOccurrence } from "../monthly-closing.service"
 
 const prisma = getTestClient()
 
@@ -24,9 +24,11 @@ describe("monthly-closing.service", () => {
   })
 
   afterAll(async () => {
+    await prisma.bankAccountMovement.deleteMany({ where: { userId } })
     await prisma.fixedCostOccurrence.deleteMany({ where: { userId } })
     await prisma.cardInvoice.deleteMany({ where: { userId } })
     await prisma.fixedCost.deleteMany({ where: { userId } })
+    await prisma.bankAccount.deleteMany({ where: { userId } })
     await prisma.financialMonth.deleteMany({ where: { userId } })
     await prisma.transaction.deleteMany({ where: { userId } })
     await prisma.card.deleteMany({ where: { userId } })
@@ -39,12 +41,22 @@ describe("monthly-closing.service", () => {
     const card = await prisma.card.create({ data: { name: `Nubank ${Date.now()}`, userId } })
     const financialMonth = await prisma.financialMonth.create({ data: { month, userId } })
 
-    await prisma.fixedCost.createMany({
-      data: [
-        { name: `Internet ${Date.now()}`, defaultAmount: 120, categoryId, paymentMethod: "PIX", paidInsideCard: false, userId },
-        { name: `Streaming ${Date.now()}`, defaultAmount: 50, categoryId, paymentMethod: "CREDIT_CARD", paidInsideCard: true, cardId: card.id, userId },
-      ],
-    })
+    const fixedCosts = await Promise.all([
+      prisma.fixedCost.create({
+        data: { name: `Internet ${Date.now()}`, defaultAmount: 120, categoryId, paymentMethod: "PIX", paidInsideCard: false, userId },
+      }),
+      prisma.fixedCost.create({
+        data: { name: `Streaming ${Date.now()}`, defaultAmount: 50, categoryId, paymentMethod: "CREDIT_CARD", paidInsideCard: true, cardId: card.id, userId },
+      }),
+    ])
+    await Promise.all([
+      prisma.fixedCostOccurrence.create({
+        data: { fixedCostId: fixedCosts[0].id, financialMonthId: financialMonth.id, month, amount: 120, status: "PENDING", dueDate: new Date("2026-06-10T12:00:00"), userId },
+      }),
+      prisma.fixedCostOccurrence.create({
+        data: { fixedCostId: fixedCosts[1].id, financialMonthId: financialMonth.id, month, amount: 50, status: "PENDING", dueDate: new Date("2026-06-15T12:00:00"), userId },
+      }),
+    ])
     await prisma.cardInvoice.create({
       data: { cardId: card.id, financialMonthId: financialMonth.id, month, dueDate: new Date("2026-06-10T12:00:00"), amount: 300, userId },
     })
@@ -65,6 +77,32 @@ describe("monthly-closing.service", () => {
     expect(closing.summary.totalToPay).toBe(500)
     expect(closing.summary.projectedBalance).toBe(500)
     expect(closing.summary.estimatedInvoicesByCard[0]?.estimatedAmount).toBe(50)
+  })
+
+  it("bloqueia pagamento de custo fixo quando saldo excede cheque especial", async () => {
+    const month = "2026-08"
+    const suffix = Date.now()
+    const account = await prisma.bankAccount.create({
+      data: { name: `CustoFixoConta ${suffix}`, type: "CHECKING", color: "#000", initialBalance: 100, overdraftLimit: 200, userId },
+    })
+    const fixedCost = await prisma.fixedCost.create({
+      data: {
+        name: `CustoFixoCheque ${suffix}`,
+        defaultAmount: 301,
+        categoryId,
+        paymentMethod: "PIX",
+        bankAccountId: account.id,
+        paidInsideCard: false,
+        userId,
+      },
+    })
+    const financialMonth = await prisma.financialMonth.create({ data: { month, userId } })
+    const occurrence = await prisma.fixedCostOccurrence.create({
+      data: { fixedCostId: fixedCost.id, financialMonthId: financialMonth.id, month, amount: 301, dueDate: new Date(), status: "PENDING", userId },
+    })
+
+    const result = await payFixedCostOccurrence(occurrence.id, userId, prisma)
+    expect(result).toBeNull()
   })
 
   it("sincroniza custos fixos inclusos no cartão ao pagar e estornar fatura", async () => {
