@@ -1,5 +1,5 @@
 -- AlterTable
-ALTER TABLE "BankAccount" ADD COLUMN "overdraftLimit" DOUBLE PRECISION NOT NULL DEFAULT 0;
+ALTER TABLE "BankAccount" ADD COLUMN IF NOT EXISTS "overdraftLimit" DOUBLE PRECISION NOT NULL DEFAULT 0;
 
 -- AlterTable
-ALTER TABLE "FixedCostOccurrence" ADD COLUMN "deletedAt" TIMESTAMP(3);
+ALTER TABLE "FixedCostOccurrence" ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3);
