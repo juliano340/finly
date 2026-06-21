@@ -13,6 +13,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "fromMonth e toMonth são obrigatórios" }, { status: 400 })
   }
 
-  const invoices = await copyCardInvoices(fromMonth, toMonth, session.user.id, invoiceIds)
+  const invoices = await copyCardInvoices(fromMonth, toMonth, session.user.id, undefined, invoiceIds)
   return NextResponse.json(invoices)
 }

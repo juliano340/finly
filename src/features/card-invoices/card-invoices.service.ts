@@ -91,8 +91,8 @@ export async function copyCardInvoices(
   fromMonth: string,
   toMonth: string,
   userId: string,
-  invoiceIds?: string[],
-  client?: PrismaClient
+  client?: PrismaClient,
+  invoiceIds?: string[]
 ) {
   const db = client ?? defaultPrisma
 
