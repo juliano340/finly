@@ -207,15 +207,14 @@ async function ensureMonthlyEvolutionData(userId: string, months: string[], db: 
   const missingMonths = months.filter((month) => !monthMap.has(month))
 
   if (missingMonths.length > 0) {
-    await db.financialMonth.createMany({
-      data: missingMonths.map((month) => ({ month, userId })),
-      skipDuplicates: true,
-    })
-    const createdMonths = await db.financialMonth.findMany({
-      where: { userId, month: { in: missingMonths } },
-      select: { id: true, month: true },
-    })
-    for (const item of createdMonths) monthMap.set(item.month, item.id)
+    for (const month of missingMonths) {
+      const record = await db.financialMonth.upsert({
+        where: { month_userId: { month, userId } },
+        create: { month, userId },
+        update: {},
+      })
+      monthMap.set(record.month, record.id)
+    }
   }
 
   const fixedCosts = await db.fixedCost.findMany({
