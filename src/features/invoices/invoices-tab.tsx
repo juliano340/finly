@@ -275,7 +275,6 @@ export function InvoicesTab() {
             <span className="min-w-28 text-center text-sm font-medium capitalize">{monthLabel(month)}</span>
             <Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(nextMonth(month))}><ChevronRight className="size-4" /></Button>
           </div>
-          <Input className="w-32" type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
           <Button variant="outline" size="sm" onClick={() => { setSimulatorOpen(true); setSimInvoiceId(""); setSimAccountId(""); setSimAmount("") }}>
             <Calculator className="mr-1 h-4 w-4" /> Simular
           </Button>
