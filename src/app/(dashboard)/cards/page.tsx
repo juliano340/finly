@@ -8,7 +8,6 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { InvoicesTab } from "@/features/invoices/invoices-tab"
 
 interface CardItem {
@@ -36,6 +35,7 @@ export default function CardsPage() {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<"cards" | "invoices">("cards")
   const inFlightUpdateRef = useRef(false)
   const editFormRef = useRef<HTMLFormElement>(null)
 
@@ -130,13 +130,13 @@ export default function CardsPage() {
         <p className="text-muted-foreground">Gerencie seus cartões de crédito e faturas mensais.</p>
       </div>
 
-      <Tabs defaultValue="cards" className="w-full">
-        <TabsList>
-          <TabsTrigger value="cards">Cartões</TabsTrigger>
-          <TabsTrigger value="invoices">Faturas</TabsTrigger>
-        </TabsList>
+      <div className="flex gap-1 rounded-md border bg-background p-1 w-fit">
+        <button type="button" onClick={() => setActiveTab("cards")} className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${activeTab === "cards" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Cartões</button>
+        <button type="button" onClick={() => setActiveTab("invoices")} className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${activeTab === "invoices" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Faturas</button>
+      </div>
 
-        <TabsContent value="cards" className="w-full space-y-6">
+      {activeTab === "cards" && (
+        <div className="space-y-6">
           <div className="flex items-center justify-end">
             <Button onClick={() => setCreating(true)}><Plus className="mr-2 h-4 w-4" />Novo cartão</Button>
           </div>
@@ -323,12 +323,12 @@ export default function CardsPage() {
         confirmText="Excluir"
         onConfirm={() => confirmDelete && handleDelete(confirmDelete)}
       />
-        </TabsContent>
+        </div>
+      )}
 
-        <TabsContent value="invoices" className="w-full">
-          <InvoicesTab />
-        </TabsContent>
-      </Tabs>
+      {activeTab === "invoices" && (
+        <InvoicesTab />
+      )}
     </div>
   )
 }
