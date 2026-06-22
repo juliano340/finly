@@ -112,6 +112,7 @@ export default function FixedCostsPage() {
 
   const fetchData = useCallback(async () => {
     setLoading(true)
+    setOccurrences([])
     const [catRes, cardRes, accountRes, occRes] = await Promise.all([
       fetch("/api/categories"),
       fetch("/api/cards"),
