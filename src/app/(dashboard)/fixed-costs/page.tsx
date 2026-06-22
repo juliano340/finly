@@ -322,7 +322,9 @@ export default function FixedCostsPage() {
             <span className="min-w-28 text-center text-sm font-medium capitalize">{monthLabel(month)}</span>
             <Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(nextMonth(month))}><ChevronRight className="size-4" /></Button>
           </div>
-          <Input className="w-32" type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
+          {month !== currentMonth() && (
+            <Button size="sm" variant="ghost" onClick={() => setMonth(currentMonth())}>Hoje</Button>
+          )}
           <Button onClick={() => {
             setInsideCard(false)
             setCreating(true)
@@ -348,6 +350,15 @@ export default function FixedCostsPage() {
         <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-xs text-muted-foreground">Pago</p><p className="text-2xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(totalPaid)}</p></CardContent></Card>
         <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-xs text-muted-foreground">A pagar</p><p className="text-2xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(totalPending)}</p></CardContent></Card>
       </div>
+
+      {!loading && totalPending === 0 && totalAll > 0 && (
+        <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900 dark:bg-emerald-950/30">
+          <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Tudo pago neste mês! 🎉</p>
+          <Button size="sm" variant="outline" onClick={() => setMonth(nextMonth(month))}>
+            Ver próximo mês
+          </Button>
+        </div>
+      )}
 
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2">

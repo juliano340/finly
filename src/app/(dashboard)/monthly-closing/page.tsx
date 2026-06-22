@@ -79,13 +79,22 @@ export default function MonthlyClosingPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between"><div><h1 className="text-2xl font-bold tracking-tight">Fechamento Mensal</h1><p className="text-muted-foreground">Gastos do mês: realizado vs. a pagar.</p></div><div className="flex items-center gap-1 rounded-md border bg-background px-2 py-1"><Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(previousMonth(month))}><ChevronLeft className="size-4" /></Button><span className="min-w-28 text-center text-sm font-medium capitalize">{monthLabel(month)}</span><Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(nextMonth(month))}><ChevronRight className="size-4" /></Button></div></div>
+      <div className="flex items-center justify-between"><div><h1 className="text-2xl font-bold tracking-tight">Fechamento Mensal</h1><p className="text-muted-foreground">Gastos do mês: realizado vs. a pagar.</p></div><div className="flex items-center gap-2"><div className="flex items-center gap-1 rounded-md border bg-background px-2 py-1"><Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(previousMonth(month))}><ChevronLeft className="size-4" /></Button><span className="min-w-28 text-center text-sm font-medium capitalize">{monthLabel(month)}</span><Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(nextMonth(month))}><ChevronRight className="size-4" /></Button></div>{month !== currentMonth() && (<Button size="sm" variant="ghost" onClick={() => setMonth(currentMonth())}>Hoje</Button>)}</div></div>
 
       <div className="grid gap-4 md:grid-cols-3">
         <Metric title="Saídas totais do mês" value={summary?.totalSpent ?? 0} description="Tudo: faturas + fixos + avulsas" highlight loading={loading} />
         <Metric title="Já pago" value={paidTotal} description="Desse total, já foi pago" loading={loading} />
         <Metric title="Ainda a pagar" value={summary?.totalToPay ?? 0} description="Restante pendente" loading={loading} />
       </div>
+
+      {!loading && (summary?.totalToPay ?? 0) === 0 && (summary?.totalSpent ?? 0) > 0 && (
+        <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900 dark:bg-emerald-950/30">
+          <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Tudo pago neste mês! 🎉</p>
+          <Button size="sm" variant="outline" onClick={() => setMonth(nextMonth(month))}>
+            Ver próximo mês
+          </Button>
+        </div>
+      )}
       <Card className="border-0 shadow-sm">
         <CardContent className="p-5">
           <p className="text-xs font-medium text-muted-foreground">Detalhamento do que ainda falta pagar</p>
