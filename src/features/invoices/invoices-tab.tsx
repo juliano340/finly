@@ -300,8 +300,10 @@ export function InvoicesTab() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/50">
-              <th className="w-10 px-3 py-3 text-center">
-                <input type="checkbox" className="h-4 w-4" checked={invoices.length > 0 && invoices.every((i) => selectedIds.has(i.id))} onChange={selectAll} />
+              <th className="w-10 px-3 py-3">
+                <div className="flex items-center justify-center">
+                  <input type="checkbox" className="h-4 w-4" checked={invoices.length > 0 && invoices.every((i) => selectedIds.has(i.id))} onChange={selectAll} />
+                </div>
               </th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Cartão</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Vencimento</th>
@@ -317,8 +319,10 @@ export function InvoicesTab() {
               </td></tr>
             ) : invoices.map((invoice) => (
               <tr key={invoice.id} className="border-b transition-colors hover:bg-muted/50">
-                <td className="w-10 px-3 py-3 text-center">
-                  <input type="checkbox" className="h-4 w-4" checked={selectedIds.has(invoice.id)} onChange={() => toggleSelect(invoice.id)} />
+                <td className="w-10 px-3 py-3">
+                  <div className="flex items-center justify-center">
+                    <input type="checkbox" className="h-4 w-4" checked={selectedIds.has(invoice.id)} onChange={() => toggleSelect(invoice.id)} />
+                  </div>
                 </td>
                 <td className="px-4 py-3">
                   <button type="button" onClick={() => setSelectedInvoice(invoice)} className="flex items-center gap-3 text-left font-medium hover:underline">
