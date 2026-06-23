@@ -34,6 +34,11 @@ export interface MonthlyClosingSummary {
     invoiceAmount: number
     difference: number
   }[]
+  incomeItems: {
+    name: string
+    amount: number
+    type: "FIXED" | "LOOSE"
+  }[]
 }
 
 export async function getMonthlyClosing(
@@ -46,7 +51,7 @@ export async function getMonthlyClosing(
 
   await ensureFixedCostOccurrences(userId, month, financialMonth.id, db)
 
-  const [invoices, occurrences, looseExpenses, income] = await Promise.all([
+  const [invoices, occurrences, looseExpenses, looseIncome] = await Promise.all([
     db.cardInvoice.findMany({
       where: { userId, month },
       include: { card: true },
@@ -58,7 +63,7 @@ export async function getMonthlyClosing(
       orderBy: { fixedCost: { name: "asc" } },
     }),
     aggregateTransactions(userId, month, "EXPENSE", db),
-    aggregateTransactions(userId, month, "INCOME", db),
+    getLooseIncomeTransactions(userId, month, db),
   ])
 
   const cardInvoicesTotal = sum(invoices.filter((inv) => inv.status === "PENDING").map((inv) => inv.amount))
@@ -76,7 +81,22 @@ export async function getMonthlyClosing(
   const allCardInvoices = sum(invoices.map((inv) => inv.amount))
   const allOutsideCard = sum(outsideCard.map((item) => item.amount))
   const totalSpent = allCardInvoices + allOutsideCard + looseExpenses
-  const totalIncome = income + fixedIncomeTotal
+  const fixedIncomeTotalCalc = sum(incomeOccurrences.map((item) => item.amount))
+  const looseIncomeTotal = looseIncome.reduce((acc, tx) => acc + tx.amount, 0)
+  const totalIncome = fixedIncomeTotalCalc + looseIncomeTotal
+
+  const incomeItems = [
+    ...incomeOccurrences.map((item) => ({
+      name: item.fixedCost.name,
+      amount: item.amount,
+      type: "FIXED" as const,
+    })),
+    ...looseIncome.map((tx) => ({
+      name: tx.description ?? tx.category.name,
+      amount: tx.amount,
+      type: "LOOSE" as const,
+    })),
+  ]
 
   return {
     financialMonth,
@@ -90,13 +110,14 @@ export async function getMonthlyClosing(
       fixedCostsOutsideCardTotal,
       fixedCostsOutsideCardTotalAll,
       cardInvoicesPaidTotal: allCardInvoices - cardInvoicesTotal,
-      fixedIncomeTotal,
+      fixedIncomeTotal: fixedIncomeTotalCalc,
       looseExpensesTotal: looseExpenses,
       incomeTotal: totalIncome,
       totalToPay,
       totalSpent,
       projectedBalance: totalIncome - totalToPay,
       estimatedInvoicesByCard: buildInvoiceEstimates(invoices, insideCard),
+      incomeItems,
     } satisfies MonthlyClosingSummary,
   }
 }
@@ -158,6 +179,7 @@ export async function getMonthlyClosingSummary(
     totalSpent,
     projectedBalance: incomeTotal - totalToPay,
     estimatedInvoicesByCard: [],
+    incomeItems: [],
   } satisfies MonthlyClosingSummary
 }
 
@@ -392,6 +414,28 @@ async function aggregateTransactions(
     _sum: { amount: true },
   })
   return result._sum.amount ?? 0
+}
+
+async function getLooseIncomeTransactions(
+  userId: string,
+  month: string,
+  db: PrismaClient
+) {
+  const [year, m] = month.split("-").map(Number)
+  return db.transaction.findMany({
+    where: {
+      userId,
+      type: "INCOME",
+      date: { gte: new Date(year, m - 1, 1), lt: new Date(year, m, 1) },
+    },
+    select: {
+      id: true,
+      amount: true,
+      description: true,
+      category: { select: { name: true } },
+    },
+    orderBy: { date: "desc" },
+  })
 }
 
 function buildInvoiceEstimates(

@@ -12,6 +12,7 @@ export const transactionSchema = z.object({
     .optional(),
   date: z.coerce.date(),
   categoryId: z.string().min(1, "Categoria é obrigatória"),
+  bankAccountId: z.string().optional(),
 })
 
 export type TransactionInput = z.infer<typeof transactionSchema>

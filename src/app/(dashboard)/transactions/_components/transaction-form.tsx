@@ -21,11 +21,18 @@ import {
 import type { TransactionInput } from "@/features/transactions/transactions.schema"
 import type { CategoryWithCount } from "@/features/categories/categories.types"
 
+interface BankAccountOption {
+  id: string
+  name: string
+  institution: string | null
+}
+
 interface TransactionFormProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSubmit: (input: TransactionInput) => Promise<void>
   categories: CategoryWithCount[]
+  bankAccounts?: BankAccountOption[]
   initial?: Partial<TransactionInput>
   title: string
   onDelete?: () => void
@@ -36,6 +43,7 @@ export function TransactionForm({
   onOpenChange,
   onSubmit,
   categories,
+  bankAccounts = [],
   initial,
   title,
   onDelete,
@@ -44,6 +52,7 @@ export function TransactionForm({
   const [type, setType] = useState<"INCOME" | "EXPENSE">(initial?.type ?? "EXPENSE")
   const [description, setDescription] = useState(initial?.description ?? "")
   const [categoryId, setCategoryId] = useState(initial?.categoryId ?? "")
+  const [bankAccountId, setBankAccountId] = useState(initial?.bankAccountId ?? "")
   const [date, setDate] = useState(
     initial?.date ? new Date(initial.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0]
   )
@@ -76,6 +85,7 @@ export function TransactionForm({
         description: description.trim() || undefined,
         categoryId,
         date: new Date(date + "T12:00:00"),
+        bankAccountId: bankAccountId || undefined,
       })
       onOpenChange(false)
     } catch (err) {
@@ -152,6 +162,26 @@ export function TransactionForm({
                       </SelectItem>
                     ))
                   )}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Conta bancária (opcional)</Label>
+              <Select value={bankAccountId || null} onValueChange={(v) => setBankAccountId(v ?? "")}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sem vinculação">
+                    {bankAccountId
+                      ? bankAccounts.find((a) => a.id === bankAccountId)?.name ?? "Selecione..."
+                      : "Sem vinculação"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Sem vinculação</SelectItem>
+                  {bankAccounts.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

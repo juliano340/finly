@@ -148,18 +148,21 @@ model Category {
 }
 
 model Transaction {
-  id          String          @id @default(cuid())
-  amount      Float
-  type        TransactionType
-  description String?
-  date        DateTime        @default(now())
-  categoryId  String
-  userId      String
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id            String          @id @default(cuid())
+  amount        Float
+  type          TransactionType
+  description   String?
+  date          DateTime        @default(now())
+  categoryId    String
+  bankAccountId String?
+  userId        String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 
-  category Category @relation(fields: [categoryId], references: [id])
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category    Category      @relation(fields: [categoryId], references: [id])
+  bankAccount BankAccount?  @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movements   BankAccountMovement[]
 
   @@index([userId, type, date])
 }
@@ -217,6 +220,7 @@ model BankAccount {
   cards     Card[]
   fixedCosts FixedCost[]
   movements BankAccountMovement[]
+  transactions Transaction[]
 
   @@unique([name, userId])
   @@index([userId, name])
@@ -229,12 +233,14 @@ model BankAccountMovement {
   type          TransactionType
   description   String?
   date          DateTime        @default(now())
+  transactionId String?
   userId        String
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
-  bankAccount BankAccount @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bankAccount BankAccount  @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  transaction Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, type])
   @@index([bankAccountId, userId, date])

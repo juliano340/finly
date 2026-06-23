@@ -12,6 +12,7 @@ interface RecentTransactionsProps {
     date: Date
     categoryName: string
     categoryColor: string
+    bankAccountName: string | null
   }[]
 }
 
@@ -47,13 +48,20 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
               <p className="text-sm font-medium">
                 {tx.description ?? (tx.type === "INCOME" ? "Receita" : "Despesa")}
               </p>
-              <Badge
-                variant="secondary"
-                className="mt-0.5 text-xs"
-                style={{ backgroundColor: `${tx.categoryColor}20`, color: tx.categoryColor }}
-              >
-                {tx.categoryName}
-              </Badge>
+              <div className="mt-0.5 flex items-center gap-1.5">
+                <Badge
+                  variant="secondary"
+                  className="text-xs"
+                  style={{ backgroundColor: `${tx.categoryColor}20`, color: tx.categoryColor }}
+                >
+                  {tx.categoryName}
+                </Badge>
+                {tx.bankAccountName && (
+                  <Badge variant="outline" className="text-xs">
+                    {tx.bankAccountName}
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
           <p

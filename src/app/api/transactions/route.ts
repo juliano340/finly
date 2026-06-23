@@ -11,6 +11,7 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url)
   const filters = {
+    id: url.searchParams.get("id") ?? undefined,
     type: url.searchParams.get("type") as "INCOME" | "EXPENSE" | undefined,
     categoryId: url.searchParams.get("categoryId") ?? undefined,
     month: url.searchParams.get("month") ?? undefined,

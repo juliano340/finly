@@ -25,7 +25,7 @@ interface BankAccount {
   balance: number
   active: boolean
   cards: { id: string; name: string; brand: string | null }[]
-  movements: { id: string; amount: number; type: "INCOME" | "EXPENSE"; description: string | null; date: string }[]
+  movements: { id: string; amount: number; type: "INCOME" | "EXPENSE"; description: string | null; date: string; transactionId: string | null }[]
 }
 
 export default function BankAccountsPage() {
@@ -399,9 +399,22 @@ export default function BankAccountsPage() {
                       {selectedAccount.movements.length === 0 ? (
                         <p className="text-sm text-muted-foreground">Nenhuma movimentação.</p>
                       ) : selectedAccount.movements.map((mov) => (
-                        <div key={mov.id} className="flex justify-between rounded-lg border p-2 text-sm">
-                          <span>{formatMovementDescription(mov.description, mov.type)} · {formatDate(mov.date)}</span>
-                          <span className={mov.type === "INCOME" ? "text-emerald-600" : "text-red-600"}>{mov.type === "INCOME" ? "+" : "-"}{formatCurrency(mov.amount)}</span>
+                        <div key={mov.id} className="flex items-center justify-between rounded-lg border p-2 text-sm">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="truncate">{formatMovementDescription(mov.description, mov.type)} · {formatDate(mov.date)}</span>
+                            {mov.transactionId && (
+                              <a
+                                href={`/transactions?id=${mov.transactionId}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="shrink-0 text-xs text-primary hover:underline"
+                                title="Ver transação original"
+                              >
+                                Ver lançamento
+                              </a>
+                            )}
+                          </div>
+                          <span className={`shrink-0 ml-2 ${mov.type === "INCOME" ? "text-emerald-600" : "text-red-600"}`}>{mov.type === "INCOME" ? "+" : "-"}{formatCurrency(mov.amount)}</span>
                         </div>
                       ))}
                     </div>
@@ -570,6 +583,7 @@ function formatMovementDescription(description: string | null, type: "INCOME" | 
   if (description.startsWith("PAGAMENTO_FATURA:")) return "Pagamento fatura"
   if (description.startsWith("TRANSFERENCIA_SAIDA:")) return `Transferência para ${description.split(":")[2] ?? "conta"}`
   if (description.startsWith("TRANSFERENCIA_ENTRADA:")) return `Transferência de ${description.split(":")[2] ?? "conta"}`
+  if (description.startsWith("TRANSAÇÃO:")) return description.replace("TRANSAÇÃO: ", "")
   return description
 }
 

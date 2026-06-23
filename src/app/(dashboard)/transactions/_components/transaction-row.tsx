@@ -41,6 +41,9 @@ export function TransactionRow({ transaction, onEdit, onDelete }: TransactionRow
         </p>
         <p className="text-xs text-muted-foreground">
           {transaction.category.name} · {formatDate(transaction.date)}
+          {transaction.bankAccount && (
+            <> · <span className="inline-flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: transaction.bankAccount.color }} />{transaction.bankAccount.name}</span></>
+          )}
         </p>
       </div>
       <div className="flex items-center gap-3">

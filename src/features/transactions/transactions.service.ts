@@ -2,10 +2,17 @@ import { prisma as defaultPrisma } from "@/lib/prisma"
 import type { PrismaClient } from "@/generated/prisma/client"
 import type { TransactionInput } from "./transactions.schema"
 import type { TransactionWithRelations } from "./transactions.types"
+import { validateExpenseLimit } from "@/features/bank-accounts/bank-accounts.service"
+
+const includeRelations = {
+  category: { select: { id: true, name: true, color: true, icon: true } },
+  bankAccount: { select: { id: true, name: true, color: true, institution: true } },
+}
 
 export async function getTransactions(
   userId: string,
   filters?: {
+    id?: string
     type?: "INCOME" | "EXPENSE"
     categoryId?: string
     month?: string
@@ -20,6 +27,7 @@ export async function getTransactions(
   const skip = (page - 1) * limit
 
   const where: Record<string, unknown> = { userId }
+  if (filters?.id) where.id = filters.id
   if (filters?.type) where.type = filters.type
   if (filters?.categoryId) where.categoryId = filters.categoryId
   if (filters?.month) {
@@ -33,9 +41,7 @@ export async function getTransactions(
   const [transactions, total] = await Promise.all([
     db.transaction.findMany({
       where,
-      include: {
-        category: { select: { id: true, name: true, color: true, icon: true } },
-      },
+      include: includeRelations,
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
       skip,
       take: limit,
@@ -52,6 +58,43 @@ export async function createTransaction(
   client?: PrismaClient
 ) {
   const db = client ?? defaultPrisma
+
+  if (input.bankAccountId) {
+    if (input.type === "EXPENSE") {
+      const check = await validateExpenseLimit(input.bankAccountId, userId, input.amount, db)
+      if (!check.allowed) throw new Error(check.reason)
+    }
+
+    return db.$transaction(async (tx) => {
+      const transaction = await tx.transaction.create({
+        data: {
+          amount: input.amount,
+          type: input.type,
+          description: input.description ?? null,
+          date: input.date,
+          categoryId: input.categoryId,
+          bankAccountId: input.bankAccountId,
+          userId,
+        },
+        include: includeRelations,
+      })
+
+      await tx.bankAccountMovement.create({
+        data: {
+          bankAccountId: input.bankAccountId!,
+          amount: input.amount,
+          type: input.type,
+          description: `TRANSAÇÃO: ${input.description ?? (input.type === "INCOME" ? "Receita avulsa" : "Despesa avulsa")}`,
+          date: input.date,
+          transactionId: transaction.id,
+          userId,
+        },
+      })
+
+      return transaction
+    })
+  }
+
   return db.transaction.create({
     data: {
       amount: input.amount,
@@ -61,9 +104,7 @@ export async function createTransaction(
       categoryId: input.categoryId,
       userId,
     },
-    include: {
-      category: { select: { id: true, name: true, color: true, icon: true } },
-    },
+    include: includeRelations,
   })
 }
 
@@ -74,21 +115,72 @@ export async function updateTransaction(
   client?: PrismaClient
 ) {
   const db = client ?? defaultPrisma
-  const tx = await db.transaction.findUnique({ where: { id } })
-  if (!tx || tx.userId !== userId) return null
+  const existing = await db.transaction.findUnique({ where: { id } })
+  if (!existing || existing.userId !== userId) return null
+
+  const oldBankAccountId = existing.bankAccountId
+  const newBankAccountId = input.bankAccountId
+  const accountChanged = newBankAccountId !== undefined && newBankAccountId !== oldBankAccountId
+  const amountChanged = input.amount !== undefined && input.amount !== existing.amount
+  const typeChanged = input.type !== undefined && input.type !== existing.type
+
+  if (accountChanged || amountChanged || typeChanged) {
+    const finalAmount = input.amount ?? existing.amount
+    const finalType = input.type ?? existing.type
+    const finalBankAccountId = newBankAccountId !== undefined ? newBankAccountId : oldBankAccountId
+
+    if (finalType === "EXPENSE" && finalBankAccountId) {
+      const check = await validateExpenseLimit(finalBankAccountId, userId, finalAmount, db)
+      if (!check.allowed) throw new Error(check.reason)
+    }
+
+    return db.$transaction(async (tx) => {
+      if (oldBankAccountId) {
+        await tx.bankAccountMovement.deleteMany({
+          where: { transactionId: id },
+        })
+      }
+
+      if (finalBankAccountId) {
+        await tx.bankAccountMovement.create({
+          data: {
+            bankAccountId: finalBankAccountId,
+            amount: finalAmount,
+            type: finalType,
+            description: `TRANSAÇÃO: ${input.description ?? existing.description ?? (finalType === "INCOME" ? "Receita avulsa" : "Despesa avulsa")}`,
+            date: input.date ?? existing.date,
+            transactionId: id,
+            userId,
+          },
+        })
+      }
+
+      return tx.transaction.update({
+        where: { id },
+        data: {
+          ...(input.amount !== undefined && { amount: input.amount }),
+          ...(input.type !== undefined && { type: input.type }),
+          ...(input.description !== undefined && { description: input.description ?? null }),
+          ...(input.date !== undefined && { date: input.date }),
+          ...(input.categoryId !== undefined && { categoryId: input.categoryId }),
+          ...(input.bankAccountId !== undefined && { bankAccountId: input.bankAccountId || null }),
+        },
+        include: includeRelations,
+      })
+    })
+  }
 
   return db.transaction.update({
     where: { id },
     data: {
-      amount: input.amount,
-      type: input.type,
-      description: input.description ?? null,
-      date: input.date,
-      categoryId: input.categoryId,
+      ...(input.amount !== undefined && { amount: input.amount }),
+      ...(input.type !== undefined && { type: input.type }),
+      ...(input.description !== undefined && { description: input.description ?? null }),
+      ...(input.date !== undefined && { date: input.date }),
+      ...(input.categoryId !== undefined && { categoryId: input.categoryId }),
+      ...(input.bankAccountId !== undefined && { bankAccountId: input.bankAccountId || null }),
     },
-    include: {
-      category: { select: { id: true, name: true, color: true, icon: true } },
-    },
+    include: includeRelations,
   })
 }
 
@@ -101,6 +193,12 @@ export async function deleteTransaction(
   const tx = await db.transaction.findUnique({ where: { id } })
   if (!tx || tx.userId !== userId) return false
 
-  await db.transaction.delete({ where: { id } })
-  return true
+  return db.$transaction(async (prismaTx) => {
+    await prismaTx.bankAccountMovement.deleteMany({
+      where: { transactionId: id },
+    })
+
+    await prismaTx.transaction.delete({ where: { id } })
+    return true
+  })
 }

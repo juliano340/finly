@@ -50,6 +50,7 @@ export function TransactionTable({
           <tr className="border-b bg-muted/50">
             <th className="px-4 py-3 text-left font-medium text-muted-foreground">Categoria</th>
             <th className="px-4 py-3 text-left font-medium text-muted-foreground">Descrição</th>
+            <th className="px-4 py-3 text-left font-medium text-muted-foreground">Conta</th>
             <th className="px-4 py-3 text-left font-medium text-muted-foreground">Data</th>
             <th className="px-4 py-3 text-right font-medium text-muted-foreground">Valor</th>
             <th className="px-4 py-3 text-center font-medium text-muted-foreground">Tipo</th>
@@ -60,7 +61,7 @@ export function TransactionTable({
           {loading && !isEmpty ? (
             Array.from({ length: 5 }).map((_, i) => (
               <tr key={`skeleton-${i}`} className="border-b">
-                {Array.from({ length: 6 }).map((_, j) => (
+                {Array.from({ length: 7 }).map((_, j) => (
                   <td key={j} className="px-4 py-3">
                     <div className="h-4 w-full animate-pulse rounded bg-muted" />
                   </td>
@@ -69,7 +70,7 @@ export function TransactionTable({
             ))
           ) : isEmpty ? (
             <tr>
-              <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+              <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
                 {loading ? (
                   <span className="inline-flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" /> Carregando...
@@ -100,6 +101,16 @@ export function TransactionTable({
                   </td>
                   <td className="px-4 py-3 text-muted-foreground max-w-64">
                     <span className="block truncate">{tx.description ?? "—"}</span>
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {tx.bankAccount ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: tx.bankAccount.color }} />
+                        <span className="truncate max-w-[120px]">{tx.bankAccount.name}</span>
+                      </span>
+                    ) : (
+                      "—"
+                    )}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
                     {formatDate(tx.date)}
@@ -136,7 +147,7 @@ export function TransactionTable({
         {totalPages > 1 && (
           <tfoot>
             <tr>
-              <td colSpan={6} className="px-4 py-3">
+              <td colSpan={7} className="px-4 py-3">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs text-muted-foreground">
                     {total} {total === 1 ? "item" : "itens"} · Página {page} de {totalPages}

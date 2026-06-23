@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Loader2, Plus, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -21,7 +22,16 @@ import { formatCurrency } from "@/lib/utils"
 import type { TransactionWithRelations } from "@/features/transactions/transactions.types"
 import type { TransactionInput } from "@/features/transactions/transactions.schema"
 
+interface BankAccountOption {
+  id: string
+  name: string
+  institution: string | null
+}
+
 export default function TransactionsPage() {
+  const searchParams = useSearchParams()
+  const highlightId = searchParams.get("id")
+
   const {
     transactions,
     total,
@@ -36,12 +46,36 @@ export default function TransactionsPage() {
   } = useTransactions()
 
   const { categories } = useCategories()
+  const [bankAccounts, setBankAccounts] = useState<BankAccountOption[]>([])
+
+  useEffect(() => {
+    fetch("/api/bank-accounts/options")
+      .then((res) => res.json())
+      .then((data) => setBankAccounts(data))
+      .catch(() => {})
+  }, [])
 
   const [formOpen, setFormOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [editing, setEditing] = useState<TransactionWithRelations | null>(null)
   const [deleting, setDeleting] = useState<TransactionWithRelations | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
+  const [highlightLoaded, setHighlightLoaded] = useState(false)
+
+  useEffect(() => {
+    if (!highlightId || highlightLoaded) return
+    setHighlightLoaded(true)
+    fetch(`/api/transactions?id=${highlightId}&limit=1`)
+      .then((res) => res.json())
+      .then((data) => {
+        const tx = data.transactions?.[0]
+        if (tx) {
+          setEditing(tx)
+          setFormOpen(true)
+        }
+      })
+      .catch(() => {})
+  }, [highlightId, highlightLoaded])
 
   const totalPages = Math.ceil(total / 20)
 
@@ -223,6 +257,7 @@ export default function TransactionsPage() {
         }}
         onSubmit={editing ? handleUpdate : handleCreate}
         categories={categories}
+        bankAccounts={bankAccounts}
         initial={
           editing
             ? {
@@ -230,6 +265,7 @@ export default function TransactionsPage() {
                 type: editing.type,
                 description: editing.description ?? undefined,
                 categoryId: editing.categoryId,
+                bankAccountId: editing.bankAccountId ?? undefined,
                 date: editing.date,
               }
             : undefined

@@ -10,6 +10,7 @@ export function useTransactions() {
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [filters, setFilters] = useState<{
+    id?: string
     type?: "INCOME" | "EXPENSE"
     categoryId?: string
     month?: string

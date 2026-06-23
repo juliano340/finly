@@ -17,6 +17,7 @@ export interface DashboardStats {
     date: Date
     categoryName: string
     categoryColor: string
+    bankAccountName: string | null
   }[]
 }
 
@@ -90,7 +91,10 @@ export async function getDashboardStats(
       }),
       db.transaction.findMany({
         where: { userId, date: { gte: startDate, lt: endDate } },
-        include: { category: { select: { name: true, color: true } } },
+        include: {
+          category: { select: { name: true, color: true } },
+          bankAccount: { select: { name: true } },
+        },
         orderBy: [{ date: "desc" }, { createdAt: "desc" }],
         take: 5,
       }),
@@ -138,6 +142,7 @@ export async function getDashboardStats(
     date: tx.date,
     categoryName: tx.category.name,
     categoryColor: tx.category.color,
+    bankAccountName: tx.bankAccount?.name ?? null,
   }))
 
   const income = incomeTotal._sum.amount ?? 0
