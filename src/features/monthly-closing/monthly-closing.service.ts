@@ -109,7 +109,7 @@ export async function getMonthlyClosing(
       fixedCostsOutsideCardTotal,
       fixedCostsOutsideCardTotalAll,
       cardInvoicesPaidTotal: allCardInvoices - cardInvoicesTotal,
-      fixedIncomeTotal: fixedIncomeTotalCalc,
+      fixedIncomeTotal,
       looseExpensesTotal: looseExpenses,
       incomeTotal: totalIncome,
       totalToPay,
