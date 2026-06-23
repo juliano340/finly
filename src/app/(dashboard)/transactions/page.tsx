@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import { Loader2, Plus, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -60,11 +60,12 @@ export default function TransactionsPage() {
   const [editing, setEditing] = useState<TransactionWithRelations | null>(null)
   const [deleting, setDeleting] = useState<TransactionWithRelations | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
-  const [highlightLoaded, setHighlightLoaded] = useState(false)
+  const loadedHighlightRef = useRef<string | null>(null)
 
   useEffect(() => {
-    if (!highlightId || highlightLoaded) return
-    setHighlightLoaded(true)
+    if (!highlightId || loadedHighlightRef.current === highlightId) return
+    loadedHighlightRef.current = highlightId
+
     fetch(`/api/transactions?id=${highlightId}&limit=1`)
       .then((res) => res.json())
       .then((data) => {
@@ -75,7 +76,7 @@ export default function TransactionsPage() {
         }
       })
       .catch(() => {})
-  }, [highlightId, highlightLoaded])
+  }, [highlightId])
 
   const totalPages = Math.ceil(total / 20)
 

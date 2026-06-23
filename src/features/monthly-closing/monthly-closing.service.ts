@@ -81,9 +81,8 @@ export async function getMonthlyClosing(
   const allCardInvoices = sum(invoices.map((inv) => inv.amount))
   const allOutsideCard = sum(outsideCard.map((item) => item.amount))
   const totalSpent = allCardInvoices + allOutsideCard + looseExpenses
-  const fixedIncomeTotalCalc = sum(incomeOccurrences.map((item) => item.amount))
   const looseIncomeTotal = looseIncome.reduce((acc, tx) => acc + tx.amount, 0)
-  const totalIncome = fixedIncomeTotalCalc + looseIncomeTotal
+  const totalIncome = fixedIncomeTotal + looseIncomeTotal
 
   const incomeItems = [
     ...incomeOccurrences.map((item) => ({

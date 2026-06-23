@@ -391,7 +391,14 @@ export default function SettingsPage() {
                       )}
                       <div className="flex justify-between">
                         <Button variant="outline" onClick={() => setStep(1)}>Voltar</Button>
-                        <Button onClick={() => { importMode === "replace" ? setConfirmRestore(true) : handleRestore() }} disabled={restoring}>
+                        <Button onClick={() => {
+                          if (importMode === "replace") {
+                            setConfirmRestore(true)
+                            return
+                          }
+
+                          handleRestore()
+                        }} disabled={restoring}>
                           {restoring ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
                           {restoring ? "Importando..." : "Importar"}
                         </Button>
