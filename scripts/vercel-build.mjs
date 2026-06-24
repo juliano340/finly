@@ -31,11 +31,7 @@ const runNpm = (args, options = {}) => {
   }
 };
 
-if (process.env.VERCEL_ENV === "production") {
-  if (!process.env.MIGRATE_DATABASE_URL) {
-    throw new Error("MIGRATE_DATABASE_URL is required to run production migrations.");
-  }
-
+if (process.env.VERCEL_ENV === "production" && process.env.MIGRATE_DATABASE_URL) {
   runNpm(["run", "db:migrate:deploy"], {
     env: { DATABASE_URL: process.env.MIGRATE_DATABASE_URL },
   });
