@@ -174,6 +174,62 @@ Producao continua usando migrations Postgres:
 DATABASE_URL='postgresql://finly_app:<DB_PASSWORD>@api.juliano340.com:5432/finly_production?schema=public&sslmode=no-verify' npx prisma migrate deploy
 ```
 
+## Migrations Automaticas pela Vercel
+
+O deploy da Vercel usa `npm run vercel-build`, configurado em `vercel.json`.
+
+Em producao, o script exige `MIGRATE_DATABASE_URL` e executa `prisma migrate deploy` antes do `next build`. A aplicacao continua usando `DATABASE_URL` com o usuario restrito.
+
+Separacao recomendada:
+
+- `DATABASE_URL`: usuario runtime da aplicacao, por exemplo `finly_app`, sem permissao de criar objetos no schema.
+- `MIGRATE_DATABASE_URL`: usuario de migracao, por exemplo `finly_migrator`, com permissao para alterar schema. Usado apenas no build.
+
+Criar usuario de migracao na VPS, conectado como `postgres` ou outro superuser. O schema continua pertencendo ao role sem login `finly_owner`; o usuario de migracao apenas herda esse role.
+
+```sql
+CREATE USER finly_migrator WITH PASSWORD '<SENHA_FORTE>';
+GRANT CONNECT ON DATABASE finly_production TO finly_migrator;
+GRANT finly_owner TO finly_migrator;
+```
+
+Garantir que o usuario runtime continua sem permissao de criar objetos:
+
+```sql
+REVOKE CREATE ON SCHEMA public FROM finly_app;
+GRANT USAGE ON SCHEMA public TO finly_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO finly_app;
+GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO finly_app;
+
+ALTER DEFAULT PRIVILEGES FOR ROLE finly_migrator IN SCHEMA public
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO finly_app;
+
+ALTER DEFAULT PRIVILEGES FOR ROLE finly_migrator IN SCHEMA public
+GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO finly_app;
+
+ALTER DEFAULT PRIVILEGES FOR ROLE finly_migrator IN SCHEMA public
+GRANT USAGE ON TYPES TO finly_app;
+```
+
+Adicionar a URL privilegiada na Vercel somente como variavel de ambiente, sem commitar em arquivo:
+
+```bash
+npx vercel env add MIGRATE_DATABASE_URL production
+```
+
+Valor esperado:
+
+```txt
+postgresql://finly_migrator:<SENHA_FORTE>@api.juliano340.com:5432/finly_production?schema=public&sslmode=no-verify
+```
+
+Se uma migration falhar no meio, como `20260620120000_add_recurrence_fields`, resolver o estado antes de redeployar:
+
+```bash
+DATABASE_URL='postgresql://finly_migrator:<SENHA_FORTE>@api.juliano340.com:5432/finly_production?schema=public&sslmode=no-verify' npx prisma migrate resolve --rolled-back 20260620120000_add_recurrence_fields
+DATABASE_URL='postgresql://finly_migrator:<SENHA_FORTE>@api.juliano340.com:5432/finly_production?schema=public&sslmode=no-verify' npx prisma migrate deploy
+```
+
 ### Problema Encontrado
 
 Ao importar backup, ocorreu:

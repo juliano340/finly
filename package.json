@@ -14,6 +14,7 @@
     "test:e2e:ui": "playwright test --ui",
     "test:all": "vitest run && playwright test",
     "db:migrate:deploy": "prisma migrate deploy",
+    "db:migrate:prod": "node scripts/migrate-production.mjs",
     "seed:accounts": "tsx scripts/seed-accounts.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
     "seed:demo:reset": "tsx scripts/seed-demo.ts --reset",
