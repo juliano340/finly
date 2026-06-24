@@ -28,10 +28,10 @@ UPDATE "FixedCostOccurrence" SET "dueDate" =
       MAKE_TIMESTAMP(
         CAST(SUBSTRING("FixedCostOccurrence"."month" FROM 1 FOR 4) AS INTEGER),
         CAST(SUBSTRING("FixedCostOccurrence"."month" FROM 6 FOR 2) AS INTEGER),
-        LEAST(fc."dueDay", DATE_PART('day', 
+        CAST(LEAST(fc."dueDay", DATE_PART('day', 
           (CAST(SUBSTRING("FixedCostOccurrence"."month" FROM 1 FOR 4) || '-' || SUBSTRING("FixedCostOccurrence"."month" FROM 6 FOR 2) || '-01' AS DATE) + INTERVAL '1 month' - INTERVAL '1 day'
           ))
-        ),
+        ) AS INTEGER),
         12, 0, 0
       )
     ELSE 
