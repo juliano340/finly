@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Calculator, Check, CheckCircle2, ChevronLeft, ChevronRight, Copy, Loader2, Settings, Trash2 } from "lucide-react"
+import { Calculator, Check, CheckCircle2, ChevronLeft, ChevronRight, Copy, FileText, Loader2, Settings, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -11,10 +11,11 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { toast } from "sonner"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { isAccountNegative, getAvailableBalance } from "@/lib/balance"
+import { ImportPdfDialog } from "./import-pdf-dialog"
 
 interface CardItem { id: string; name: string; color: string }
 interface BankAccountItem { id: string; name: string; balance: number; overdraftLimit: number }
-interface Invoice { id: string; month: string; dueDate: string; amount: number; status: "PENDING" | "PAID"; card: CardItem; paymentMethod?: string | null; paymentBankAccountId?: string | null }
+interface Invoice { id: string; month: string; dueDate: string; amount: number; status: "PENDING" | "PAID"; card: CardItem; paymentMethod?: string | null; paymentBankAccountId?: string | null; importSessionId?: string | null }
 
 function currentMonth() {
   const now = new Date()
@@ -76,6 +77,8 @@ export function InvoicesTab() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [confirmBatchDelete, setConfirmBatchDelete] = useState(false)
   const [batchDeleting, setBatchDeleting] = useState(false)
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
+  const [importInvoiceId, setImportInvoiceId] = useState<string | null>(null)
   const inFlightUpdateRef = useRef(false)
   const editFormRef = useRef<HTMLFormElement>(null)
 
@@ -678,6 +681,34 @@ export function InvoicesTab() {
                       <Button type="button" variant="outline" onClick={() => setDeleteTarget(selectedInvoice.id)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </form>
+
+                  <div className="border-t pt-4">
+                    <p className="text-xs text-muted-foreground mb-2">Importação de fatura</p>
+                    {selectedInvoice.importSessionId ? (
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => window.location.href = `/invoices/${selectedInvoice.id}/analysis`}
+                        >
+                          <FileText className="mr-2 h-4 w-4" />
+                          Ver análise
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => {
+                          setImportInvoiceId(selectedInvoice.id)
+                          setImportDialogOpen(true)
+                        }}
+                      >
+                        <FileText className="mr-2 h-4 w-4" />
+                        Importar PDF
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </>
@@ -746,6 +777,18 @@ export function InvoicesTab() {
           )}
         </DialogContent>
       </Dialog>
+
+      {importInvoiceId && (
+        <ImportPdfDialog
+          open={importDialogOpen}
+          onOpenChange={setImportDialogOpen}
+          invoiceId={importInvoiceId}
+          onImportComplete={() => {
+            fetchData()
+            setSelectedInvoice(null)
+          }}
+        />
+      )}
     </div>
   )
 }
