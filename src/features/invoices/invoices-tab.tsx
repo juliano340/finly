@@ -79,6 +79,7 @@ export function InvoicesTab() {
   const [batchDeleting, setBatchDeleting] = useState(false)
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [importInvoiceId, setImportInvoiceId] = useState<string | null>(null)
+  const [importStandaloneOpen, setImportStandaloneOpen] = useState(false)
   const inFlightUpdateRef = useRef(false)
   const editFormRef = useRef<HTMLFormElement>(null)
 
@@ -284,6 +285,10 @@ export function InvoicesTab() {
           </Button>
           <Button variant="outline" size="sm" onClick={() => { setSimulatorOpen(true); setSimInvoiceId(""); setSimAccountId(""); setSimAmount("") }}>
             <Calculator className="mr-1 h-4 w-4" /> Simular
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setImportStandaloneOpen(true)}>
+            <FileText className="mr-1.5 h-3.5 w-3.5" />
+            Importar PDF
           </Button>
           <Button onClick={() => setCreating(true)}>Nova fatura</Button>
         </div>
@@ -786,6 +791,18 @@ export function InvoicesTab() {
           onImportComplete={() => {
             fetchData()
             setSelectedInvoice(null)
+          }}
+        />
+      )}
+
+      {importStandaloneOpen && (
+        <ImportPdfDialog
+          open={importStandaloneOpen}
+          onOpenChange={setImportStandaloneOpen}
+          cards={cards}
+          onImportComplete={(invId) => {
+            fetchData()
+            if (invId) window.location.href = `/invoices/${invId}/analysis`
           }}
         />
       )}

@@ -6,12 +6,18 @@ import { normalizeDescription } from "@/lib/formatters/normalize-description"
 import { stringSimilarity } from "@/lib/formatters/string-similarity"
 import type { ImportSessionData } from "./pdf-import.types"
 
+export type PdfImportResult = {
+  sessionId: string
+  transactionCount: number
+  invoiceId: string | null
+}
+
 export async function uploadAndParsePdf(
   file: File,
   userId: string,
   cardInvoiceId?: string,
   client?: PrismaClient
-): Promise<{ sessionId: string; transactionCount: number }> {
+): Promise<PdfImportResult> {
   const db = client ?? defaultPrisma
 
   const arrayBuffer = await file.arrayBuffer()
@@ -51,13 +57,115 @@ export async function uploadAndParsePdf(
   if (cardInvoiceId) {
     await db.cardInvoice.update({
       where: { id: cardInvoiceId },
-      data: { importSessionId: session.id },
+      data: {
+        importSessionId: session.id,
+        ...(parsed.invoiceTotal !== null && { amount: parsed.invoiceTotal }),
+        ...(parsed.dueDate !== null && { dueDate: parsed.dueDate }),
+      },
     })
   }
 
   return {
     sessionId: session.id,
     transactionCount: parsed.transactions.length,
+    invoiceId: cardInvoiceId ?? null,
+  }
+}
+
+export async function importPdfStandalone(
+  file: File,
+  cardId: string,
+  userId: string,
+  client?: PrismaClient
+): Promise<PdfImportResult> {
+  const db = client ?? defaultPrisma
+
+  const card = await db.card.findFirst({
+    where: { id: cardId, userId },
+  })
+  if (!card) throw new Error("Cartão não encontrado")
+
+  const arrayBuffer = await file.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  const rawText = await extractTextFromPdf(buffer)
+  const parser = getParser(rawText)
+  if (!parser) throw new Error("Formato de fatura não suportado")
+  const parsed = parser.parse(rawText)
+
+  if (!parsed.dueDate) throw new Error("Não foi possível identificar a data de vencimento no PDF")
+  if (parsed.invoiceTotal === null) throw new Error("Não foi possível identificar o valor total no PDF")
+
+  const month = `${parsed.dueDate.getFullYear()}-${String(parsed.dueDate.getMonth() + 1).padStart(2, "0")}`
+
+  const { ensureFinancialMonth } = await import("@/features/financial-months/financial-months.service")
+  const financialMonth = await ensureFinancialMonth(userId, month, db)
+
+  let invoice = await db.cardInvoice.findFirst({
+    where: { cardId: card.id, month, userId },
+  })
+
+  if (invoice) {
+    if (invoice.importSessionId) {
+      await db.importedTransaction.deleteMany({
+        where: { importSessionId: invoice.importSessionId },
+      })
+      await db.descriptionMapping.deleteMany({
+        where: { importSessionId: invoice.importSessionId },
+      })
+      await db.importSession.delete({
+        where: { id: invoice.importSessionId },
+      })
+    }
+
+    invoice = await db.cardInvoice.update({
+      where: { id: invoice.id },
+      data: {
+        dueDate: parsed.dueDate,
+        amount: parsed.invoiceTotal,
+        importSessionId: null,
+      },
+    })
+  } else {
+    invoice = await db.cardInvoice.create({
+      data: {
+        cardId: card.id,
+        financialMonthId: financialMonth.id,
+        month,
+        dueDate: parsed.dueDate,
+        amount: parsed.invoiceTotal,
+        status: "PENDING",
+        userId,
+      },
+    })
+  }
+
+  const session = await db.importSession.create({
+    data: {
+      fileName: file.name,
+      bank: parsed.bank,
+      invoiceTotal: parsed.invoiceTotal,
+      dueDate: parsed.dueDate,
+      rawText,
+      userId,
+      cardInvoice: { connect: { id: invoice.id } },
+      transactions: {
+        create: parsed.transactions.map((t) => ({
+          cardIdentifier: t.cardIdentifier,
+          date: t.date,
+          description: t.description,
+          amount: t.amount,
+          type: t.type,
+          rawLine: t.rawLine,
+          userId,
+        })),
+      },
+    },
+  })
+
+  return {
+    sessionId: session.id,
+    transactionCount: parsed.transactions.length,
+    invoiceId: invoice.id,
   }
 }
 
