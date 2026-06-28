@@ -156,7 +156,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <Separator className="bg-white/10" />
         <nav className="flex-1 space-y-1 p-2">
           {navItems.map((item) => {
-            const isActive = pathname === item.href
+            const isActive = item.href === "/cards" ? pathname.startsWith("/cards") || pathname.startsWith("/invoices/") : pathname === item.href
             return (
               <Link
                 key={item.href}

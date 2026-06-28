@@ -226,7 +226,7 @@ export default function AnalysisPage({
   const uncategorized = data.transactions.length - categorized
 
   return (
-    <div className="space-y-4">
+    <div key="content" className="space-y-4" style={{ animation: "dashboard-page-enter 450ms cubic-bezier(0.22, 1.2, 0.36, 1) both" }}>
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={() => window.history.back()}>
           <ArrowLeft className="mr-2 h-4 w-4" />

@@ -36,6 +36,11 @@ export default function CardsPage() {
   const [loading, setLoading] = useState(true)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<"cards" | "invoices">("cards")
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get("tab") === "invoices") setActiveTab("invoices")
+  }, [])
   const inFlightUpdateRef = useRef(false)
   const editFormRef = useRef<HTMLFormElement>(null)
 

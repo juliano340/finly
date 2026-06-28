@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Calculator, Check, CheckCircle2, ChevronLeft, ChevronRight, Copy, FileText, Loader2, Settings, Trash2 } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { BarChart3, Calculator, Check, CheckCircle2, ChevronLeft, ChevronRight, Copy, FileText, Loader2, Settings, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -51,6 +52,7 @@ const paymentMethods = [
 const methodLabels: Record<string, string> = { PIX: "Pix", TED: "TED", DEBIT: "Débito", CASH: "Dinheiro", BANK_SLIP: "Boleto" }
 
 export function InvoicesTab() {
+  const router = useRouter()
   const [cards, setCards] = useState<CardItem[]>([])
   const [bankAccounts, setBankAccounts] = useState<BankAccountItem[]>([])
   const [invoices, setInvoices] = useState<Invoice[]>([])
@@ -336,6 +338,11 @@ export function InvoicesTab() {
                   <button type="button" onClick={() => setSelectedInvoice(invoice)} className="flex items-center gap-3 text-left font-medium hover:underline">
                     <span className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white" style={{ backgroundColor: invoice.card.color }}>{invoice.card.name.charAt(0)}</span>
                     {invoice.card.name}
+                    {invoice.importSessionId && (
+                      <button type="button" onClick={(e) => { e.stopPropagation(); window.history.replaceState(null, "", "/cards?tab=invoices"); router.push(`/invoices/${invoice.id}/analysis`) }} className="ml-1.5 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+                        <BarChart3 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </button>
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">{formatDate(invoice.dueDate)}</td>
@@ -398,6 +405,7 @@ export function InvoicesTab() {
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white" style={{ backgroundColor: invoice.card.color }}>{invoice.card.name.charAt(0)}</div>
                   <span className="font-medium">{invoice.card.name}</span>
+                  {invoice.importSessionId && <BarChart3 className="ml-1.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
                 </div>
                 <strong>{formatCurrency(invoice.amount)}</strong>
               </div>
@@ -694,7 +702,7 @@ export function InvoicesTab() {
                         <Button
                           variant="outline"
                           className="flex-1"
-                          onClick={() => window.location.href = `/invoices/${selectedInvoice.id}/analysis`}
+                          onClick={() => { window.history.replaceState(null, "", "/cards?tab=invoices"); router.push(`/invoices/${selectedInvoice.id}/analysis`) }}
                         >
                           <FileText className="mr-2 h-4 w-4" />
                           Ver análise
@@ -802,7 +810,7 @@ export function InvoicesTab() {
           cards={cards}
           onImportComplete={(invId) => {
             fetchData()
-            if (invId) window.location.href = `/invoices/${invId}/analysis`
+            if (invId) { window.history.replaceState(null, "", "/cards?tab=invoices"); router.push(`/invoices/${invId}/analysis`) }
           }}
         />
       )}
