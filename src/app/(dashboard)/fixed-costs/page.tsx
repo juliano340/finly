@@ -136,10 +136,10 @@ export default function FixedCostsPage() {
     try {
       const res = await fetch(`/api/fixed-costs/${fixedCostId}/pay?month=${month}`, { method: "POST" })
       if (res.ok) {
-        toast.success("Custo fixo marcado como pago.")
+        toast.success(activeTab === "INCOME" ? "Receita marcada como recebida." : "Custo fixo marcado como pago.")
         fetchData()
       } else {
-        toast.error("Não foi possível marcar como pago.")
+        toast.error(activeTab === "INCOME" ? "Não foi possível marcar como recebida." : "Não foi possível marcar como pago.")
       }
     } finally {
       setPayingId(null)
@@ -151,10 +151,10 @@ export default function FixedCostsPage() {
     try {
       const res = await fetch(`/api/fixed-costs/${fixedCostId}/unpay?month=${month}`, { method: "POST" })
       if (res.ok) {
-        toast.info("Pagamento estornado.")
+        toast.info(activeTab === "INCOME" ? "Recebimento cancelado." : "Pagamento estornado.")
         fetchData()
       } else {
-        toast.error("Não foi possível estornar o pagamento.")
+        toast.error(activeTab === "INCOME" ? "Não foi possível cancelar o recebimento." : "Não foi possível estornar o pagamento.")
       }
     } finally {
       setUnpayingId(null)
@@ -178,7 +178,7 @@ export default function FixedCostsPage() {
           type: activeTab,
           defaultAmount: String(formData.get("defaultAmount") ?? "").replace(",", "."),
           categoryId: formData.get("categoryId"),
-          paymentMethod: paidInsideCard ? "CREDIT_CARD" : formData.get("paymentMethod"),
+          paymentMethod: paidInsideCard ? "CREDIT_CARD" : formData.get("paymentMethod") || "PIX",
           dueDay: formData.get("dueDay") || null,
           paidInsideCard,
           cardId: paidInsideCard ? formData.get("cardId") : null,
@@ -223,7 +223,7 @@ export default function FixedCostsPage() {
           type: item.type,
           defaultAmount: String(formData.get("defaultAmount") ?? "").replace(",", "."),
           categoryId: formData.get("categoryId"),
-          paymentMethod: paidInsideCard ? "CREDIT_CARD" : formData.get("paymentMethod"),
+          paymentMethod: paidInsideCard ? "CREDIT_CARD" : formData.get("paymentMethod") || "PIX",
           dueDay: formData.get("dueDay") || null,
           paidInsideCard,
           cardId: paidInsideCard ? formData.get("cardId") : null,
@@ -315,9 +315,9 @@ export default function FixedCostsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div><h1 className="text-2xl font-bold tracking-tight">Lançamentos Fixos</h1><p className="text-muted-foreground">Entradas e saídas recorrentes.</p></div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1 rounded-md border bg-background px-2 py-1">
             <Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(previousMonth(month))}><ChevronLeft className="size-4" /></Button>
             <span className="min-w-28 text-center text-sm font-medium capitalize">{monthLabel(month)}</span>
@@ -348,13 +348,13 @@ export default function FixedCostsPage() {
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-xs text-muted-foreground">Total do mês</p><p className="text-2xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(totalAll)}</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-xs text-muted-foreground">Pago</p><p className="text-2xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(totalPaid)}</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-xs text-muted-foreground">A pagar</p><p className="text-2xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(totalPending)}</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-xs text-muted-foreground">{activeTab === "INCOME" ? "Recebido" : "Pago"}</p><p className="text-2xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(totalPaid)}</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-xs text-muted-foreground">{activeTab === "INCOME" ? "A receber" : "A pagar"}</p><p className="text-2xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(totalPending)}</p></CardContent></Card>
       </div>
 
       {!loading && totalPending === 0 && totalAll > 0 && (
         <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900 dark:bg-emerald-950/30">
-          <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Tudo pago neste mês! 🎉</p>
+          <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">{activeTab === "INCOME" ? "Tudo recebido neste mês! 🎉" : "Tudo pago neste mês! 🎉"}</p>
           <Button size="sm" variant="outline" onClick={() => setMonth(nextMonth(month))}>
             Ver próximo mês
           </Button>
@@ -416,10 +416,10 @@ export default function FixedCostsPage() {
                   <td className="px-4 py-3 text-center">
                     {occ.fixedCost.paidInsideCard ? (
                       <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${occ.status === "PAID" ? "bg-emerald-500/10 text-emerald-600" : "bg-blue-500/10 text-blue-600"}`}>
-                        {occ.status === "PAID" ? "Pago na fatura" : "Na fatura"}
+                        {occ.status === "PAID" ? (activeTab === "INCOME" ? "Recebido na fatura" : "Pago na fatura") : (activeTab === "INCOME" ? "Na fatura" : "Na fatura")}
                       </span>
                     ) : occ.status === "PAID" ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600">Pago</span>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600">{activeTab === "INCOME" ? "Recebido" : "Pago"}</span>
                     ) : (
                       <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-600">Pendente</span>
                     )}
@@ -430,7 +430,7 @@ export default function FixedCostsPage() {
                         onClick={() => occ.status === "PAID" ? handleUnpay(occ.fixedCostId) : handlePay(occ.fixedCostId)}
                         className={`ml-2 inline-flex items-center gap-1 text-xs transition-colors ${occ.status === "PAID" ? "text-emerald-600 hover:text-emerald-700" : "text-muted-foreground hover:text-foreground"}`}
                       >
-                        {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : occ.status === "PAID" ? "Estornar" : "Pagar"}
+                        {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : occ.status === "PAID" ? (activeTab === "INCOME" ? "Cancelar" : "Estornar") : (activeTab === "INCOME" ? "Receber" : "Pagar")}
                       </button>
                     )}
                   </td>
@@ -459,54 +459,54 @@ export default function FixedCostsPage() {
         ) : filteredOccurrences.map((occ) => {
           const isLoading = payingId === occ.fixedCostId || unpayingId === occ.fixedCostId
           return (
-            <div key={occ.id} className="flex items-center gap-2">
-              <input type="checkbox" className="h-4 w-4 shrink-0" checked={selectedIds.has(occ.id)} onChange={() => toggleSelect(occ.id)} />
-              <button type="button" onClick={() => openEditSheet(occ)} className="w-full rounded-lg border bg-card p-4 text-left text-sm transition-colors hover:bg-muted/50">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-xs font-bold">{occ.fixedCost.name.charAt(0)}</div>
-                    <span className="font-medium">{occ.fixedCost.name}</span>
+            <div key={occ.id} className="rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50">
+              <div className="flex items-center gap-3">
+                <button type="button" onClick={() => openEditSheet(occ)} className="flex flex-1 items-center gap-3 text-left min-w-0">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-bold">{occ.fixedCost.name.charAt(0)}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium truncate">{occ.fixedCost.name}</span>
+                      <strong className="shrink-0">{formatCurrency(occ.amount)}</strong>
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">{occ.fixedCost.category.name} · {occ.fixedCost.paidInsideCard ? `Cartão ${occ.fixedCost.card?.name ?? "-"}` : "Fora do cartão"} · {occ.dueDate ? `vence em ${new Date(occ.dueDate).toLocaleDateString("pt-BR")}` : occ.fixedCost.dueDay ? `vence em ${formatDueDate(occ.fixedCost.dueDay, occ.month)}` : "sem vencimento"}</p>
                   </div>
-                  <strong>{formatCurrency(occ.amount)}</strong>
-                </div>
-                <p className="mt-0.5 pl-12 text-xs text-muted-foreground">{occ.fixedCost.category.name} · {occ.fixedCost.paidInsideCard ? `Cartão ${occ.fixedCost.card?.name ?? "-"}` : "Fora do cartão"} · {occ.dueDate ? `vence em ${new Date(occ.dueDate).toLocaleDateString("pt-BR")}` : occ.fixedCost.dueDay ? `vence em ${formatDueDate(occ.fixedCost.dueDay, occ.month)}` : "sem vencimento"}</p>
-                <div className="mt-1 pl-12">
-                  {occ.fixedCost.paidInsideCard ? (
-                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${occ.status === "PAID" ? "bg-emerald-500/10 text-emerald-600" : "bg-blue-500/10 text-blue-600"}`}>
-                      {occ.status === "PAID" ? "Pago na fatura" : "Na fatura"}
-                    </span>
-                  ) : (
-                    <span
-                      role="button" tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key !== "Enter") return
-                        e.stopPropagation()
-                        if (occ.status === "PAID") handleUnpay(occ.fixedCostId)
-                        else handlePay(occ.fixedCostId)
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        if (occ.status === "PAID") handleUnpay(occ.fixedCostId)
-                        else handlePay(occ.fixedCostId)
-                      }}
-                      className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${occ.status === "PAID" ? "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
-                    >
-                      {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className={`h-3.5 w-3.5 ${occ.status === "PAID" ? "fill-emerald-600 text-white" : ""}`} />}
-                      {occ.status === "PAID" ? "Estornar" : "Pagar"}
-                    </span>
-                  )}
-                </div>
-              </button>
-            <div>
-              <Button
-                size="icon"
-                variant="ghost"
-                aria-label="Editar custo fixo"
-                onClick={() => openEditSheet(occ)}
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
-            </div>
+                </button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 shrink-0"
+                  aria-label="Editar custo fixo"
+                  onClick={() => openEditSheet(occ)}
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="mt-2 ml-12">
+                {occ.fixedCost.paidInsideCard ? (
+                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${occ.status === "PAID" ? "bg-emerald-500/10 text-emerald-600" : "bg-blue-500/10 text-blue-600"}`}>
+                    {occ.status === "PAID" ? (activeTab === "INCOME" ? "Recebido na fatura" : "Pago na fatura") : "Na fatura"}
+                  </span>
+                ) : (
+                  <span
+                    role="button" tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key !== "Enter") return
+                      e.stopPropagation()
+                      if (occ.status === "PAID") handleUnpay(occ.fixedCostId)
+                      else handlePay(occ.fixedCostId)
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (occ.status === "PAID") handleUnpay(occ.fixedCostId)
+                      else handlePay(occ.fixedCostId)
+                    }}
+                    className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${occ.status === "PAID" ? "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+                  >
+                    {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className={`h-3.5 w-3.5 ${occ.status === "PAID" ? "fill-emerald-600 text-white" : ""}`} />}
+                    {occ.status === "PAID" ? (activeTab === "INCOME" ? "Cancelar" : "Estornar") : (activeTab === "INCOME" ? "Receber" : "Pagar")}
+                  </span>
+                )}
+              </div>
             </div>
           )
         })}

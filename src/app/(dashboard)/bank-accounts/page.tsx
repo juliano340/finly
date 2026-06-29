@@ -173,23 +173,24 @@ export default function BankAccountsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Contas Bancárias</h1>
           <p className="text-muted-foreground">Controle saldos por conta e vincule cartões a elas.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setTransferOpen(true)}><ArrowLeftRight className="mr-2 h-4 w-4" />Transferir</Button>
-          <Button onClick={() => setCreating(true)}><Plus className="mr-2 h-4 w-4" />Nova conta</Button>
+          <Button variant="outline" size="sm" onClick={() => setTransferOpen(true)}><ArrowLeftRight className="mr-2 h-4 w-4" />Transferir</Button>
+          <Button size="sm" onClick={() => setCreating(true)}><Plus className="mr-2 h-4 w-4" />Nova conta</Button>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 grid-cols-3 md:grid-cols-4">
         <SummaryCard
           title="Saldo total"
           value={formatCurrency(totalBalance)}
           highlight
           loading={loading}
+          className="col-span-3 md:col-span-1"
           infoContent={
             <div className="space-y-1.5">
               <p className="font-medium">Composição do saldo:</p>
@@ -260,28 +261,17 @@ export default function BankAccountsPage() {
             {loading ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</span> : "Nenhuma conta bancária cadastrada."}
           </CardContent></Card>
         ) : accounts.map((account) => (
-          <div key={account.id} className="flex items-center gap-2">
-            <button type="button" onClick={() => openDetail(account)} className="flex w-full flex-col gap-1 rounded-lg border bg-card p-4 text-left text-sm transition-colors hover:bg-muted/50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: account.color }} />
-                  <span className="font-medium">{account.name}</span>
-                </div>
-                  <strong className={isAccountNegative(account.balance, account.overdraftLimit) ? "text-red-600" : ""}>{formatCurrency(account.balance)}</strong>
-              </div>
-              <p className="pl-6 text-xs text-muted-foreground">{account.institution ?? "Sem instituição"} · {account.cards.length} {account.cards.length === 1 ? "cartão" : "cartões"}</p>
-            </button>
-            <div className="flex flex-col gap-1">
-              <Button
-                size="icon"
-                variant="ghost"
-                aria-label="Editar conta"
-                onClick={() => openDetail(account)}
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
+          <button type="button" key={account.id} onClick={() => openDetail(account)} className="flex w-full items-center gap-3 rounded-lg border bg-card p-4 text-left transition-colors hover:bg-muted/50">
+            <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: account.color }} />
+            <div className="min-w-0 flex-1">
+              <span className="font-medium truncate block">{account.name}</span>
+              <p className="text-xs text-muted-foreground truncate">{account.institution ?? "Sem instituição"} · {account.cards.length} {account.cards.length === 1 ? "cartão" : "cartões"}</p>
             </div>
-          </div>
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              <strong className={`text-sm ${isAccountNegative(account.balance, account.overdraftLimit) ? "text-red-600" : ""}`}>{formatCurrency(account.balance)}</strong>
+              <Settings className="h-3.5 w-3.5 text-muted-foreground" />
+            </div>
+          </button>
         ))}
       </div>
 
@@ -587,10 +577,10 @@ function formatMovementDescription(description: string | null, type: "INCOME" | 
   return description
 }
 
-function SummaryCard({ title, value, highlight = false, loading = false, infoContent }: { title: string; value: string; highlight?: boolean; loading?: boolean; infoContent?: React.ReactNode }) {
+function SummaryCard({ title, value, highlight = false, loading = false, infoContent, className }: { title: string; value: string; highlight?: boolean; loading?: boolean; infoContent?: React.ReactNode; className?: string }) {
   return (
-    <Card className={`border-0 shadow-sm ${highlight ? "bg-primary text-primary-foreground" : ""}`}>
-      <CardContent className="p-5">
+    <Card className={`border-0 shadow-sm ${highlight ? "bg-primary text-primary-foreground" : ""} ${className ?? ""}`}>
+      <CardContent className={highlight ? "p-5" : "p-4"}>
         <div className="flex items-center gap-1.5">
           <p className="text-xs font-medium opacity-80">{title}</p>
           {infoContent && (

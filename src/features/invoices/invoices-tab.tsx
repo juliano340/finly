@@ -269,9 +269,9 @@ export function InvoicesTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div><h2 className="text-xl font-bold tracking-tight">Faturas</h2><p className="text-sm text-muted-foreground">Valor final lançado manualmente por cartão.</p></div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1 rounded-md border bg-background px-2 py-1">
             <Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(previousMonth(month))}><ChevronLeft className="size-4" /></Button>
             <span className="min-w-28 text-center text-sm font-medium capitalize">{monthLabel(month)}</span>
@@ -280,7 +280,7 @@ export function InvoicesTab() {
           {month !== currentMonth() && (
             <Button size="sm" variant="ghost" onClick={() => setMonth(currentMonth())}>Hoje</Button>
           )}
-          <div className="h-5 w-px bg-border" />
+          <div className="h-5 w-px bg-border hidden sm:block" />
           <Button size="sm" variant="outline" onClick={openCopyDialog} disabled={copiando}>
             <Copy className="mr-1.5 h-3.5 w-3.5" />
             Copiar
@@ -292,7 +292,7 @@ export function InvoicesTab() {
             <FileText className="mr-1.5 h-3.5 w-3.5" />
             Importar PDF
           </Button>
-          <Button onClick={() => setCreating(true)}>Nova fatura</Button>
+          <Button size="sm" onClick={() => setCreating(true)}>Nova fatura</Button>
         </div>
       </div>
 
@@ -339,9 +339,9 @@ export function InvoicesTab() {
                     <span className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white" style={{ backgroundColor: invoice.card.color }}>{invoice.card.name.charAt(0)}</span>
                     {invoice.card.name}
                     {invoice.importSessionId && (
-                      <button type="button" onClick={(e) => { e.stopPropagation(); window.history.replaceState(null, "", "/cards?tab=invoices"); router.push(`/invoices/${invoice.id}/analysis`) }} className="ml-1.5 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground">
+                      <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); window.history.replaceState(null, "", "/cards?tab=invoices"); router.push(`/invoices/${invoice.id}/analysis`) }} className="ml-1.5 cursor-pointer rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground">
                         <BarChart3 className="h-3.5 w-3.5" />
-                      </button>
+                      </span>
                     )}
                   </button>
                 </td>
@@ -398,24 +398,37 @@ export function InvoicesTab() {
             {loading ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</span> : "Nenhuma fatura neste mês."}
           </CardContent></Card>
         ) : invoices.map((invoice) => (
-          <div key={invoice.id} className="flex items-center gap-2">
-            <input type="checkbox" className="h-4 w-4 shrink-0" checked={selectedIds.has(invoice.id)} onChange={() => toggleSelect(invoice.id)} />
-            <button type="button" onClick={() => setSelectedInvoice(invoice)} className="w-full rounded-lg border bg-card p-4 text-left text-sm transition-colors hover:bg-muted/50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white" style={{ backgroundColor: invoice.card.color }}>{invoice.card.name.charAt(0)}</div>
-                  <span className="font-medium">{invoice.card.name}</span>
-                  {invoice.importSessionId && <BarChart3 className="ml-1.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+          <div key={invoice.id} className="rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50">
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={() => setSelectedInvoice(invoice)} className="flex flex-1 items-center gap-3 text-left min-w-0">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white" style={{ backgroundColor: invoice.card.color }}>{invoice.card.name.charAt(0)}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="font-medium truncate">{invoice.card.name}</span>
+                      {invoice.importSessionId && <BarChart3 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+                    </div>
+                    <strong className="shrink-0">{formatCurrency(invoice.amount)}</strong>
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">
+                    Vence {formatDate(invoice.dueDate)} ·{" "}
+                    {invoice.status === "PAID"
+                      ? `Pago${invoice.paymentMethod ? ` via ${methodLabels[invoice.paymentMethod] ?? invoice.paymentMethod}` : ""}`
+                      : "Pendente"}
+                  </p>
                 </div>
-                <strong>{formatCurrency(invoice.amount)}</strong>
-              </div>
-              <p className="mt-0.5 pl-12 text-xs text-muted-foreground">
-                Vence {formatDate(invoice.dueDate)} ·{" "}
-                {invoice.status === "PAID"
-                  ? `Pago${invoice.paymentMethod ? ` via ${methodLabels[invoice.paymentMethod] ?? invoice.paymentMethod}` : ""}`
-                  : "Pendente"}
-              </p>
-              <div className="mt-1 pl-12">
+              </button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 shrink-0"
+                aria-label="Editar fatura"
+                onClick={() => setSelectedInvoice(invoice)}
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </div>
+              <div className="mt-2 ml-12">
                 {invoice.status === "PENDING" ? (
                   <span
                     role="button" tabIndex={0}
@@ -438,18 +451,7 @@ export function InvoicesTab() {
                   </span>
                 )}
               </div>
-            </button>
-            <div>
-              <Button
-                size="icon"
-                variant="ghost"
-                aria-label="Editar fatura"
-                onClick={() => setSelectedInvoice(invoice)}
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
             </div>
-          </div>
         ))}
       </div>
 

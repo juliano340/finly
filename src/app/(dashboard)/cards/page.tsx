@@ -199,23 +199,20 @@ export default function CardsPage() {
         ) : cards.length === 0 ? (
           <Card className="border-0 shadow-sm"><CardContent className="p-8 text-center text-sm text-muted-foreground">Nenhum cartão cadastrado.</CardContent></Card>
         ) : cards.map((card) => (
-          <div key={card.id} className="flex items-center gap-2">
-            <button type="button" onClick={() => setSelectedCard(card)} className="flex w-full items-center justify-between rounded-lg border bg-card p-4 text-left text-sm transition-colors hover:bg-muted/50">
-              <div className="flex items-center gap-3">
-                <span className="rounded-lg p-2 text-white" style={{ backgroundColor: card.color }}><CreditCard className="h-4 w-4" /></span>
-                <div>
-                  <p className="font-medium">{card.name}</p>
-                  <p className="text-xs text-muted-foreground">{card.brand ?? "Sem bandeira"} · Fecha {card.closingDay ?? "-"} · Vence {card.dueDay ?? "-"}</p>
+          <div key={card.id} className="rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50">
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={() => setSelectedCard(card)} className="flex flex-1 items-center gap-3 text-left min-w-0">
+                <span className="shrink-0 rounded-lg p-2 text-white" style={{ backgroundColor: card.color }}><CreditCard className="h-4 w-4" /></span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium truncate">{card.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{card.brand ?? "Sem bandeira"} · Fecha {card.closingDay ?? "-"} · Vence {card.dueDay ?? "-"}</p>
+                  <p className="text-xs text-muted-foreground truncate">{card.bankAccount?.name ?? "Sem conta"}</p>
                 </div>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>{card.bankAccount?.name ?? "sem conta"}</span>
-              </div>
-            </button>
-            <div>
+              </button>
               <Button
                 size="icon"
                 variant="ghost"
+                className="h-8 w-8 shrink-0"
                 aria-label="Editar cartão"
                 onClick={() => setSelectedCard(card)}
               >
