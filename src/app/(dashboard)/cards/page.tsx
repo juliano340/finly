@@ -39,7 +39,9 @@ export default function CardsPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    if (params.get("tab") === "invoices") setActiveTab("invoices")
+    if (params.get("tab") === "invoices")
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setActiveTab("invoices")
   }, [])
   const inFlightUpdateRef = useRef(false)
   const editFormRef = useRef<HTMLFormElement>(null)

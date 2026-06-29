@@ -61,11 +61,27 @@ function formatDueDate(dueDay: number | null, month: string) {
 
 function FixedCostsPageInner() {
   const searchParams = useSearchParams()
+  const urlMonth = searchParams.get("month")
+  const validUrlMonth = urlMonth && /^\d{4}-\d{2}$/.test(urlMonth) ? urlMonth : null
+
+  const [interactiveMonth, setInteractiveMonth] = useState<string | null>(null)
+
+  // Reset interactive month when URL param changes externally (e.g. notification click)
+  // Render-time state update — avoids useEffect + setState anti-pattern
+  const urlKey = urlMonth ?? ""
+  const [prevUrlKey, setPrevUrlKey] = useState(urlKey)
+  if (urlKey !== prevUrlKey) {
+    setInteractiveMonth(null)
+    setPrevUrlKey(urlKey)
+  }
+
+  const month = interactiveMonth ?? validUrlMonth ?? currentMonth()
+  const setMonth = useCallback((m: string) => setInteractiveMonth(m), [])
+
   const [categories, setCategories] = useState<Category[]>([])
   const [cards, setCards] = useState<CardItem[]>([])
   const [bankAccounts, setBankAccounts] = useState<BankAccountItem[]>([])
   const [occurrences, setOccurrences] = useState<Occurrence[]>([])
-  const [month, setMonth] = useState(currentMonth)
   const [activeTab, setActiveTab] = useState<"EXPENSE" | "INCOME">("EXPENSE")
   const [selectedOccurrence, setSelectedOccurrence] = useState<Occurrence | null>(null)
   const [creating, setCreating] = useState(false)
@@ -89,13 +105,6 @@ function FixedCostsPageInner() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [confirmBatchDelete, setConfirmBatchDelete] = useState(false)
   const [batchDeleting, setBatchDeleting] = useState(false)
-
-  useEffect(() => {
-    const monthParam = searchParams.get("month")
-    if (monthParam && /^\d{4}-\d{2}$/.test(monthParam)) {
-      setMonth(monthParam)
-    }
-  }, [searchParams])
 
   const inFlightUpdateRef = useRef(false)
   const inFlightCreateRef = useRef(false)
