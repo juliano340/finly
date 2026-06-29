@@ -80,7 +80,22 @@ export default function MonthlyClosingPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between"><div><h1 className="text-2xl font-bold tracking-tight">Fechamento Mensal</h1><p className="text-muted-foreground">Gastos do mês: realizado vs. a pagar.</p></div><div className="flex items-center gap-2"><div className="flex items-center gap-1 rounded-md border bg-background px-2 py-1"><Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(previousMonth(month))}><ChevronLeft className="size-4" /></Button><span className="min-w-28 text-center text-sm font-medium capitalize">{monthLabel(month)}</span><Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(nextMonth(month))}><ChevronRight className="size-4" /></Button></div>{month !== currentMonth() && (<Button size="sm" variant="ghost" onClick={() => setMonth(currentMonth())}>Hoje</Button>)}</div></div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Fechamento Mensal</h1>
+          <p className="text-muted-foreground">Gastos do mês: realizado vs. a pagar.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1 rounded-md border bg-background px-2 py-1">
+            <Button size="sm" variant="ghost" className="size-7 p-0" disabled={loading} onClick={() => setMonth(previousMonth(month))}><ChevronLeft className="size-4" /></Button>
+            <span className="min-w-28 text-center text-sm font-medium capitalize">{loading ? <Loader2 className="inline h-4 w-4 animate-spin" /> : monthLabel(month)}</span>
+            <Button size="sm" variant="ghost" className="size-7 p-0" disabled={loading} onClick={() => setMonth(nextMonth(month))}><ChevronRight className="size-4" /></Button>
+          </div>
+          {month !== currentMonth() && (
+            <Button size="sm" variant="ghost" disabled={loading} onClick={() => setMonth(currentMonth())}>Hoje</Button>
+          )}
+        </div>
+      </div>
 
       <div className="grid gap-4 md:grid-cols-3">
         <Metric title="Saídas totais do mês" value={summary?.totalSpent ?? 0} description="Tudo: faturas + fixos + avulsas" highlight loading={loading} />
