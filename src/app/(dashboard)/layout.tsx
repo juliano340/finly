@@ -70,6 +70,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [notified, setNotified] = useState(false)
   const [logoutOpen, setLogoutOpen] = useState(false)
   const notificationsRef = useRef<HTMLDivElement | null>(null)
+  const [bellPos, setBellPos] = useState<{ top: number; right: number } | null>(null)
 
   const handleLogout = () => {
     setLogoutOpen(false)
@@ -203,8 +204,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div ref={notificationsRef} className="relative">
               <button
                 type="button"
-                onClick={() => {
-                  if (!notificationsOpen) fetchNotifications()
+                onClick={(e) => {
+                  if (!notificationsOpen) {
+                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                    setBellPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right })
+                    fetchNotifications()
+                  }
                   setNotificationsOpen((open) => !open)
                 }}
                 className="relative rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -216,8 +221,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   </span>
                 )}
               </button>
-              {notificationsOpen && (
-                <div className="absolute right-0 top-9 z-50 w-80 overflow-hidden rounded-xl border bg-background shadow-lg">
+              {notificationsOpen && bellPos && (
+                <div className="fixed z-[9999] w-80 overflow-hidden rounded-xl border bg-background shadow-lg" style={{ top: bellPos.top, right: bellPos.right }}>
                   <div className="border-b p-3">
                     <p className="text-sm font-semibold">Lembretes</p>
                     <p className="text-xs text-muted-foreground">Contas próximas do vencimento</p>

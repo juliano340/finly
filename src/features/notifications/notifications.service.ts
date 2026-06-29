@@ -75,7 +75,7 @@ export async function getDueSoonNotifications(
       dueDate: dueDate.toISOString(),
       daysUntilDue,
       status: notificationStatus(daysUntilDue),
-      href: "/fixed-costs",
+      href: `/fixed-costs?month=${occurrence.month}`,
     }]
   })
 

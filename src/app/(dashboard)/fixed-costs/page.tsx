@@ -1,6 +1,7 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState, Suspense } from "react"
+import { useSearchParams } from "next/navigation"
 import { CheckCircle2, ChevronLeft, ChevronRight, Loader2, Settings, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -58,7 +59,8 @@ function formatDueDate(dueDay: number | null, month: string) {
   return date.toLocaleDateString("pt-BR", { timeZone: "UTC" })
 }
 
-export default function FixedCostsPage() {
+function FixedCostsPageInner() {
+  const searchParams = useSearchParams()
   const [categories, setCategories] = useState<Category[]>([])
   const [cards, setCards] = useState<CardItem[]>([])
   const [bankAccounts, setBankAccounts] = useState<BankAccountItem[]>([])
@@ -87,6 +89,14 @@ export default function FixedCostsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [confirmBatchDelete, setConfirmBatchDelete] = useState(false)
   const [batchDeleting, setBatchDeleting] = useState(false)
+
+  useEffect(() => {
+    const monthParam = searchParams.get("month")
+    if (monthParam && /^\d{4}-\d{2}$/.test(monthParam)) {
+      setMonth(monthParam)
+    }
+  }, [searchParams])
+
   const inFlightUpdateRef = useRef(false)
   const inFlightCreateRef = useRef(false)
   const editFormRef = useRef<HTMLFormElement>(null)
@@ -821,5 +831,13 @@ export default function FixedCostsPage() {
         onConfirm={handleBatchDelete}
       />
     </div>
+  )
+}
+
+export default function FixedCostsPage() {
+  return (
+    <Suspense>
+      <FixedCostsPageInner />
+    </Suspense>
   )
 }
