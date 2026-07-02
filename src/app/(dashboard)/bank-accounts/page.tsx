@@ -238,7 +238,7 @@ export default function BankAccountsPage() {
                   </button>
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">{account.institution ?? "-"}</td>
-                <td className={`px-4 py-3 text-right font-medium ${isAccountNegative(account.balance, account.overdraftLimit) ? "text-red-600" : ""}`}>{formatCurrency(account.balance)}</td>
+                <td className={`px-4 py-3 text-right font-medium ${isAccountNegative(account.balance, account.overdraftLimit) ? "text-destructive" : ""}`}>{formatCurrency(account.balance)}</td>
                 <td className="px-4 py-3 text-right">
                   <Button
                     size="icon"
@@ -268,7 +268,7 @@ export default function BankAccountsPage() {
               <p className="text-xs text-muted-foreground truncate">{account.institution ?? "Sem instituição"} · {account.cards.length} {account.cards.length === 1 ? "cartão" : "cartões"}</p>
             </div>
             <div className="flex flex-col items-end gap-1 shrink-0">
-              <strong className={`text-sm ${isAccountNegative(account.balance, account.overdraftLimit) ? "text-red-600" : ""}`}>{formatCurrency(account.balance)}</strong>
+              <strong className={`text-sm ${isAccountNegative(account.balance, account.overdraftLimit) ? "text-destructive" : ""}`}>{formatCurrency(account.balance)}</strong>
               <Settings className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
           </button>
@@ -339,7 +339,7 @@ export default function BankAccountsPage() {
                     <div className="grid gap-3">
                       <div className="rounded-lg bg-muted p-4">
                         <p className="text-xs text-muted-foreground">Saldo atual</p>
-                        <p className={`text-2xl font-bold ${isAccountNegative(selectedAccount.balance, selectedAccount.overdraftLimit) ? "text-red-600" : ""}`}>{formatCurrency(selectedAccount.balance)}</p>
+                        <p className={`text-2xl font-bold ${isAccountNegative(selectedAccount.balance, selectedAccount.overdraftLimit) ? "text-destructive" : ""}`}>{formatCurrency(selectedAccount.balance)}</p>
                       </div>
                       {selectedAccount.overdraftLimit > 0 && (
                         <div className="rounded-lg border bg-card p-3">
@@ -351,7 +351,7 @@ export default function BankAccountsPage() {
                             </div>
                             <div className="flex justify-between">
                               <span className="text-muted-foreground">Disponível</span>
-                              <span className={getAvailableBalance(selectedAccount.balance, selectedAccount.overdraftLimit) < 0 ? "font-medium text-red-600" : "font-medium text-emerald-600"}>{formatCurrency(getAvailableBalance(selectedAccount.balance, selectedAccount.overdraftLimit))}</span>
+                              <span className={getAvailableBalance(selectedAccount.balance, selectedAccount.overdraftLimit) < 0 ? "font-medium text-destructive" : "font-medium text-success"}>{formatCurrency(getAvailableBalance(selectedAccount.balance, selectedAccount.overdraftLimit))}</span>
                             </div>
                           </div>
                         </div>
@@ -404,7 +404,7 @@ export default function BankAccountsPage() {
                               </a>
                             )}
                           </div>
-                          <span className={`shrink-0 ml-2 ${mov.type === "INCOME" ? "text-emerald-600" : "text-red-600"}`}>{mov.type === "INCOME" ? "+" : "-"}{formatCurrency(mov.amount)}</span>
+                          <span className={`shrink-0 ml-2 ${mov.type === "INCOME" ? "text-success" : "text-destructive"}`}>{mov.type === "INCOME" ? "+" : "-"}{formatCurrency(mov.amount)}</span>
                         </div>
                       ))}
                     </div>
@@ -445,7 +445,7 @@ export default function BankAccountsPage() {
                           </div>
                           <div className="text-right">
                             <p className="text-xs text-muted-foreground">Diferença</p>
-                            <p className={`text-sm font-bold ${diff >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                            <p className={`text-sm font-bold ${diff >= 0 ? "text-success" : "text-destructive"}`}>
                               {diff >= 0 ? "+" : ""}{formatCurrency(diff)}
                             </p>
                           </div>

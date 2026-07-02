@@ -434,11 +434,11 @@ function FixedCostsPageInner() {
                   <td className="px-4 py-3 text-right font-medium">{formatCurrency(occ.amount)}</td>
                   <td className="px-4 py-3 text-center">
                     {occ.fixedCost.paidInsideCard ? (
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${occ.status === "PAID" ? "bg-emerald-500/10 text-emerald-600" : "bg-blue-500/10 text-blue-600"}`}>
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${occ.status === "PAID" ? "bg-success/10 text-success" : "bg-blue-500/10 text-blue-600"}`}>
                         {occ.status === "PAID" ? (activeTab === "INCOME" ? "Recebido na fatura" : "Pago na fatura") : (activeTab === "INCOME" ? "Na fatura" : "Na fatura")}
                       </span>
                     ) : occ.status === "PAID" ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600">{activeTab === "INCOME" ? "Recebido" : "Pago"}</span>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">{activeTab === "INCOME" ? "Recebido" : "Pago"}</span>
                     ) : (
                       <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-600">Pendente</span>
                     )}
@@ -447,7 +447,7 @@ function FixedCostsPageInner() {
                         type="button"
                         disabled={isLoading}
                         onClick={() => occ.status === "PAID" ? handleUnpay(occ.fixedCostId) : handlePay(occ.fixedCostId)}
-                        className={`ml-2 inline-flex items-center gap-1 text-xs transition-colors ${occ.status === "PAID" ? "text-emerald-600 hover:text-emerald-700" : "text-muted-foreground hover:text-foreground"}`}
+                        className={`ml-2 inline-flex items-center gap-1 text-xs transition-colors ${occ.status === "PAID" ? "text-success hover:text-success" : "text-muted-foreground hover:text-foreground"}`}
                       >
                         {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : occ.status === "PAID" ? (activeTab === "INCOME" ? "Cancelar" : "Estornar") : (activeTab === "INCOME" ? "Receber" : "Pagar")}
                       </button>
@@ -502,7 +502,7 @@ function FixedCostsPageInner() {
               </div>
               <div className="mt-2 ml-12">
                 {occ.fixedCost.paidInsideCard ? (
-                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${occ.status === "PAID" ? "bg-emerald-500/10 text-emerald-600" : "bg-blue-500/10 text-blue-600"}`}>
+                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${occ.status === "PAID" ? "bg-success/10 text-success" : "bg-blue-500/10 text-blue-600"}`}>
                     {occ.status === "PAID" ? (activeTab === "INCOME" ? "Recebido na fatura" : "Pago na fatura") : "Na fatura"}
                   </span>
                 ) : (
@@ -519,9 +519,9 @@ function FixedCostsPageInner() {
                       if (occ.status === "PAID") handleUnpay(occ.fixedCostId)
                       else handlePay(occ.fixedCostId)
                     }}
-                    className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${occ.status === "PAID" ? "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+                    className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${occ.status === "PAID" ? "bg-success/10 text-success hover:bg-success/20" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
                   >
-                    {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className={`h-3.5 w-3.5 ${occ.status === "PAID" ? "fill-emerald-600 text-white" : ""}`} />}
+                    {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className={`h-3.5 w-3.5 ${occ.status === "PAID" ? "fill-success text-white" : ""}`} />}
                     {occ.status === "PAID" ? (activeTab === "INCOME" ? "Cancelar" : "Estornar") : (activeTab === "INCOME" ? "Receber" : "Pagar")}
                   </span>
                 )}

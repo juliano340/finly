@@ -35,13 +35,13 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
           <div className="flex items-center gap-3">
             <div
               className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                tx.type === "INCOME" ? "bg-emerald-50" : "bg-red-50"
+                tx.type === "INCOME" ? "bg-success/10" : "bg-destructive/10"
               }`}
             >
               {tx.type === "INCOME" ? (
-                <ArrowUp className="h-4 w-4 text-emerald-500" />
+                <ArrowUp className="h-4 w-4 text-success" />
               ) : (
-                <ArrowDown className="h-4 w-4 text-red-500" />
+                <ArrowDown className="h-4 w-4 text-destructive" />
               )}
             </div>
             <div>
@@ -66,7 +66,7 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
           </div>
           <p
             className={`text-sm font-semibold ${
-              tx.type === "INCOME" ? "text-emerald-500" : "text-red-500"
+              tx.type === "INCOME" ? "text-success" : "text-destructive"
             }`}
           >
             {tx.type === "INCOME" ? "+" : "-"}{" "}

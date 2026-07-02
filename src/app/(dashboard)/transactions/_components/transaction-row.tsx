@@ -16,7 +16,7 @@ export function TransactionRow({ transaction, onEdit, onDelete }: TransactionRow
   const isIncome = transaction.type === "INCOME"
 
   return (
-    <div className="rounded-xl border bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+    <div className="rounded-xl border bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex items-center gap-3">
         <div
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-lg"
@@ -46,14 +46,14 @@ export function TransactionRow({ transaction, onEdit, onDelete }: TransactionRow
                 variant="secondary"
                 className={`text-[10px] shrink-0 ${
                   isIncome
-                    ? "bg-emerald-500/10 text-emerald-600"
-                    : "bg-red-500/10 text-red-600"
+                    ? "bg-success/10 text-success"
+                    : "bg-destructive/10 text-destructive"
                 }`}
               >
                 {isIncome ? "Receita" : "Despesa"}
               </Badge>
             </div>
-            <span className={`shrink-0 text-sm font-semibold ${isIncome ? "text-emerald-500" : "text-red-500"}`}>
+            <span className={`shrink-0 text-sm font-semibold ${isIncome ? "text-success" : "text-destructive"}`}>
               {isIncome ? "+" : "-"} {formatCurrency(transaction.amount)}
             </span>
           </div>

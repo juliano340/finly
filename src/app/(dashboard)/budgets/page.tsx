@@ -157,8 +157,8 @@ export default function BudgetsPage() {
         </Card>
         <Card className="border-0 shadow-sm">
           <CardContent className="flex items-center gap-4 p-6">
-            <div className="rounded-xl bg-red-50 p-3">
-              <Wallet className="h-5 w-5 text-red-500" />
+            <div className="rounded-xl bg-destructive/10 p-3">
+              <Wallet className="h-5 w-5 text-destructive" />
             </div>
             <div>
               <p className="text-xs font-medium text-muted-foreground">Gasto</p>
@@ -170,8 +170,8 @@ export default function BudgetsPage() {
         </Card>
         <Card className="border-0 shadow-sm">
           <CardContent className="flex items-center gap-4 p-6">
-            <div className="rounded-xl bg-emerald-50 p-3">
-              <Wallet className="h-5 w-5 text-emerald-500" />
+            <div className="rounded-xl bg-success/10 p-3">
+              <Wallet className="h-5 w-5 text-success" />
             </div>
             <div>
               <p className="text-xs font-medium text-muted-foreground">Restante</p>

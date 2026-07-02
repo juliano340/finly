@@ -28,17 +28,17 @@ export function BudgetCard({
 }: BudgetCardProps) {
   const statusColor =
     percentage >= 100
-      ? "text-red-500"
+      ? "text-destructive"
       : percentage >= 80
         ? "text-amber-500"
-        : "text-emerald-500"
+        : "text-success"
 
   const progressColor =
     percentage >= 100
-      ? "bg-red-500"
+      ? "bg-destructive"
       : percentage >= 80
         ? "bg-amber-500"
-        : "bg-emerald-500"
+        : "bg-success"
 
   return (
     <Card className="border-0 shadow-sm">
@@ -56,7 +56,7 @@ export function BudgetCard({
               <Pencil className="h-4 w-4" />
             </Button>
             <Button variant="ghost" size="icon" onClick={onDelete}>
-              <Trash2 className="h-4 w-4 text-red-500" />
+              <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
           </div>
         </div>

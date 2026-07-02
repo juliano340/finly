@@ -98,22 +98,22 @@ export default function DashboardPage() {
       label: "Receitas do mês",
       value: summary.income,
       icon: ArrowUp,
-      color: "text-emerald-500",
-      bg: "bg-emerald-50",
+      color: "text-success",
+      bg: "bg-success/10",
     },
     {
       label: "Despesas do mês",
       value: summary.expense,
       icon: ArrowDown,
-      color: "text-red-500",
-      bg: "bg-red-50",
+      color: "text-destructive",
+      bg: "bg-destructive/10",
     },
     {
       label: "Resultado líquido",
       value: summary.balance,
       icon: Wallet,
-      color: summary.balance >= 0 ? "text-emerald-500" : "text-red-500",
-      bg: summary.balance >= 0 ? "bg-emerald-50" : "bg-red-50",
+      color: summary.balance >= 0 ? "text-success" : "text-destructive",
+      bg: summary.balance >= 0 ? "bg-success/10" : "bg-destructive/10",
     },
   ]
   const evolutionSummary = getMetricSummary(evolution?.months ?? [], evolutionMetric)
@@ -170,7 +170,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-4">
-        <Card className={`border-0 shadow-sm ${bankTotal >= (closing?.summary.totalToPay ?? 0) ? "bg-emerald-600 text-white" : "bg-red-600 text-white"}`}>
+        <Card className={`border-0 shadow-sm ${bankTotal >= (closing?.summary.totalToPay ?? 0) ? "bg-success text-white" : "bg-destructive text-white"}`}>
           <CardContent className="flex items-center gap-4 p-6">
             <div className="rounded-xl bg-white/20 p-3"><Landmark className="h-5 w-5 text-white" /></div>
             <div>
@@ -182,10 +182,10 @@ export default function DashboardPage() {
         </Card>
         <Card className="border-0 shadow-sm">
           <CardContent className="flex items-center gap-4 p-6">
-            <div className="rounded-xl bg-red-100 p-3"><ArrowDown className="h-5 w-5 text-red-600" /></div>
+            <div className="rounded-xl bg-destructive/10 p-3"><ArrowDown className="h-5 w-5 text-destructive" /></div>
             <div>
               <p className="text-xs font-medium text-muted-foreground">A pagar</p>
-              <p className="text-xl font-bold text-red-600">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(closing?.summary.totalToPay ?? 0)}</p>
+              <p className="text-xl font-bold text-destructive">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(closing?.summary.totalToPay ?? 0)}</p>
               <p className="text-[10px] text-muted-foreground/60">Faturas pendentes + contas fixas + avulsas</p>
             </div>
           </CardContent>
@@ -200,12 +200,12 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border-0 shadow-sm bg-red-50">
+        <Card className="border-0 shadow-sm bg-destructive/5">
           <CardContent className="flex items-center gap-4 p-6">
-            <div className="rounded-xl bg-red-100 p-3"><Banknote className="h-5 w-5 text-red-600" /></div>
+            <div className="rounded-xl bg-destructive/10 p-3"><Banknote className="h-5 w-5 text-destructive" /></div>
             <div>
               <p className="text-xs font-medium text-muted-foreground">Gastos do mês</p>
-              <p className="text-xl font-bold text-red-600">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(closing?.summary.totalSpent ?? 0)}</p>
+              <p className="text-xl font-bold text-destructive">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(closing?.summary.totalSpent ?? 0)}</p>
               <p className="text-[10px] text-muted-foreground/60">Tudo que entrou na fatura + PIX + avulsas</p>
             </div>
           </CardContent>
@@ -351,7 +351,7 @@ function InsightCard({
   tone?: "neutral" | "good" | "bad"
   loading?: boolean
 }) {
-  const toneClass = tone === "good" ? "text-emerald-600" : tone === "bad" ? "text-red-600" : "text-foreground"
+  const toneClass = tone === "good" ? "text-success" : tone === "bad" ? "text-destructive" : "text-foreground"
   return (
     <div className="rounded-xl bg-muted p-4">
       <p className="text-xs font-medium text-muted-foreground">{title}</p>

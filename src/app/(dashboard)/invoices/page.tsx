@@ -327,7 +327,7 @@ export default function InvoicesPage() {
                 <td className="px-4 py-3 text-right font-medium">{formatCurrency(invoice.amount)}</td>
                 <td className="px-4 py-3 text-center">
                   {invoice.status === "PAID" ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">
                       Pago{invoice.paymentMethod ? ` · ${methodLabels[invoice.paymentMethod] ?? invoice.paymentMethod}` : ""}
                     </span>
                   ) : (
@@ -348,7 +348,7 @@ export default function InvoicesPage() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="text-emerald-600 hover:text-emerald-700"
+                        className="text-success hover:text-success"
                         onClick={() => handleUnpay(invoice.id)}
                       >
                         Estornar
@@ -408,9 +408,9 @@ export default function InvoicesPage() {
                     role="button" tabIndex={0}
                     onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); handleUnpay(invoice.id) } }}
                     onClick={(e) => { e.stopPropagation(); handleUnpay(invoice.id) }}
-                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-600 transition-colors hover:bg-emerald-500/20"
+                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 text-xs font-medium text-success transition-colors hover:bg-success/20"
                   >
-                    <CheckCircle2 className="h-3.5 w-3.5 fill-emerald-600 text-white" />
+                    <CheckCircle2 className="h-3.5 w-3.5 fill-success text-white" />
                     Estornar
                   </span>
                 )}
@@ -484,17 +484,17 @@ export default function InvoicesPage() {
                   <div className="space-y-1 rounded-lg bg-muted p-3 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Saldo</span>
-                      <span className={isAccountNegative(acc.balance, acc.overdraftLimit) ? "font-medium text-red-600" : "font-medium"}>{formatCurrency(acc.balance)}</span>
+                      <span className={isAccountNegative(acc.balance, acc.overdraftLimit) ? "font-medium text-destructive" : "font-medium"}>{formatCurrency(acc.balance)}</span>
                     </div>
                     {acc.overdraftLimit > 0 && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Disponível (c/ cheque)</span>
-                        <span className={available < 0 ? "font-medium text-red-600" : "font-medium text-emerald-600"}>{formatCurrency(available)}</span>
+                        <span className={available < 0 ? "font-medium text-destructive" : "font-medium text-success"}>{formatCurrency(available)}</span>
                       </div>
                     )}
                     <div className="flex justify-between border-t pt-1">
                       <span className="text-muted-foreground">Após pagamento</span>
-                      <span className={isAccountNegative(after, acc.overdraftLimit) ? "font-bold text-destructive" : "font-bold text-emerald-600"}>{formatCurrency(after)}</span>
+                      <span className={isAccountNegative(after, acc.overdraftLimit) ? "font-bold text-destructive" : "font-bold text-success"}>{formatCurrency(after)}</span>
                     </div>
                     {isAccountNegative(after, acc.overdraftLimit) && (
                       <p className="text-xs text-destructive">Saldo insuficiente (considerando cheque especial).</p>
@@ -570,12 +570,12 @@ export default function InvoicesPage() {
                 <div className="space-y-2 rounded-lg bg-muted p-4 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Saldo atual</span>
-                    <span className={isAccountNegative(simAcc.balance, simAcc.overdraftLimit) ? "font-medium text-red-600" : "font-medium"}>{formatCurrency(simAcc.balance)}</span>
+                    <span className={isAccountNegative(simAcc.balance, simAcc.overdraftLimit) ? "font-medium text-destructive" : "font-medium"}>{formatCurrency(simAcc.balance)}</span>
                   </div>
                   {simAcc.overdraftLimit > 0 && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Disponível (c/ cheque)</span>
-                      <span className={available < 0 ? "font-medium text-red-600" : "font-medium text-emerald-600"}>{formatCurrency(available)}</span>
+                      <span className={available < 0 ? "font-medium text-destructive" : "font-medium text-success"}>{formatCurrency(available)}</span>
                     </div>
                   )}
                   <div className="flex justify-between">
@@ -584,7 +584,7 @@ export default function InvoicesPage() {
                   </div>
                   <div className="flex justify-between border-t pt-2">
                     <span className="text-muted-foreground">Saldo após</span>
-                    <span className={`font-bold ${isAccountNegative(after, simAcc.overdraftLimit) ? "text-destructive" : "text-emerald-600"}`}>
+                    <span className={`font-bold ${isAccountNegative(after, simAcc.overdraftLimit) ? "text-destructive" : "text-success"}`}>
                       {formatCurrency(after)}
                     </span>
                   </div>

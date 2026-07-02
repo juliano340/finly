@@ -90,8 +90,8 @@ export function CategoryTable({
                     <span
                       className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                         isIncome
-                          ? "bg-emerald-500/10 text-emerald-600"
-                          : "bg-red-500/10 text-red-600"
+                          ? "bg-success/10 text-success"
+                          : "bg-destructive/10 text-destructive"
                       }`}
                     >
                       {isIncome ? "Receita" : "Despesa"}

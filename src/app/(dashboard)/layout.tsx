@@ -133,7 +133,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex h-screen overflow-hidden bg-muted/30">
       {/* Sidebar */}
       <aside
-        className={`flex flex-col bg-[#1E3B4A] text-white transition-all duration-300 ${
+        className={`flex flex-col bg-sidebar text-sidebar-foreground transition-all duration-300 ${
           collapsed ? "w-16" : "w-56"
         }`}
       >
@@ -148,7 +148,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className={`ml-auto rounded-md p-1 text-white/60 hover:bg-white/10 hover:text-white ${
+            className={`ml-auto rounded-md p-1 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground ${
               collapsed ? "mx-auto" : ""
             }`}
           >
@@ -159,7 +159,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             )}
           </button>
         </div>
-        <Separator className="bg-white/10" />
+        <Separator className="bg-sidebar-border" />
         <nav className="flex-1 space-y-1 p-2">
           {navItems.map((item) => {
             const isActive = item.href === "/cards" ? pathname.startsWith("/cards") || pathname.startsWith("/invoices/") : pathname === item.href
@@ -170,7 +170,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
                   isActive
                     ? "bg-primary text-primary-foreground"
-                    : "text-white/70 hover:bg-white/10 hover:text-white"
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                 } ${collapsed ? "justify-center px-2" : ""}`}
               >
                 <item.icon className="h-4 w-4" />
@@ -180,10 +180,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
         <div className="p-2">
-          <Separator className="bg-white/10" />
+          <Separator className="bg-sidebar-border" />
           <button
             onClick={() => setLogoutOpen(true)}
-            className={`mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-white/70 transition-colors hover:bg-white/10 hover:text-white ${
+            className={`mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground ${
               collapsed ? "justify-center px-2" : ""
             }`}
           >
@@ -196,7 +196,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Main */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <header className="flex h-14 items-center justify-between border-b bg-white px-6">
+        <header className="flex h-14 items-center justify-between border-b border-border bg-background px-6">
           <h2 className="text-sm font-medium text-muted-foreground">
             {navItems.find((i) => i.href === pathname)?.label ?? ""}
           </h2>

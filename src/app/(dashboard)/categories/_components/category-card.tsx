@@ -28,7 +28,7 @@ export function CategoryCard({ category, onEdit }: CategoryCardProps) {
   const emoji = iconMap[category.icon] ?? "📌"
 
   return (
-    <div className="flex items-center gap-4 rounded-xl border bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+    <div className="flex items-center gap-4 rounded-xl border bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
       <div
         className="flex h-12 w-12 items-center justify-center rounded-xl text-xl"
         style={{ backgroundColor: `${category.color}15`, color: category.color }}
@@ -42,8 +42,8 @@ export function CategoryCard({ category, onEdit }: CategoryCardProps) {
             variant="secondary"
             className={`text-[10px] ${
               category.type === "INCOME"
-                ? "bg-emerald-500/10 text-emerald-600"
-                : "bg-red-500/10 text-red-600"
+                ? "bg-success/10 text-success"
+                : "bg-destructive/10 text-destructive"
             }`}
           >
             {category.type === "INCOME" ? "Receita" : "Despesa"}

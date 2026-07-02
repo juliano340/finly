@@ -116,7 +116,7 @@ export function TransactionTable({
                     {formatDate(tx.date)}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <span className={`font-semibold ${isIncome ? "text-emerald-500" : "text-red-500"}`}>
+                    <span className={`font-semibold ${isIncome ? "text-success" : "text-destructive"}`}>
                       {isIncome ? "+ " : "- "}
                       {formatCurrency(tx.amount)}
                     </span>
@@ -124,7 +124,7 @@ export function TransactionTable({
                   <td className="px-4 py-3 text-center">
                     <Badge
                       variant="secondary"
-                      className={`text-[11px] ${isIncome ? "bg-emerald-500/10 text-emerald-600" : "bg-red-500/10 text-red-600"}`}
+                      className={`text-[11px] ${isIncome ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}
                     >
                       {isIncome ? "Receita" : "Despesa"}
                     </Badge>

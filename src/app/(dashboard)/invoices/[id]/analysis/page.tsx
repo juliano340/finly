@@ -273,8 +273,8 @@ export default function AnalysisPage({
               <p
                 className={`text-[11px] mt-0.5 ${
                   Math.abs(data.summary.diffFromInvoice) < 0.01
-                    ? "text-emerald-600"
-                    : "text-red-600"
+                    ? "text-success"
+                    : "text-destructive"
                 }`}
               >
                 Dif: {formatCurrency(data.summary.diffFromInvoice)}
