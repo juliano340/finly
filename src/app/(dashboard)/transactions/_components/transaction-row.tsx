@@ -1,6 +1,7 @@
 "use client"
 
 import { Pencil, Trash2 } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import type { TransactionWithRelations } from "@/features/transactions/transactions.types"
@@ -37,9 +38,21 @@ export function TransactionRow({ transaction, onEdit, onDelete }: TransactionRow
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <p className="font-medium truncate">
-              {transaction.description ?? transaction.category.name}
-            </p>
+            <div className="flex items-center gap-2 min-w-0">
+              <p className="font-medium truncate">
+                {transaction.description ?? transaction.category.name}
+              </p>
+              <Badge
+                variant="secondary"
+                className={`text-[10px] shrink-0 ${
+                  isIncome
+                    ? "bg-emerald-500/10 text-emerald-600"
+                    : "bg-red-500/10 text-red-600"
+                }`}
+              >
+                {isIncome ? "Receita" : "Despesa"}
+              </Badge>
+            </div>
             <span className={`shrink-0 text-sm font-semibold ${isIncome ? "text-emerald-500" : "text-red-500"}`}>
               {isIncome ? "+" : "-"} {formatCurrency(transaction.amount)}
             </span>
