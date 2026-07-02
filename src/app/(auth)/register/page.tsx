@@ -7,6 +7,7 @@ import { Eye, EyeOff, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { ThemeToggle } from "@/components/theme-toggle"
 import {
   Select,
   SelectContent,
@@ -96,7 +97,8 @@ export default function RegisterPage() {
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
       {/* Left - Form */}
-      <div className="flex items-center justify-center overflow-y-auto p-10">
+      <div className="relative flex items-center justify-center overflow-y-auto p-10">
+        <ThemeToggle className="absolute right-4 top-4 z-20" />
         <div className="w-full max-w-md">
           <Link href="/" className="mb-8 flex items-center gap-2.5">
             <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary font-extrabold text-white">

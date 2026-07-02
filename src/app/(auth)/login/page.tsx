@@ -8,6 +8,7 @@ import { Eye, EyeOff, LogIn, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { toast } from "sonner";
 
 function getInitialEmail(): string {
@@ -89,7 +90,8 @@ export default function LoginPage() {
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
       {/* Left - Form */}
-      <div className="flex items-center justify-center p-10">
+      <div className="relative flex items-center justify-center p-10">
+        <ThemeToggle className="absolute right-4 top-4" />
         <div className="w-full max-w-md">
           <Link href="/" className="mb-10 flex items-center gap-2.5">
             <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary font-extrabold text-white">

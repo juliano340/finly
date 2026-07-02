@@ -133,7 +133,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex h-screen overflow-hidden bg-muted/30">
       {/* Sidebar */}
       <aside
-        className={`flex flex-col bg-sidebar text-sidebar-foreground transition-all duration-300 ${
+        className={`flex flex-col bg-sidebar-background text-sidebar-foreground transition-all duration-300 ${
           collapsed ? "w-16" : "w-56"
         }`}
       >

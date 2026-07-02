@@ -8,7 +8,7 @@ import { Toaster } from "@/components/ui/sonner"
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
-      <ThemeProvider attribute="data-theme" defaultTheme="dark" storageKey="cinema-theme" disableTransitionOnChange>
+      <ThemeProvider attribute="data-theme" defaultTheme="light" storageKey="cinema-theme" disableTransitionOnChange>
         <TooltipProvider>
           {children}
           <Toaster richColors />

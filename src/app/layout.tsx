@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     "Gerencie suas finanças pessoais de forma simples e inteligente.",
 }
 
-const themeBootstrap = `(function(){try{var t=localStorage.getItem('cinema-theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();`
+const themeBootstrap = `(function(){try{var t=localStorage.getItem('cinema-theme');var theme=(t==='light'||t==='dark')?t:'light';document.documentElement.setAttribute('data-theme',theme);}catch(e){}})();`
 
 export default function RootLayout({
   children,
