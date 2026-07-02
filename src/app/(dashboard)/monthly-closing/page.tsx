@@ -53,7 +53,9 @@ export default function MonthlyClosingPage() {
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
+    queueMicrotask(() => {
+      if (!cancelled) setLoading(true)
+    })
     fetchClosing().then(() => {
       if (!cancelled) setLoading(false)
     })
