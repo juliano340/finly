@@ -56,11 +56,21 @@ describe("notifications.service", () => {
   })
 
   it("lista custo fixo pendente com dia de vencimento", async () => {
-    await createFixedCost(
+    const created = await createFixedCost(
       userId,
-      { name: `Internet Notify ${Date.now()}`, defaultAmount: 150, categoryId, paymentMethod: "PIX", dueDay: 5, paidInsideCard: false, cardId: null, bankAccountId: null, active: true },
+      { name: `Internet Notify ${Date.now()}`, defaultAmount: 150, categoryId, paymentMethod: "PIX", dueDay: 5, paidInsideCard: false, cardId: null, bankAccountId: null, active: true, startDate: "2026-01-01" },
       prisma
     )
+    if (!created) return
+
+    const juneFM = await prisma.financialMonth.upsert({
+      where: { month_userId: { month: "2026-06", userId } },
+      create: { month: "2026-06", userId },
+      update: {},
+    })
+    await prisma.fixedCostOccurrence.create({
+      data: { fixedCostId: created.id, financialMonthId: juneFM.id, month: "2026-06", dueDate: new Date("2026-06-05T12:00:00"), amount: 150, status: "PENDING", userId },
+    })
 
     const notifications = await getDueSoonNotifications(userId, 7, prisma, new Date("2026-06-01T12:00:00"))
 

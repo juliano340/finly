@@ -125,7 +125,7 @@ describe("Dashboard Service", () => {
     )
     await createFixedCost(
       userId,
-      { name: `Internet evolução ${Date.now()}`, type: "EXPENSE" as const, defaultAmount: 120, categoryId: expenseCategoryId, paymentMethod: "PIX", dueDay: 10, paidInsideCard: false, cardId: null, bankAccountId: null, active: true },
+      { name: `Internet evolução ${Date.now()}`, type: "EXPENSE" as const, defaultAmount: 120, categoryId: expenseCategoryId, paymentMethod: "PIX", dueDay: 10, paidInsideCard: false, cardId: null, bankAccountId: null, active: true, startDate: "2026-01-01" },
       prisma
     )
 
