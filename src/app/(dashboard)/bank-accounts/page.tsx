@@ -2,7 +2,7 @@
 
 import type { FormEvent } from "react"
 import { useEffect, useState } from "react"
-import { ArrowLeftRight, Info, Loader2, Plus, Settings, Trash2 } from "lucide-react"
+import { ArrowLeftRight, ArrowUpDown, Eye, Info, Loader2, Pencil, Plus, Settings, SlidersHorizontal, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -276,7 +276,7 @@ export default function BankAccountsPage() {
       </div>
 
       <Sheet open={creating || !!selectedAccount} onOpenChange={(open) => { if (!open) { setCreating(false); setSelectedAccount(null) } }}>
-        <SheetContent className="w-full sm:max-w-md">
+        <SheetContent className="w-full sm:max-w-lg">
           {creating ? (
             <>
               <SheetHeader><SheetTitle>Nova conta</SheetTitle></SheetHeader>
@@ -326,10 +326,10 @@ export default function BankAccountsPage() {
                 </SheetTitle>
               </SheetHeader>
               <div className="flex-1 overflow-y-auto px-4 pb-4">
-                <div className="flex gap-1 border-b">
-                  {(["overview", "movements", "adjust", "edit"] as const).map((tab) => (
-                    <button key={tab} type="button" onClick={() => setDetailTab(tab)} className={`px-3 pb-2 text-sm transition-colors ${detailTab === tab ? "border-b-2 border-foreground font-medium text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-                      {tab === "overview" ? "Visão Geral" : tab === "movements" ? "Movimentações" : tab === "adjust" ? "Ajuste" : "Editar"}
+                <div className="flex border-b">
+                  {([["overview", Eye], ["movements", ArrowUpDown], ["adjust", SlidersHorizontal], ["edit", Pencil]] as const).map(([tab, Icon]) => (
+                    <button key={tab} type="button" onClick={() => setDetailTab(tab)} className={`flex flex-1 items-center justify-center gap-1.5 border-b-2 pb-2.5 pt-2 transition-colors ${detailTab === tab ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+                      <Icon className="h-4 w-4" />
                     </button>
                   ))}
                 </div>

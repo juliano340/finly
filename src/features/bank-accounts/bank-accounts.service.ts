@@ -153,10 +153,10 @@ export async function validateExpenseLimit(
   const balanceAfter = balance - amount
 
   if (balanceAfter < minBalance) {
-    const needed = Math.abs(balanceAfter - minBalance)
+    const totalAvailable = balance + account.overdraftLimit
     return {
       allowed: false,
-      reason: `Saldo insuficiente. Necessário mais R$ ${needed.toFixed(2)}. Saldo disponível: R$ ${(balance + account.overdraftLimit).toFixed(2)}.`,
+      reason: `Saldo insuficiente. Transferência de R$ ${amount.toFixed(2)} excede o limite disponível de R$ ${totalAvailable.toFixed(2)} (saldo: R$ ${balance.toFixed(2)} + cheque especial: R$ ${account.overdraftLimit.toFixed(2)}).`,
     }
   }
 
@@ -225,12 +225,12 @@ export async function transferBetweenBankAccounts(
   client?: PrismaClient
 ) {
   const db = client ?? defaultPrisma
-  if (input.fromAccountId === input.toAccountId) return null
+  if (input.fromAccountId === input.toAccountId) return { error: "Conta de origem e destino devem ser diferentes" }
 
   const check = await validateExpenseLimit(input.fromAccountId, userId, input.amount, db)
-  if (!check.allowed) return null
+  if (!check.allowed) return { error: check.reason }
 
-  return db.$transaction(async (tx) => {
+  const result = await db.$transaction(async (tx) => {
     const accounts = await tx.bankAccount.findMany({
       where: { userId, id: { in: [input.fromAccountId, input.toAccountId] } },
       select: { id: true, name: true },
@@ -266,4 +266,7 @@ export async function transferBetweenBankAccounts(
 
     return { outgoing, incoming }
   })
+
+  if (!result) return { error: "Conta de origem ou destino não encontrada" }
+  return result
 }

@@ -10,8 +10,8 @@ export async function POST(request: Request) {
   const parsed = bankAccountTransferSchema.safeParse(await request.json())
   if (!parsed.success) return NextResponse.json({ error: "Dados inválidos" }, { status: 400 })
 
-  const transfer = await transferBetweenBankAccounts(session.user.id, parsed.data)
-  if (!transfer) return NextResponse.json({ error: "Contas inválidas" }, { status: 400 })
+  const result = await transferBetweenBankAccounts(session.user.id, parsed.data)
+  if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 })
 
-  return NextResponse.json(transfer, { status: 201 })
+  return NextResponse.json(result, { status: 201 })
 }
