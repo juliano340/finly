@@ -93,7 +93,7 @@ describe("bank-accounts.service", () => {
       prisma
     )
 
-    expect(transfer).toBeNull()
+    expect(transfer).toEqual({ error: "Conta de origem e destino devem ser diferentes" })
   })
 
   it("bloqueia conta de outro usuário", async () => {
@@ -120,7 +120,7 @@ describe("bank-accounts.service", () => {
       prisma
     )
 
-    expect(transfer).toBeNull()
+    expect(transfer).toEqual({ error: "Conta de origem ou destino não encontrada" })
     await prisma.bankAccount.deleteMany({ where: { userId: otherUserId } })
     await prisma.user.delete({ where: { id: otherUserId } })
   })
@@ -223,6 +223,6 @@ describe("bank-accounts.service", () => {
       { fromAccountId: from.id, toAccountId: to.id, amount: 301, method: "PIX", description: "estourando", date: new Date() },
       prisma
     )
-    expect(result).toBeNull()
+    expect(result).toHaveProperty("error")
   })
 })
