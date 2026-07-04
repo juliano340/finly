@@ -136,7 +136,7 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="sm:max-w-xl p-3 sm:p-4 max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Transferir entre contas</DialogTitle>
         </DialogHeader>
@@ -431,22 +431,22 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-2 border-t pt-4">
+        <div className="flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             {step > 0 ? (
-              <Button type="button" variant="ghost" onClick={goBack} disabled={submitting}>
+              <Button type="button" variant="ghost" onClick={goBack} disabled={submitting} className="w-full sm:w-auto">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Voltar
               </Button>
             ) : (
-              <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)} disabled={submitting}>
+              <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)} disabled={submitting} className="w-full sm:w-auto">
                 Cancelar
               </Button>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-end gap-2">
             <span className="text-xs text-muted-foreground">
-              Passo {step + 1} de {steps.length}
+              {step + 1}/{steps.length}
             </span>
             {step < steps.length - 1 ? (
               <Button
@@ -471,7 +471,8 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
                 ) : (
                   <>
                     <Check className="mr-2 h-4 w-4" />
-                    Confirmar transferência
+                    <span className="hidden sm:inline">Confirmar transferência</span>
+                    <span className="sm:hidden">Transferir</span>
                   </>
                 )}
               </Button>

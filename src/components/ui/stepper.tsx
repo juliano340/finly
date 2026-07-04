@@ -62,7 +62,7 @@ export function Stepper({ steps, currentStep, onStepClick }: StepperProps) {
             {!isLast && (
               <div
                 className={cn(
-                  "mx-2 mb-5 h-px w-12 sm:w-20 transition-colors",
+                  "mx-1 sm:mx-2 mb-5 h-px w-6 sm:w-12 transition-colors",
                   index < currentStep ? "bg-primary" : "bg-muted-foreground/20"
                 )}
               />
