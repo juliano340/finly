@@ -9,9 +9,9 @@ import { formatCurrency, formatDate } from "@/lib/utils"
 
   interface ClosingData {
     summary: {
-    cardInvoicesTotal: number; cardInvoicesPaidTotal: number; fixedCostsTotal: number; fixedCostsInsideCardTotal: number; fixedCostsOutsideCardTotal: number; fixedCostsOutsideCardTotalAll: number; fixedIncomeTotal: number; looseExpensesTotal: number; incomeTotal: number; totalToPay: number; totalSpent: number; projectedBalance: number
+    cardInvoicesTotal: number; cardInvoicesPaidTotal: number; fixedCostsTotal: number; fixedCostsInsideCardTotal: number; fixedCostsOutsideCardTotal: number; fixedCostsOutsideCardTotalAll: number; fixedIncomeTotal: number; looseExpensesTotal: number; incomeTotal: number; receivedIncomeTotal: number; totalToPay: number; totalSpent: number; projectedBalance: number
     estimatedInvoicesByCard: { cardId: string; cardName: string; estimatedAmount: number; invoiceAmount: number; difference: number }[]
-    incomeItems: { name: string; amount: number; type: "FIXED" | "LOOSE" }[]
+    incomeItems: { name: string; amount: number; type: "FIXED" | "LOOSE"; status: "PENDING" | "PAID" }[]
   }
   invoices: { id: string; amount: number; dueDate: string; status: "PENDING" | "PAID"; card: { name: string } }[]
   fixedCosts: { id: string; amount: number; status: "PENDING" | "PAID"; fixedCost: { name: string; paidInsideCard: boolean; paymentMethod: string; category: { name: string }; card: { name: string } | null; bankAccount: { name: string } | null } }[]
@@ -140,7 +140,7 @@ export default function MonthlyClosingPage() {
         <Metric title="Faturas totais" value={(summary?.cardInvoicesTotal ?? 0) + (summary?.cardInvoicesPaidTotal ?? 0)} description={`${formatCurrency(summary?.cardInvoicesPaidTotal ?? 0)} já pago · ${formatCurrency(summary?.cardInvoicesTotal ?? 0)} pendente`} loading={loading} detailItems={data?.invoices.map((inv) => ({ name: `${inv.card.name} — ${formatDate(inv.dueDate)}`, amount: inv.amount, status: inv.status }))} />
         <Metric title="Fixos fora do cartão" value={summary?.fixedCostsOutsideCardTotalAll ?? 0} description={`${formatCurrency(summary?.fixedCostsOutsideCardTotal ?? 0)} pendente · ${formatCurrency((summary?.fixedCostsOutsideCardTotalAll ?? 0) - (summary?.fixedCostsOutsideCardTotal ?? 0))} já pago`} loading={loading} detailItems={outsideCardCosts.map((fc) => ({ name: fc.fixedCost.name, amount: fc.amount, status: fc.status }))} />
         <Metric title="Despesas avulsas" value={summary?.looseExpensesTotal ?? 0} description="Transações não recorrentes" loading={loading} />
-        <Metric title="Receitas do mês" value={summary?.incomeTotal ?? 0} description={`${formatCurrency(summary?.fixedIncomeTotal ?? 0)} fixas · ${formatCurrency((summary?.incomeTotal ?? 0) - (summary?.fixedIncomeTotal ?? 0))} avulsas`} loading={loading} detailItems={summary?.incomeItems?.map((item) => ({ name: `${item.name} (${item.type === "FIXED" ? "Fixa" : "Avulsa"})`, amount: item.amount, status: "PAID" }))} />
+        <Metric title="Receitas do mês" value={summary?.receivedIncomeTotal ?? 0} description={`${formatCurrency(summary?.receivedIncomeTotal ?? 0)} recebido · ${formatCurrency((summary?.incomeTotal ?? 0) - (summary?.receivedIncomeTotal ?? 0))} pendente`} loading={loading} detailItems={summary?.incomeItems?.map((item) => ({ name: `${item.name} (${item.type === "FIXED" ? "Fixa" : "Avulsa"})`, amount: item.amount, status: item.status }))} />
         <Metric title="Fixos totais" value={summary?.fixedCostsTotal ?? 0} description="Dentro + fora do cartão" loading={loading} detailItems={data?.fixedCosts.map((fc) => ({ name: fc.fixedCost.name, amount: fc.amount, status: fc.status }))} />
         <Metric title="Fixos dentro do cartão" value={summary?.fixedCostsInsideCardTotal ?? 0} description="Previstos na fatura" loading={loading} detailItems={insideCardCosts.map((fc) => ({ name: fc.fixedCost.name, amount: fc.amount, status: fc.status }))} />
         <Metric title="Saldo projetado" value={summary?.projectedBalance ?? 0} description="Receitas - total a pagar" loading={loading} />
@@ -167,7 +167,10 @@ function Metric({ title, value, description, highlight = false, loading = false,
             <div className="max-h-48 overflow-y-auto py-1.5">
               {detailItems.map((item, i) => (
                 <div key={i} className="flex items-center justify-between gap-6 px-3 py-1 text-sm">
-                  <span className="max-w-40 truncate">{item.name}</span>
+                  <span className="flex items-center gap-2 max-w-40 truncate">
+                    {item.name}
+                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${item.status === "PAID" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400" : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"}`}>{item.status === "PAID" ? "Recebido" : "Pendente"}</span>
+                  </span>
                   <span className="tabular-nums whitespace-nowrap font-medium">{formatCurrency(item.amount)}</span>
                 </div>
               ))}

@@ -24,6 +24,7 @@ export interface MonthlyClosingSummary {
   fixedIncomeTotal: number
   looseExpensesTotal: number
   incomeTotal: number
+  receivedIncomeTotal: number
   totalToPay: number
   totalSpent: number
   projectedBalance: number
@@ -38,6 +39,7 @@ export interface MonthlyClosingSummary {
     name: string
     amount: number
     type: "FIXED" | "LOOSE"
+    status: "PENDING" | "PAID"
   }[]
 }
 
@@ -83,17 +85,21 @@ export async function getMonthlyClosing(
   const totalSpent = allCardInvoices + allOutsideCard + looseExpenses
   const looseIncomeTotal = looseIncome.reduce((acc, tx) => acc + tx.amount, 0)
   const totalIncome = fixedIncomeTotal + looseIncomeTotal
+  const receivedFixedIncomeTotal = sum(incomeOccurrences.filter((item) => item.status === "PAID").map((item) => item.amount))
+  const receivedIncomeTotal = receivedFixedIncomeTotal + looseIncomeTotal
 
   const incomeItems = [
     ...incomeOccurrences.map((item) => ({
       name: item.fixedCost.name,
       amount: item.amount,
       type: "FIXED" as const,
+      status: item.status,
     })),
     ...looseIncome.map((tx) => ({
       name: tx.description ?? tx.category.name,
       amount: tx.amount,
       type: "LOOSE" as const,
+      status: "PAID" as const,
     })),
   ]
 
@@ -112,6 +118,7 @@ export async function getMonthlyClosing(
       fixedIncomeTotal,
       looseExpensesTotal: looseExpenses,
       incomeTotal: totalIncome,
+      receivedIncomeTotal,
       totalToPay,
       totalSpent,
       projectedBalance: totalIncome - totalToPay,
@@ -156,6 +163,7 @@ export async function getMonthlyClosingSummary(
   const outsideCard = expenseOccurrences.filter((item) => !item.fixedCost.paidInsideCard)
   const fixedCostsTotal = sum(expenseOccurrences.map((item) => item.amount))
   const fixedIncomeTotal = sum(incomeOccurrences.map((item) => item.amount))
+  const receivedIncomeTotal = sum(incomeOccurrences.filter((item) => item.status === "PAID").map((item) => item.amount)) + income
   const fixedCostsInsideCardTotal = sum(insideCard.map((item) => item.amount))
   const fixedCostsOutsideCardTotal = sum(outsideCard.filter((item) => item.status === "PENDING").map((item) => item.amount))
   const fixedCostsOutsideCardTotalAll = sum(outsideCard.map((item) => item.amount))
@@ -174,6 +182,7 @@ export async function getMonthlyClosingSummary(
     fixedIncomeTotal,
     looseExpensesTotal: looseExpenses,
     incomeTotal,
+    receivedIncomeTotal,
     totalToPay,
     totalSpent,
     projectedBalance: incomeTotal - totalToPay,
