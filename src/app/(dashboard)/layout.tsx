@@ -167,6 +167,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => { if (window.innerWidth < 768) setCollapsed(true) }}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
                   isActive
                     ? "bg-primary text-primary-foreground"
@@ -182,7 +183,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="p-2">
           <Separator className="bg-sidebar-border" />
           <button
-            onClick={() => setLogoutOpen(true)}
+            onClick={() => { if (window.innerWidth < 768) setCollapsed(true); setLogoutOpen(true) }}
             className={`mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground ${
               collapsed ? "justify-center px-2" : ""
             }`}
