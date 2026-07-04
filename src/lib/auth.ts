@@ -35,11 +35,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     async jwt({ token, user }) {
-      if (user) token.id = user.id
+      if (user) {
+        token.id = user.id
+        token.loginAt = Math.floor(Date.now() / 1000)
+      }
+
+      if (token.id) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { passwordChangedAt: true },
+        })
+        if (dbUser?.passwordChangedAt) {
+          const changedAtSec = Math.floor(dbUser.passwordChangedAt.getTime() / 1000)
+          const issuedAtSec = (token.loginAt as number | undefined) ?? 0
+          if (changedAtSec > issuedAtSec) {
+            return {}
+          }
+        }
+      }
+
       return token
     },
     async session({ session, token }) {
-      if (session.user) session.user.id = token.id as string
+      if (session.user && token.id) session.user.id = token.id as string
       return session
     },
   },
