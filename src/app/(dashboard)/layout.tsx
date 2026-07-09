@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { formatCurrency, formatDate } from "@/lib/utils"
+import { computeDaysUntilDue, deriveStatus, type DueNotificationStatus } from "@/lib/compute-days-until-due"
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -44,15 +45,18 @@ const navItems = [
   { href: "/settings", label: "Configurações", icon: Settings },
 ]
 
-interface DueNotification {
+interface RawDueNotification {
   id: string
   type: "INVOICE" | "FIXED_COST"
   title: string
   amount: number
   dueDate: string
-  daysUntilDue: number
-  status: "OVERDUE" | "DUE_TODAY" | "DUE_SOON"
   href: string
+}
+
+interface DueNotification extends RawDueNotification {
+  daysUntilDue: number
+  status: DueNotificationStatus
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -92,7 +96,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const fetchNotifications = () => {
     return fetch("/api/notifications/due-soon")
       .then((res) => res.ok ? res.json() : [])
-      .then((data: DueNotification[]) => setNotifications(data))
+      .then((data: RawDueNotification[]) => {
+        const enriched: DueNotification[] = data.map((item) => {
+          const daysUntilDue = computeDaysUntilDue(item.dueDate)
+          return { ...item, daysUntilDue, status: deriveStatus(daysUntilDue) }
+        })
+        setNotifications(enriched)
+      })
       .catch(() => setNotifications([]))
   }
 

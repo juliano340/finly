@@ -1,16 +1,12 @@
 import { prisma as defaultPrisma } from "@/lib/prisma"
 import type { PrismaClient } from "@/generated/prisma/client"
 
-export type DueNotificationStatus = "OVERDUE" | "DUE_TODAY" | "DUE_SOON"
-
 export interface DueNotification {
   id: string
   type: "INVOICE" | "FIXED_COST"
   title: string
   amount: number
   dueDate: string
-  daysUntilDue: number
-  status: DueNotificationStatus
   href: string
 }
 
@@ -22,8 +18,9 @@ export async function getDueSoonNotifications(
 ) {
   const db = client ?? defaultPrisma
   const today = normalizeDate(now)
+  const startDate = addDays(today, -30)
   const endDate = addDays(today, daysAhead)
-  const months = monthsBetween(today, endDate)
+  const months = monthsBetween(startDate, endDate)
 
   const [invoices, occurrences] = await Promise.all([
     db.cardInvoice.findMany({
@@ -31,7 +28,7 @@ export async function getDueSoonNotifications(
         userId,
         status: "PENDING",
         month: { in: months },
-        dueDate: { lte: endOfDay(endDate) },
+        dueDate: { gte: startOfDay(startDate), lte: endOfDay(endDate) },
       },
       include: { card: true },
     }),
@@ -47,40 +44,31 @@ export async function getDueSoonNotifications(
     }),
   ])
 
-  const invoiceNotifications = invoices.map((invoice) => {
-    const dueDate = normalizeDate(invoice.dueDate)
-    const daysUntilDue = clampDays(differenceInDays(today, dueDate))
-    return {
-      id: invoice.id,
-      type: "INVOICE" as const,
-      title: `Fatura ${invoice.card.name}`,
-      amount: invoice.amount,
-      dueDate: dueDate.toISOString(),
-      daysUntilDue,
-      status: notificationStatus(daysUntilDue),
-      href: "/invoices",
-    }
-  })
+  const invoiceNotifications = invoices.map((invoice) => ({
+    id: invoice.id,
+    type: "INVOICE" as const,
+    title: `Fatura ${invoice.card.name}`,
+    amount: invoice.amount,
+    dueDate: invoice.dueDate.toISOString(),
+    href: "/invoices",
+  }))
 
   const fixedCostNotifications = occurrences.flatMap((occurrence) => {
     if (!isValidMonth(occurrence.month) || !occurrence.fixedCost.dueDay) return []
     const dueDate = fixedCostDueDate(occurrence.month, occurrence.fixedCost.dueDay)
     if (dueDate.getTime() > endOfDay(endDate).getTime()) return []
-    const daysUntilDue = clampDays(differenceInDays(today, dueDate))
+    if (dueDate.getTime() < startOfDay(startDate).getTime()) return []
     return [{
       id: occurrence.id,
       type: "FIXED_COST" as const,
       title: occurrence.fixedCost.name,
       amount: occurrence.amount,
       dueDate: dueDate.toISOString(),
-      daysUntilDue,
-      status: notificationStatus(daysUntilDue),
       href: `/fixed-costs?month=${occurrence.month}`,
     }]
   })
 
   return [...invoiceNotifications, ...fixedCostNotifications]
-    .sort((a, b) => statusPriority(a.status) - statusPriority(b.status) || a.daysUntilDue - b.daysUntilDue)
 }
 
 function fixedCostDueDate(month: string, dueDay: number) {
@@ -89,20 +77,12 @@ function fixedCostDueDate(month: string, dueDay: number) {
   return normalizeDate(new Date(year, monthIndex - 1, Math.min(dueDay, lastDay)))
 }
 
-function notificationStatus(daysUntilDue: number): DueNotificationStatus {
-  if (daysUntilDue < 0) return "OVERDUE"
-  if (daysUntilDue === 0) return "DUE_TODAY"
-  return "DUE_SOON"
-}
-
-function statusPriority(status: DueNotificationStatus) {
-  if (status === "OVERDUE") return 0
-  if (status === "DUE_TODAY") return 1
-  return 2
-}
-
 function normalizeDate(date: Date) {
   return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+}
+
+function startOfDay(date: Date) {
+  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0))
 }
 
 function endOfDay(date: Date) {
@@ -111,10 +91,6 @@ function endOfDay(date: Date) {
 
 function addDays(date: Date, days: number) {
   return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate() + days))
-}
-
-function differenceInDays(today: Date, target: Date) {
-  return Math.round((target.getTime() - today.getTime()) / 86_400_000)
 }
 
 function monthsBetween(start: Date, end: Date) {
@@ -128,14 +104,6 @@ function monthsBetween(start: Date, end: Date) {
   return months
 }
 
-
 function isValidMonth(month: string) {
   return /^\d{4}-\d{2}$/.test(month) && month.startsWith("20")
-}
-
-function clampDays(days: number) {
-  if (!Number.isFinite(days)) return 0
-  if (days < -3650) return -3650
-  if (days > 3650) return 3650
-  return days
 }

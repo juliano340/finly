@@ -74,7 +74,7 @@ describe("notifications.service", () => {
 
     const notifications = await getDueSoonNotifications(userId, 7, prisma, new Date("2026-06-01T12:00:00"))
 
-    expect(notifications.some((item) => item.type === "FIXED_COST" && item.amount === 150 && item.daysUntilDue === 4)).toBe(true)
+    expect(notifications.some((item) => item.type === "FIXED_COST" && item.amount === 150 && item.dueDate.startsWith("2026-06-05"))).toBe(true)
   })
 
   it("ajusta vencimento dia 31 para último dia de mês curto", async () => {
@@ -96,6 +96,6 @@ describe("notifications.service", () => {
 
     const notifications = await getDueSoonNotifications(userId, 7, prisma, new Date("2026-02-26T12:00:00"))
 
-    expect(notifications.some((item) => item.type === "FIXED_COST" && item.amount === 90 && item.daysUntilDue === 2)).toBe(true)
+    expect(notifications.some((item) => item.type === "FIXED_COST" && item.amount === 90 && item.dueDate.startsWith("2026-02-28"))).toBe(true)
   })
 })
