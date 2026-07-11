@@ -1,15 +1,23 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState, Suspense } from "react"
+import { useCallback, useEffect, useRef, useState, Suspense, type ReactNode } from "react"
 import { useSearchParams } from "next/navigation"
-import { CheckCircle2, ChevronLeft, ChevronRight, Loader2, Settings, Trash2 } from "lucide-react"
+import { CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, Clock3, CreditCard, Loader2, RotateCcw, Settings, Trash2 } from "lucide-react"
 import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { formatCurrency } from "@/lib/utils"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { cn, formatCurrency } from "@/lib/utils"
 
 interface Category { id: string; name: string; type: string }
 interface CardItem { id: string; name: string; color: string }
@@ -26,6 +34,47 @@ interface Occurrence {
   paidAt: string | null
   paidViaCard: boolean
   fixedCost: FixedCostData
+}
+
+function StatusIconTooltip({
+  label,
+  icon,
+  tone,
+  onClick,
+  loading = false,
+}: {
+  label: string
+  icon: ReactNode
+  tone: "success" | "warning" | "info" | "muted"
+  onClick?: () => void
+  loading?: boolean
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        type="button"
+        aria-label={label}
+        aria-disabled={loading || undefined}
+        tabIndex={loading ? -1 : undefined}
+        onClick={() => {
+          if (loading) return
+          onClick?.()
+        }}
+        className={cn(
+          buttonVariants({ variant: "ghost", size: "icon-sm" }),
+          "cursor-pointer rounded-full border transition-colors",
+          loading && "pointer-events-none opacity-50",
+          tone === "success" && "border-success/20 bg-success/10 text-success hover:bg-success/20 hover:text-success",
+          tone === "warning" && "border-amber-500/20 bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 hover:text-amber-700",
+          tone === "info" && "border-blue-500/20 bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 hover:text-blue-700",
+          tone === "muted" && "border-border bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground"
+        )}
+      >
+        {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : icon}
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  )
 }
 
 function currentMonth() {
@@ -398,11 +447,28 @@ function FixedCostsPageInner() {
         <button type="button" onClick={() => { setActiveTab("INCOME"); clearSelection() }} className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${activeTab === "INCOME" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Receitas</button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="hidden gap-4 md:grid md:grid-cols-3">
         <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-xs text-muted-foreground">Total do mês</p><p className="text-2xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(totalAll)}</p></CardContent></Card>
         <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-xs text-muted-foreground">{activeTab === "INCOME" ? "Recebido" : "Pago"}</p><p className="text-2xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(totalPaid)}</p></CardContent></Card>
         <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-xs text-muted-foreground">{activeTab === "INCOME" ? "A receber" : "A pagar"}</p><p className="text-2xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(totalPending)}</p></CardContent></Card>
       </div>
+
+      <Card className="border-0 shadow-sm md:hidden">
+        <CardContent className="grid grid-cols-3 gap-2 p-3">
+          <div className="min-w-0">
+            <p className="truncate text-[11px] font-medium text-muted-foreground">Total</p>
+            <p className="truncate text-sm font-bold tabular-nums">{loading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : formatCurrency(totalAll)}</p>
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-[11px] font-medium text-muted-foreground">{activeTab === "INCOME" ? "Recebido" : "Pago"}</p>
+            <p className="truncate text-sm font-bold tabular-nums">{loading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : formatCurrency(totalPaid)}</p>
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-[11px] font-medium text-muted-foreground">{activeTab === "INCOME" ? "A receber" : "A pagar"}</p>
+            <p className="truncate text-sm font-bold tabular-nums">{loading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : formatCurrency(totalPending)}</p>
+          </div>
+        </CardContent>
+      </Card>
 
       {!loading && totalPending === 0 && totalAll > 0 && (
         <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900 dark:bg-emerald-950/30">
@@ -435,7 +501,7 @@ function FixedCostsPageInner() {
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Origem</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Vencimento</th>
               <th className="px-4 py-3 text-right font-medium text-muted-foreground">Valor do mês</th>
-              <th className="px-4 py-3 text-center font-medium text-muted-foreground">Status</th>
+              <th className="w-[128px] px-4 py-3 text-center font-medium text-muted-foreground">Status</th>
               <th className="px-4 py-3 text-right font-medium text-muted-foreground">Ações</th>
             </tr>
           </thead>
@@ -466,52 +532,52 @@ function FixedCostsPageInner() {
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{occ.dueDate ? new Date(occ.dueDate).toLocaleDateString("pt-BR") : formatDueDate(occ.fixedCost.dueDay, occ.month)}</td>
                   <td className="px-4 py-3 text-right font-medium">{formatCurrency(occ.amount)}</td>
-                  <td className="px-4 py-3 text-center">
-                    {occ.fixedCost.paidInsideCard ? (
-                      <>
-                        {occ.status === "PAID" && occ.paidViaCard ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">Pago no cartão</span>
+                  <td className="px-4 py-3">
+                    <div className="flex min-w-[72px] items-center justify-center gap-2">
+                      {occ.fixedCost.paidInsideCard ? (
+                        occ.status === "PAID" && occ.paidViaCard ? (
+                          <StatusIconTooltip label="Pago no cartão" tone="success" icon={<CheckCircle2 className="h-3.5 w-3.5 fill-success text-white" />} />
                         ) : occ.status === "PAID" ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">{activeTab === "INCOME" ? "Recebido na fatura" : "Pago na fatura"}</span>
+                          <StatusIconTooltip label={activeTab === "INCOME" ? "Recebido na fatura" : "Pago na fatura"} tone="success" icon={<CheckCircle2 className="h-3.5 w-3.5 fill-success text-white" />} />
                         ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-600">Na fatura</span>
-                        )}
-                        {occ.status === "PENDING" && activeTab === "EXPENSE" && (
-                          <button
-                            type="button"
-                            disabled={isLoadingCard}
+                          <StatusIconTooltip label="Na fatura" tone="info" icon={<CreditCard className="h-3.5 w-3.5" />} />
+                        )
+                      ) : occ.status === "PAID" ? (
+                        <StatusIconTooltip label={activeTab === "INCOME" ? "Recebido" : "Pago"} tone="success" icon={<CheckCircle2 className="h-3.5 w-3.5 fill-success text-white" />} />
+                      ) : (
+                        <StatusIconTooltip label="Pendente" tone="warning" icon={<Clock3 className="h-3.5 w-3.5" />} />
+                      )}
+
+                      {occ.fixedCost.paidInsideCard ? (
+                        occ.status === "PENDING" && activeTab === "EXPENSE" ? (
+                          <StatusIconTooltip
+                            label="Pagar com cartão"
+                            tone="muted"
+                            loading={isLoadingCard}
                             onClick={() => handlePayCard(occ.fixedCostId)}
-                            className="ml-2 inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-                          >
-                            {isLoadingCard ? <Loader2 className="h-3 w-3 animate-spin" /> : "Pagar com Cartão"}
-                          </button>
-                        )}
-                        {occ.status === "PAID" && occ.paidViaCard && (
-                          <button
-                            type="button"
-                            disabled={isLoadingCard}
+                            icon={<CreditCard className="h-3.5 w-3.5" />}
+                          />
+                        ) : occ.status === "PAID" && occ.paidViaCard ? (
+                          <StatusIconTooltip
+                            label="Estornar pagamento"
+                            tone="success"
+                            loading={isLoadingCard}
                             onClick={() => handleUnpayCard(occ.fixedCostId)}
-                            className="ml-2 inline-flex items-center gap-1 text-xs text-success transition-colors hover:text-success"
-                          >
-                            {isLoadingCard ? <Loader2 className="h-3 w-3 animate-spin" /> : "Estornar"}
-                          </button>
-                        )}
-                      </>
-                    ) : occ.status === "PAID" ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">{activeTab === "INCOME" ? "Recebido" : "Pago"}</span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-600">Pendente</span>
-                    )}
-                    {!occ.fixedCost.paidInsideCard && (
-                      <button
-                        type="button"
-                        disabled={isLoading}
-                        onClick={() => occ.status === "PAID" ? handleUnpay(occ.fixedCostId) : handlePay(occ.fixedCostId)}
-                        className={`ml-2 inline-flex items-center gap-1 text-xs transition-colors ${occ.status === "PAID" ? "text-success hover:text-success" : "text-muted-foreground hover:text-foreground"}`}
-                      >
-                        {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : occ.status === "PAID" ? (activeTab === "INCOME" ? "Cancelar" : "Estornar") : (activeTab === "INCOME" ? "Receber" : "Pagar")}
-                      </button>
-                    )}
+                            icon={<RotateCcw className="h-3.5 w-3.5" />}
+                          />
+                        ) : (
+                          <span className="h-7 w-7" aria-hidden="true" />
+                        )
+                      ) : (
+                        <StatusIconTooltip
+                          label={occ.status === "PAID" ? (activeTab === "INCOME" ? "Cancelar recebimento" : "Estornar pagamento") : (activeTab === "INCOME" ? "Receber" : "Pagar")}
+                          tone={occ.status === "PAID" ? "success" : "muted"}
+                          loading={isLoading}
+                          onClick={() => occ.status === "PAID" ? handleUnpay(occ.fixedCostId) : handlePay(occ.fixedCostId)}
+                          icon={occ.status === "PAID" ? <RotateCcw className="h-3.5 w-3.5" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                        />
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <Button
@@ -538,96 +604,120 @@ function FixedCostsPageInner() {
         ) : filteredOccurrences.map((occ) => {
           const isLoading = payingId === occ.fixedCostId || unpayingId === occ.fixedCostId
           const isLoadingCard = payingCardId === occ.fixedCostId || unpayingCardId === occ.fixedCostId
+          const sourceLabel = occ.fixedCost.paidInsideCard ? `Cartão ${occ.fixedCost.card?.name ?? "-"}` : "Fora do cartão"
+          const dueLabel = occ.dueDate ? new Date(occ.dueDate).toLocaleDateString("pt-BR") : occ.fixedCost.dueDay ? formatDueDate(occ.fixedCost.dueDay, occ.month) : null
           return (
-            <div key={occ.id} className="rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50">
-              <div className="flex items-center gap-3">
-                <button type="button" onClick={() => openEditSheet(occ)} className="flex flex-1 items-center gap-3 text-left min-w-0">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-bold">{occ.fixedCost.name.charAt(0)}</div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium truncate">{occ.fixedCost.name}</span>
-                      <strong className="shrink-0">{formatCurrency(occ.amount)}</strong>
-                    </div>
-                    <p className="text-xs text-muted-foreground truncate">{occ.fixedCost.category.name} · {occ.fixedCost.paidInsideCard ? `Cartão ${occ.fixedCost.card?.name ?? "-"}` : "Fora do cartão"} · {occ.dueDate ? `vence em ${new Date(occ.dueDate).toLocaleDateString("pt-BR")}` : occ.fixedCost.dueDay ? `vence em ${formatDueDate(occ.fixedCost.dueDay, occ.month)}` : "sem vencimento"}</p>
+            <div key={occ.id} className="rounded-lg border bg-card p-3 transition-colors hover:bg-muted/50">
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-bold">
+                  {occ.fixedCost.name.charAt(0)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <button type="button" onClick={() => openEditSheet(occ)} className="min-w-0 truncate text-left font-medium hover:underline">
+                      {occ.fixedCost.name}
+                    </button>
+                    <strong className="shrink-0 text-sm tabular-nums">{formatCurrency(occ.amount)}</strong>
                   </div>
-                </button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8 shrink-0"
-                  aria-label="Editar custo fixo"
-                  onClick={() => openEditSheet(occ)}
-                >
-                  <Settings className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="mt-2 ml-12">
-                {occ.fixedCost.paidInsideCard ? (
-                  <div className="flex items-center gap-2">
-                    {occ.status === "PAID" && occ.paidViaCard ? (
-                      <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-success/10 text-success">Pago no cartão</span>
+                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                    {occ.fixedCost.category.name} · {sourceLabel}
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {dueLabel && (
+                      <span className="inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full bg-muted px-2 text-xs font-medium text-muted-foreground">
+                        <CalendarClock className="h-3.5 w-3.5" />
+                        Vence {dueLabel}
+                      </span>
+                    )}
+
+                    {occ.fixedCost.paidInsideCard ? (
+                      occ.status === "PAID" && occ.paidViaCard ? (
+                        <span className="inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full bg-success/10 px-2.5 text-xs font-medium text-success">
+                          <CheckCircle2 className="h-3.5 w-3.5 fill-success text-white" />
+                          Pago no cartão
+                        </span>
+                      ) : occ.status === "PAID" ? (
+                        <span className="inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full bg-success/10 px-2.5 text-xs font-medium text-success">
+                          <CheckCircle2 className="h-3.5 w-3.5 fill-success text-white" />
+                          {activeTab === "INCOME" ? "Recebido na fatura" : "Pago na fatura"}
+                        </span>
+                      ) : (
+                        <span className="inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full bg-blue-500/10 px-2.5 text-xs font-medium text-blue-600">
+                          <CreditCard className="h-3.5 w-3.5" />
+                          Na fatura
+                        </span>
+                      )
                     ) : occ.status === "PAID" ? (
-                      <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-success/10 text-success">{activeTab === "INCOME" ? "Recebido na fatura" : "Pago na fatura"}</span>
+                      <span className="inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full bg-success/10 px-2.5 text-xs font-medium text-success">
+                        <CheckCircle2 className="h-3.5 w-3.5 fill-success text-white" />
+                        {activeTab === "INCOME" ? "Recebido" : "Pago"}
+                      </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-500/10 text-blue-600">Na fatura</span>
-                    )}
-                    {occ.status === "PENDING" && activeTab === "EXPENSE" && (
-                      <span
-                        role="button" tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key !== "Enter") return
-                          e.stopPropagation()
-                          handlePayCard(occ.fixedCostId)
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handlePayCard(occ.fixedCostId)
-                        }}
-                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors bg-muted text-muted-foreground hover:bg-muted/80"
-                      >
-                        {isLoadingCard ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-                        Pagar com Cartão
+                      <span className="inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full bg-amber-500/10 px-2.5 text-xs font-medium text-amber-600">
+                        <Clock3 className="h-3.5 w-3.5" />
+                        Pendente
                       </span>
                     )}
-                    {occ.status === "PAID" && occ.paidViaCard && (
-                      <span
-                        role="button" tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key !== "Enter") return
-                          e.stopPropagation()
-                          handleUnpayCard(occ.fixedCostId)
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleUnpayCard(occ.fixedCostId)
-                        }}
-                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors bg-success/10 text-success hover:bg-success/20"
+
+                    {occ.fixedCost.paidInsideCard && occ.status === "PENDING" && activeTab === "EXPENSE" && (
+                      <Button
+                        type="button"
+                        size="xs"
+                        variant="ghost"
+                        disabled={isLoadingCard}
+                        onClick={() => handlePayCard(occ.fixedCostId)}
+                        className="h-6 rounded-full bg-muted/60 px-2 text-xs text-muted-foreground"
                       >
-                        {isLoadingCard ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5 fill-success text-white" />}
-                        Estornar
-                      </span>
+                        {isLoadingCard ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CreditCard className="h-3.5 w-3.5" />}
+                        Pagar
+                      </Button>
+                    )}
+
+                    {!occ.fixedCost.paidInsideCard && occ.status === "PENDING" && (
+                      <Button
+                        type="button"
+                        size="xs"
+                        variant="ghost"
+                        disabled={isLoading}
+                        onClick={() => handlePay(occ.fixedCostId)}
+                        className="h-6 rounded-full bg-muted/60 px-2 text-xs text-muted-foreground"
+                      >
+                        {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                        {activeTab === "INCOME" ? "Receber" : "Pagar"}
+                      </Button>
                     )}
                   </div>
-                ) : (
-                  <span
-                    role="button" tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key !== "Enter") return
-                      e.stopPropagation()
-                      if (occ.status === "PAID") handleUnpay(occ.fixedCostId)
-                      else handlePay(occ.fixedCostId)
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      if (occ.status === "PAID") handleUnpay(occ.fixedCostId)
-                      else handlePay(occ.fixedCostId)
-                    }}
-                    className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${occ.status === "PAID" ? "bg-success/10 text-success hover:bg-success/20" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    type="button"
+                    aria-label="Ações do lançamento"
+                    className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "h-8 w-8 shrink-0 cursor-pointer rounded-full")}
                   >
-                    {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className={`h-3.5 w-3.5 ${occ.status === "PAID" ? "fill-success text-white" : ""}`} />}
-                    {occ.status === "PAID" ? (activeTab === "INCOME" ? "Cancelar" : "Estornar") : (activeTab === "INCOME" ? "Receber" : "Pagar")}
-                  </span>
-                )}
+                    <Settings className="h-4 w-4" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-44">
+                    <DropdownMenuItem className="cursor-pointer" onClick={() => openEditSheet(occ)}>
+                      <Settings className="h-4 w-4" />
+                      Editar
+                    </DropdownMenuItem>
+                    {((!occ.fixedCost.paidInsideCard && occ.status === "PAID") || (occ.fixedCost.paidInsideCard && occ.status === "PAID" && occ.paidViaCard)) && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="cursor-pointer text-success focus:text-success"
+                          onClick={() => {
+                            if (occ.fixedCost.paidInsideCard) handleUnpayCard(occ.fixedCostId)
+                            else handleUnpay(occ.fixedCostId)
+                          }}
+                        >
+                          {(occ.fixedCost.paidInsideCard ? isLoadingCard : isLoading) ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                          {activeTab === "INCOME" ? "Cancelar" : "Estornar"}
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           )

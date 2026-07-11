@@ -1,20 +1,52 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import { Calculator, Check, CheckCircle2, ChevronLeft, ChevronRight, Copy, Loader2, Settings, Trash2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useEffect, useRef, useState, type ReactNode } from "react"
+import { Calculator, Check, CheckCircle2, ChevronLeft, ChevronRight, Copy, Loader2, RotateCcw, Settings, Trash2 } from "lucide-react"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { toast } from "sonner"
-import { formatCurrency, formatDate } from "@/lib/utils"
+import { cn, formatCurrency, formatDate } from "@/lib/utils"
 import { isAccountNegative, getAvailableBalance } from "@/lib/balance"
 
 interface CardItem { id: string; name: string; color: string }
 interface BankAccountItem { id: string; name: string; balance: number; overdraftLimit: number }
 interface Invoice { id: string; month: string; dueDate: string; amount: number; status: "PENDING" | "PAID"; card: CardItem; paymentMethod?: string | null; paymentBankAccountId?: string | null }
+
+function InvoiceActionIcon({
+  label,
+  icon,
+  tone = "muted",
+  onClick,
+}: {
+  label: string
+  icon: ReactNode
+  tone?: "muted" | "success"
+  onClick: () => void
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        type="button"
+        aria-label={label}
+        onClick={onClick}
+        className={cn(
+          buttonVariants({ variant: "ghost", size: "icon-sm" }),
+          "cursor-pointer rounded-full border transition-colors",
+          tone === "muted" && "border-border bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground",
+          tone === "success" && "border-success/20 bg-success/10 text-success hover:bg-success/20 hover:text-success"
+        )}
+      >
+        {icon}
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  )
+}
 
 function currentMonth() {
   const now = new Date()
@@ -304,7 +336,7 @@ export default function InvoicesPage() {
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Vencimento</th>
               <th className="px-4 py-3 text-right font-medium text-muted-foreground">Valor</th>
               <th className="px-4 py-3 text-center font-medium text-muted-foreground">Status</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Ações</th>
+              <th className="w-[112px] px-4 py-3 text-center font-medium text-muted-foreground">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -334,34 +366,27 @@ export default function InvoicesPage() {
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-600">Pendente</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-right">
-                  <div className="flex justify-end gap-1">
+                <td className="px-4 py-3">
+                  <div className="flex justify-center gap-2">
                     {invoice.status === "PENDING" ? (
-                      <Button
-                        size="sm"
-                        variant="ghost"
+                      <InvoiceActionIcon
+                        label="Pagar fatura"
+                        icon={<CheckCircle2 className="h-3.5 w-3.5" />}
                         onClick={() => openPayDialog(invoice)}
-                      >
-                        <CheckCircle2 className="mr-1 h-4 w-4" /> Pagar
-                      </Button>
+                      />
                     ) : (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-success hover:text-success"
+                      <InvoiceActionIcon
+                        label="Estornar pagamento"
+                        tone="success"
+                        icon={<RotateCcw className="h-3.5 w-3.5" />}
                         onClick={() => handleUnpay(invoice.id)}
-                      >
-                        Estornar
-                      </Button>
+                      />
                     )}
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      aria-label="Editar fatura"
+                    <InvoiceActionIcon
+                      label="Editar fatura"
+                      icon={<Settings className="h-3.5 w-3.5" />}
                       onClick={() => setSelectedInvoice(invoice)}
-                    >
-                      <Settings className="h-4 w-4" />
-                    </Button>
+                    />
                   </div>
                 </td>
               </tr>
