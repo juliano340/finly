@@ -1,6 +1,22 @@
 "use client"
 
-import { Settings } from "lucide-react"
+import {
+  BookOpen,
+  BriefcaseBusiness,
+  Car,
+  CreditCard,
+  Gamepad2,
+  Heart,
+  House,
+  Laptop,
+  Pencil,
+  Pin,
+  Repeat,
+  Settings,
+  ShoppingBag,
+  Utensils,
+  type LucideIcon,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import type { CategoryWithCount } from "@/features/categories/categories.types"
@@ -10,37 +26,40 @@ interface CategoryCardProps {
   onEdit: () => void
 }
 
-const iconMap: Record<string, string> = {
-  utensils: "🍽️",
-  car: "🚗",
-  home: "🏠",
-  gamepad: "🎮",
-  heart: "❤️",
-  book: "📚",
-  repeat: "🔄",
-  "shopping-bag": "🛍️",
-  briefcase: "💼",
-  laptop: "💻",
-  wallet: "💳",
+const iconMap: Record<string, LucideIcon> = {
+  utensils: Utensils,
+  car: Car,
+  home: House,
+  gamepad: Gamepad2,
+  heart: Heart,
+  book: BookOpen,
+  repeat: Repeat,
+  "shopping-bag": ShoppingBag,
+  briefcase: BriefcaseBusiness,
+  laptop: Laptop,
+  wallet: CreditCard,
 }
 
 export function CategoryCard({ category, onEdit }: CategoryCardProps) {
-  const emoji = iconMap[category.icon] ?? "📌"
+  const Icon = iconMap[category.icon] ?? Pin
+  const transactionCount = category._count?.transactions ?? 0
+  const budgetCount = category._count?.budgets ?? 0
 
   return (
-    <div className="flex items-center gap-4 rounded-xl border bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
+    <div className="flex items-center gap-3 rounded-xl border bg-card px-3 py-3 shadow-sm transition-shadow hover:shadow-md">
       <div
-        className="flex h-12 w-12 items-center justify-center rounded-xl text-xl"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
         style={{ backgroundColor: `${category.color}15`, color: category.color }}
+        aria-hidden="true"
       >
-        {emoji}
+        <Icon className="h-4 w-4" />
       </div>
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <p className="font-medium truncate">{category.name}</p>
+          <p className="truncate font-medium">{category.name}</p>
           <Badge
             variant="secondary"
-            className={`text-[10px] ${
+            className={`h-5 shrink-0 text-[10px] ${
               category.type === "INCOME"
                 ? "bg-success/10 text-success"
                 : "bg-destructive/10 text-destructive"
@@ -49,14 +68,20 @@ export function CategoryCard({ category, onEdit }: CategoryCardProps) {
             {category.type === "INCOME" ? "Receita" : "Despesa"}
           </Badge>
         </div>
-        <p className="text-xs text-muted-foreground">
-          {category._count?.transactions ?? 0} transações
-          {(category._count?.budgets ?? 0) > 0 &&
-            ` · ${category._count.budgets} orçamento${category._count.budgets > 1 ? "s" : ""}`}
+        <p className="mt-0.5 truncate text-xs text-muted-foreground">
+          {transactionCount} transaç{transactionCount === 1 ? "ão" : "ões"}
+          {budgetCount > 0 && ` · ${budgetCount} orçamento${budgetCount > 1 ? "s" : ""}`}
         </p>
       </div>
-      <Button variant="ghost" size="icon" onClick={onEdit}>
-        <Settings className="h-4 w-4" />
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        onClick={onEdit}
+        className="shrink-0 cursor-pointer rounded-full text-muted-foreground"
+        aria-label={`Editar categoria ${category.name}`}
+      >
+        <Pencil className="h-4 w-4 md:hidden" />
+        <Settings className="hidden h-4 w-4 md:block" />
       </Button>
     </div>
   )

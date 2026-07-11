@@ -1,9 +1,16 @@
 "use client"
 
-import { Pencil, Trash2 } from "lucide-react"
+import { CalendarDays, EllipsisVertical, Landmark, Pencil, Trash2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { formatCurrency, formatDate } from "@/lib/utils"
+import { buttonVariants } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { cn, formatCurrency, formatDate } from "@/lib/utils"
 import type { TransactionWithRelations } from "@/features/transactions/transactions.types"
 
 interface TransactionRowProps {
@@ -16,62 +23,63 @@ export function TransactionRow({ transaction, onEdit, onDelete }: TransactionRow
   const isIncome = transaction.type === "INCOME"
 
   return (
-    <div className="rounded-xl border bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
-      <div className="flex items-center gap-3">
-        <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-lg"
-          style={{
-            backgroundColor: `${transaction.category.color}15`,
-          }}
-        >
-          {transaction.category.icon === "utensils" && "🍽️"}
-          {transaction.category.icon === "car" && "🚗"}
-          {transaction.category.icon === "home" && ""}
-          {transaction.category.icon === "gamepad" && "🎮"}
-          {transaction.category.icon === "heart" && "❤️"}
-          {transaction.category.icon === "book" && ""}
-          {transaction.category.icon === "repeat" && "🔄"}
-          {transaction.category.icon === "shopping-bag" && "🛍️"}
-          {transaction.category.icon === "briefcase" && "💼"}
-          {transaction.category.icon === "laptop" && "💻"}
-          {!["utensils","car","home","gamepad","heart","book","repeat","shopping-bag","briefcase","laptop"].includes(transaction.category.icon) && "📌"}
+    <div className="rounded-xl border bg-card p-3 shadow-sm">
+      <div className="flex items-start gap-3">
+        <div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${isIncome ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
+          {isIncome ? "+" : "-"}
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <p className="font-medium truncate">
-                {transaction.description ?? transaction.category.name}
-              </p>
-              <Badge
-                variant="secondary"
-                className={`text-[10px] shrink-0 ${
-                  isIncome
-                    ? "bg-success/10 text-success"
-                    : "bg-destructive/10 text-destructive"
-                }`}
-              >
-                {isIncome ? "Receita" : "Despesa"}
-              </Badge>
-            </div>
-            <span className={`shrink-0 text-sm font-semibold ${isIncome ? "text-success" : "text-destructive"}`}>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-medium">{transaction.description ?? transaction.category.name}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <span className={`text-sm font-bold tabular-nums ${isIncome ? "text-success" : "text-destructive"}`}>
               {isIncome ? "+" : "-"} {formatCurrency(transaction.amount)}
             </span>
+            <Badge
+              variant="secondary"
+              className={`h-5 text-[10px] ${isIncome ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}
+            >
+              {isIncome ? "Receita" : "Despesa"}
+            </Badge>
           </div>
-          <p className="text-xs text-muted-foreground truncate">
-            {transaction.category.name} · {formatDate(transaction.date)}
+
+          <div className="mt-3 flex flex-wrap gap-1.5 text-xs text-muted-foreground">
+            <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-muted px-2 py-1">
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: transaction.category.color }} />
+              <span className="truncate">{transaction.category.name}</span>
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1">
+              <CalendarDays className="h-3.5 w-3.5" />
+              {formatDate(transaction.date)}
+            </span>
             {transaction.bankAccount && (
-              <> · <span className="inline-flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: transaction.bankAccount.color }} />{transaction.bankAccount.name}</span></>
+              <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-muted px-2 py-1">
+                <Landmark className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{transaction.bankAccount.name}</span>
+              </span>
             )}
-          </p>
+          </div>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEdit}>
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onDelete}>
-            <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>
-        </div>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            type="button"
+            aria-label="Ações da transação"
+            className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "h-8 w-8 shrink-0 cursor-pointer rounded-full")}
+          >
+            <EllipsisVertical className="h-4 w-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuItem className="cursor-pointer" onClick={onEdit}>
+              <Pencil className="h-4 w-4" />
+              Editar
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" className="cursor-pointer" onClick={onDelete}>
+              <Trash2 className="h-4 w-4" />
+              Excluir
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   )

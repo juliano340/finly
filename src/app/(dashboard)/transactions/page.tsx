@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useSearchParams } from "next/navigation"
-import { Loader2, Plus, Wallet } from "lucide-react"
+import { ArrowDown, ArrowUp, Loader2, Plus, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -79,6 +79,8 @@ export default function TransactionsPage() {
   }, [highlightId])
 
   const totalPages = Math.ceil(total / 20)
+  const filteredIncome = transactions.filter((tx) => tx.type === "INCOME").reduce((sum, tx) => sum + tx.amount, 0)
+  const filteredExpense = transactions.filter((tx) => tx.type === "EXPENSE").reduce((sum, tx) => sum + tx.amount, 0)
 
   async function handleCreate(input: TransactionInput) {
     await createTransaction(input)
@@ -120,8 +122,8 @@ export default function TransactionsPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Transações</h1>
-          <p className="text-muted-foreground">
-            Avulsas, receitas, ajustes manuais e lançamentos não recorrentes · {total} {total === 1 ? "item" : "itens"}
+          <p className="text-sm text-muted-foreground sm:text-base">
+            Avulsas, receitas e ajustes · {total} {total === 1 ? "item" : "itens"}
           </p>
         </div>
         <Button
@@ -129,15 +131,36 @@ export default function TransactionsPage() {
             setEditing(null)
             setFormOpen(true)
           }}
-          className="gap-2"
+          className="w-full gap-2 sm:w-auto"
         >
           <Plus className="h-4 w-4" />
           Novo lançamento avulso
         </Button>
       </div>
 
+      <div className="grid grid-cols-2 gap-3 md:hidden">
+        <div className="rounded-xl border bg-card p-3">
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-success/10 text-success">
+              <ArrowUp className="h-4 w-4" />
+            </span>
+            <span className="text-xs font-medium text-muted-foreground">Receitas</span>
+          </div>
+          <p className="mt-2 truncate text-sm font-bold text-success">{formatCurrency(filteredIncome)}</p>
+        </div>
+        <div className="rounded-xl border bg-card p-3">
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+              <ArrowDown className="h-4 w-4" />
+            </span>
+            <span className="text-xs font-medium text-muted-foreground">Despesas</span>
+          </div>
+          <p className="mt-2 truncate text-sm font-bold text-destructive">{formatCurrency(filteredExpense)}</p>
+        </div>
+      </div>
+
       {/* Filtros */}
-      <div className="flex flex-wrap gap-3">
+      <div className="grid grid-cols-2 gap-3 md:flex md:flex-wrap">
         <Select
           value={filters.type ?? "all"}
           onValueChange={(v) => {
@@ -145,7 +168,7 @@ export default function TransactionsPage() {
             setFilters({ ...filters, type: value === "all" ? undefined : (value as typeof filters.type) })
           }}
         >
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-full md:w-40">
             <SelectValue>
               {filters.type === "INCOME" ? "Receitas" : filters.type === "EXPENSE" ? "Despesas" : "Todos"}
             </SelectValue>
@@ -163,7 +186,7 @@ export default function TransactionsPage() {
             setFilters({ ...filters, categoryId: value === "all" ? undefined : value })
           }}
         >
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-full md:w-48">
             <SelectValue>
               {filters.categoryId
                 ? categories.find((c) => c.id === filters.categoryId)?.name ?? "Todas"

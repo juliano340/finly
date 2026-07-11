@@ -14,10 +14,9 @@ const mockCategory = {
 }
 
 describe("CategoryCard", () => {
-  it("renderiza nome e emoji", () => {
+  it("renderiza nome", () => {
     render(<CategoryCard category={mockCategory} onEdit={() => {}} />)
     expect(screen.getByText("Alimentação")).toBeDefined()
-    expect(screen.getByText("🍽️")).toBeDefined()
   })
 
   it("renderiza badge de Despesa", () => {
@@ -38,8 +37,7 @@ describe("CategoryCard", () => {
   it("chama onEdit ao clicar no lápis", async () => {
     let called = false
     render(<CategoryCard category={mockCategory} onEdit={() => { called = true }} />)
-    const buttons = screen.getAllByRole("button")
-    await userEvent.click(buttons[0])
+    await userEvent.click(screen.getByRole("button", { name: /editar categoria alimentação/i }))
     expect(called).toBe(true)
   })
 })

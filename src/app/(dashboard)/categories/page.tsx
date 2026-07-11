@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Loader2, Plus, Wallet } from "lucide-react"
+import { ArrowDown, ArrowUp, Loader2, Plus, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCategories } from "@/hooks/use-categories"
 import { CategoryCard } from "./_components/category-card"
@@ -64,11 +64,11 @@ export default function CategoriesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Categorias</h1>
-          <p className="text-muted-foreground">
-            Organize suas receitas e despesas
+          <p className="text-sm text-muted-foreground sm:text-base">
+            Organize receitas e despesas · {categories.length} {categories.length === 1 ? "categoria" : "categorias"}
           </p>
         </div>
         <Button
@@ -76,11 +76,32 @@ export default function CategoriesPage() {
             setEditing(null)
             setFormOpen(true)
           }}
-          className="gap-2"
+          className="w-full gap-2 sm:w-auto"
         >
           <Plus className="h-4 w-4" />
           Nova categoria
         </Button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 md:hidden">
+        <div className="rounded-xl border bg-card p-3">
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-success/10 text-success">
+              <ArrowUp className="h-4 w-4" />
+            </span>
+            <span className="text-xs font-medium text-muted-foreground">Receitas</span>
+          </div>
+          <p className="mt-2 text-sm font-bold text-success">{incomes.length}</p>
+        </div>
+        <div className="rounded-xl border bg-card p-3">
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+              <ArrowDown className="h-4 w-4" />
+            </span>
+            <span className="text-xs font-medium text-muted-foreground">Despesas</span>
+          </div>
+          <p className="mt-2 text-sm font-bold text-destructive">{expenses.length}</p>
+        </div>
       </div>
 
       {/* Tabela — Desktop */}
@@ -108,10 +129,13 @@ export default function CategoriesPage() {
           <div className="space-y-6">
             {incomes.length > 0 && (
               <div className="space-y-3">
-                <h2 className="text-sm font-medium text-muted-foreground">
-                  Receitas
-                </h2>
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-medium text-muted-foreground">
+                    Receitas
+                  </h2>
+                  <span className="text-xs text-muted-foreground">{incomes.length}</span>
+                </div>
+                <div className="grid gap-2.5 sm:grid-cols-2">
                   {incomes.map((cat) => (
                     <CategoryCard
                       key={cat.id}
@@ -127,10 +151,13 @@ export default function CategoriesPage() {
             )}
             {expenses.length > 0 && (
               <div className="space-y-3">
-                <h2 className="text-sm font-medium text-muted-foreground">
-                  Despesas
-                </h2>
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-medium text-muted-foreground">
+                    Despesas
+                  </h2>
+                  <span className="text-xs text-muted-foreground">{expenses.length}</span>
+                </div>
+                <div className="grid gap-2.5 sm:grid-cols-2">
                   {expenses.map((cat) => (
                     <CategoryCard
                       key={cat.id}
