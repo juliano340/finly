@@ -14,7 +14,7 @@ import { formatCurrency, formatDate } from "@/lib/utils"
     incomeItems: { name: string; amount: number; type: "FIXED" | "LOOSE"; status: "PENDING" | "PAID" }[]
   }
   invoices: { id: string; amount: number; dueDate: string; status: "PENDING" | "PAID"; card: { name: string } }[]
-  fixedCosts: { id: string; amount: number; status: "PENDING" | "PAID"; fixedCost: { name: string; paidInsideCard: boolean; paymentMethod: string; category: { name: string }; card: { name: string } | null; bankAccount: { name: string } | null } }[]
+  fixedCosts: { id: string; amount: number; status: "PENDING" | "PAID"; fixedCost: { name: string; type: "INCOME" | "EXPENSE"; paidInsideCard: boolean; paymentMethod: string; category: { name: string }; card: { name: string } | null; bankAccount: { name: string } | null } }[]
 }
 
 function currentMonth() {
@@ -77,9 +77,19 @@ export default function MonthlyClosingPage() {
   ]
 
   const paidTotal = (summary?.totalSpent ?? 0) - (summary?.totalToPay ?? 0)
+  const paidFormula = [
+    { label: "Faturas pagas", value: summary?.cardInvoicesPaidTotal ?? 0 },
+    { label: "Fixos fora pagos", value: (summary?.fixedCostsOutsideCardTotalAll ?? 0) - (summary?.fixedCostsOutsideCardTotal ?? 0) },
+  ]
+  const totalFormula = [
+    { label: "Faturas", value: (summary?.cardInvoicesTotal ?? 0) + (summary?.cardInvoicesPaidTotal ?? 0) },
+    { label: "Fixos fora", value: summary?.fixedCostsOutsideCardTotalAll ?? 0 },
+    { label: "Avulsas", value: summary?.looseExpensesTotal ?? 0 },
+  ]
 
-  const outsideCardCosts = data?.fixedCosts?.filter((fc) => !fc.fixedCost.paidInsideCard) ?? []
-  const insideCardCosts = data?.fixedCosts?.filter((fc) => fc.fixedCost.paidInsideCard) ?? []
+  const expenseFixedCosts = data?.fixedCosts?.filter((fc) => fc.fixedCost.type === "EXPENSE") ?? []
+  const outsideCardCosts = expenseFixedCosts.filter((fc) => !fc.fixedCost.paidInsideCard)
+  const insideCardCosts = expenseFixedCosts.filter((fc) => fc.fixedCost.paidInsideCard)
 
   return (
     <div className="space-y-6">
@@ -100,10 +110,20 @@ export default function MonthlyClosingPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Metric title="Saídas totais do mês" value={summary?.totalSpent ?? 0} description="Tudo: faturas + fixos + avulsas" highlight loading={loading} />
-        <Metric title="Já pago" value={paidTotal} description="Desse total, já foi pago" loading={loading} />
-        <Metric title="Ainda a pagar" value={summary?.totalToPay ?? 0} description="Restante pendente" loading={loading} />
+      <MobileClosingSummary
+        total={summary?.totalSpent ?? 0}
+        paid={paidTotal}
+        pending={summary?.totalToPay ?? 0}
+        totalItems={totalFormula}
+        paidItems={paidFormula}
+        pendingItems={pendingFormula}
+        loading={loading}
+      />
+
+      <div className="hidden gap-4 md:grid md:grid-cols-3">
+        <Metric title="Saídas totais do mês" value={summary?.totalSpent ?? 0} description="Tudo: faturas + fixos + avulsas" highlight loading={loading} detailItems={totalFormula} />
+        <Metric title="Já pago" value={paidTotal} description="Desse total, já foi pago" loading={loading} detailItems={paidFormula.map((item) => ({ ...item, status: "PAID" }))} />
+        <Metric title="Ainda a pagar" value={summary?.totalToPay ?? 0} description="Restante pendente" loading={loading} detailItems={pendingFormula.map((item) => ({ ...item, status: "PENDING" }))} />
       </div>
 
       {!loading && (summary?.totalToPay ?? 0) === 0 && (summary?.totalSpent ?? 0) > 0 && (
@@ -114,7 +134,7 @@ export default function MonthlyClosingPage() {
           </Button>
         </div>
       )}
-      <Card className="border-0 shadow-sm">
+      <Card className="hidden border-0 shadow-sm md:block">
         <CardContent className="p-5">
           <p className="text-xs font-medium text-muted-foreground">Detalhamento do que ainda falta pagar</p>
           <div className="mt-3 grid gap-3 md:grid-cols-3">
@@ -136,7 +156,7 @@ export default function MonthlyClosingPage() {
         <Metric title="Fixos fora do cartão" value={summary?.fixedCostsOutsideCardTotalAll ?? 0} description={`${formatCurrency(summary?.fixedCostsOutsideCardTotal ?? 0)} pendente · ${formatCurrency((summary?.fixedCostsOutsideCardTotalAll ?? 0) - (summary?.fixedCostsOutsideCardTotal ?? 0))} já pago`} loading={loading} detailItems={outsideCardCosts.map((fc) => ({ name: fc.fixedCost.name, amount: fc.amount, status: fc.status }))} />
         <Metric title="Despesas avulsas" value={summary?.looseExpensesTotal ?? 0} description="Transações não recorrentes" loading={loading} />
         <Metric title="Receitas do mês" value={summary?.receivedIncomeTotal ?? 0} description={`${formatCurrency(summary?.receivedIncomeTotal ?? 0)} recebido · ${formatCurrency((summary?.incomeTotal ?? 0) - (summary?.receivedIncomeTotal ?? 0))} pendente`} loading={loading} detailItems={summary?.incomeItems?.map((item) => ({ name: `${item.name} (${item.type === "FIXED" ? "Fixa" : "Avulsa"})`, amount: item.amount, status: item.status }))} />
-        <Metric title="Fixos totais" value={summary?.fixedCostsTotal ?? 0} description="Dentro + fora do cartão" loading={loading} detailItems={data?.fixedCosts.map((fc) => ({ name: fc.fixedCost.name, amount: fc.amount, status: fc.status }))} />
+        <Metric title="Fixos totais" value={summary?.fixedCostsTotal ?? 0} description="Dentro + fora do cartão" loading={loading} detailItems={expenseFixedCosts.map((fc) => ({ name: fc.fixedCost.name, amount: fc.amount, status: fc.status }))} />
         <Metric title="Fixos dentro do cartão" value={summary?.fixedCostsInsideCardTotal ?? 0} description="Previstos na fatura" loading={loading} detailItems={insideCardCosts.map((fc) => ({ name: fc.fixedCost.name, amount: fc.amount, status: fc.status }))} />
         <Metric title="Saldo projetado" value={summary?.projectedBalance ?? 0} description="Receitas - total a pagar" loading={loading} />
       </div>
@@ -149,32 +169,119 @@ export default function MonthlyClosingPage() {
   )
 }
 
-function Metric({ title, value, description, highlight = false, loading = false, detailItems }: { title: string; value: number; description?: string; highlight?: boolean; loading?: boolean; detailItems?: { name: string; amount: number; status: string }[] }) {
+type DetailItem = { name?: string; label?: string; amount?: number; value?: number; status?: string }
+
+function MobileClosingSummary({
+  total,
+  paid,
+  pending,
+  totalItems,
+  paidItems,
+  pendingItems,
+  loading,
+}: {
+  total: number
+  paid: number
+  pending: number
+  totalItems: DetailItem[]
+  paidItems: DetailItem[]
+  pendingItems: DetailItem[]
+  loading: boolean
+}) {
+  return (
+    <Card className="border-0 shadow-sm md:hidden">
+      <CardContent className="space-y-4 p-4">
+        <div className="rounded-xl bg-primary p-4 text-primary-foreground">
+          <p className="text-xs font-medium opacity-80">Saídas totais do mês</p>
+          <p className="mt-1 text-2xl font-bold tabular-nums">{loading ? <Loader2 className="h-5 w-5 animate-spin opacity-70" /> : formatCurrency(total)}</p>
+          <div className="mt-3">
+            <BreakdownRows items={totalItems} className="bg-white/10 text-primary-foreground/90" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-xl bg-muted/50 p-3">
+            <p className="text-xs font-medium text-muted-foreground">Já pago</p>
+            <p className="mt-1 text-lg font-bold tabular-nums text-success">{loading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : formatCurrency(paid)}</p>
+          </div>
+          <div className="rounded-xl bg-muted/50 p-3">
+            <p className="text-xs font-medium text-muted-foreground">Ainda a pagar</p>
+            <p className="mt-1 text-lg font-bold tabular-nums text-destructive">{loading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : formatCurrency(pending)}</p>
+          </div>
+        </div>
+
+        <div className="grid gap-3">
+          <MobileBreakdown title="Composição do já pago" items={paidItems} tone="paid" />
+          <MobileBreakdown title="Composição do a pagar" items={pendingItems} tone="pending" />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function MobileBreakdown({ title, items, tone }: { title: string; items: DetailItem[]; tone: "paid" | "pending" }) {
+  return (
+    <div className="rounded-xl border bg-background p-3">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <p className="text-xs font-medium text-muted-foreground">{title}</p>
+        <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${tone === "paid" ? "bg-success/10 text-success" : "bg-amber-500/10 text-amber-600"}`}>
+          {tone === "paid" ? "Pago" : "Pendente"}
+        </span>
+      </div>
+      <BreakdownRows items={items} />
+    </div>
+  )
+}
+
+function BreakdownRows({ items, className = "bg-muted/50" }: { items: DetailItem[]; className?: string }) {
+  return (
+    <div className="space-y-1.5">
+      {items.map((item) => (
+        <div key={item.name ?? item.label} className={`flex items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-xs ${className}`}>
+          <span className="min-w-0 truncate">{item.name ?? item.label}</span>
+          <span className="shrink-0 font-semibold tabular-nums">{formatCurrency(item.amount ?? item.value ?? 0)}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function Metric({ title, value, description, highlight = false, loading = false, detailItems }: { title: string; value: number; description?: string; highlight?: boolean; loading?: boolean; detailItems?: DetailItem[] }) {
   return <Card className={`border-0 shadow-sm ${highlight ? "bg-primary text-primary-foreground" : ""}`}><CardContent className="p-5">
     <p className="text-xs font-medium opacity-80 flex items-center gap-1.5">
       {title}
       {detailItems && detailItems.length > 0 && !loading && (
-        <Tooltip>
-          <TooltipTrigger>
-            <span tabIndex={0} className="inline-flex cursor-help"><Info className="size-3.5" /></span>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" align="start" className="p-0">
-            <div className="max-h-48 overflow-y-auto py-1.5">
-              {detailItems.map((item, i) => (
-                <div key={i} className="flex items-center justify-between gap-4 px-3 py-1 text-sm">
-                  <span className="flex items-center gap-2 min-w-0">
-                    <span className="truncate">{item.name}</span>
-                    <span className={`shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded ${item.status === "PAID" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400" : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"}`}>{item.status === "PAID" ? "Recebido" : "Pendente"}</span>
-                  </span>
-                  <span className="tabular-nums whitespace-nowrap font-medium shrink-0">{formatCurrency(item.amount)}</span>
-                </div>
-              ))}
-            </div>
-          </TooltipContent>
-        </Tooltip>
+        <span className="hidden md:inline-flex">
+          <Tooltip>
+            <TooltipTrigger>
+              <span tabIndex={0} className="inline-flex cursor-help"><Info className="size-3.5" /></span>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" align="start" className="p-0">
+              <div className="max-h-48 overflow-y-auto py-1.5">
+                {detailItems.map((item, i) => (
+                  <div key={i} className="flex items-center justify-between gap-4 px-3 py-1 text-sm">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="truncate">{item.name ?? item.label}</span>
+                      {item.status && <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${item.status === "PAID" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400" : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"}`}>{item.status === "PAID" ? "Recebido" : "Pendente"}</span>}
+                    </span>
+                    <span className="shrink-0 whitespace-nowrap font-medium tabular-nums">{formatCurrency(item.amount ?? item.value ?? 0)}</span>
+                  </div>
+                ))}
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </span>
       )}
     </p>
     <p className="text-xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin opacity-60" /> : formatCurrency(value)}</p>
     {description && <p className="mt-1 text-xs opacity-75">{description}</p>}
+    {detailItems && detailItems.length > 0 && !loading && (
+      <details className="mt-3 rounded-lg bg-muted/60 p-3 md:hidden">
+        <summary className="cursor-pointer text-xs font-medium text-muted-foreground">Ver composição</summary>
+        <div className="mt-2">
+          <BreakdownRows items={detailItems} className="bg-background" />
+        </div>
+      </details>
+    )}
   </CardContent></Card>
 }

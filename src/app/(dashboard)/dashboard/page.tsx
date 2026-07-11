@@ -116,24 +116,28 @@ export default function DashboardPage() {
       bg: summary.balance >= 0 ? "bg-success/10" : "bg-destructive/10",
     },
   ]
+  const totalToPay = closing?.summary.totalToPay ?? 0
+  const totalSpent = closing?.summary.totalSpent ?? 0
+  const available = bankTotal - totalToPay
+  const hasCoverage = bankTotal >= totalToPay
   const evolutionSummary = getMetricSummary(evolution?.months ?? [], evolutionMetric)
   const selectedCard = cardEvolution?.cards.find((card) => card.id === selectedCardId)
   const cardSummary = getCardInvoiceSummary(cardEvolution?.months ?? [], selectedCardId)
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">
             Visão geral das suas finanças
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-center justify-between gap-2 rounded-lg border bg-background px-2 py-1 sm:w-auto sm:justify-start sm:border-0 sm:bg-transparent sm:p-0">
           <Button variant="outline" size="icon" onClick={prevMonth}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="text-sm font-medium capitalize">
+          <span className="min-w-0 flex-1 text-center text-sm font-medium capitalize sm:min-w-28 sm:flex-none">
             {formatMonth(month)}
           </span>
           <Button variant="outline" size="icon" onClick={nextMonth}>
@@ -142,7 +146,27 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <Card className="border-0 shadow-sm sm:hidden">
+        <CardContent className="space-y-4 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">Resultado líquido</p>
+              <p className={`mt-1 text-2xl font-bold tabular-nums ${summary.balance >= 0 ? "text-success" : "text-destructive"}`}>
+                {loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(summary.balance)}
+              </p>
+            </div>
+            <div className={`rounded-xl p-3 ${summary.balance >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
+              <Wallet className="h-5 w-5" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <MobileFinanceItem label="Receitas" value={summary.income} icon={<ArrowUp className="h-4 w-4" />} tone="good" loading={loading} />
+            <MobileFinanceItem label="Despesas" value={summary.expense} icon={<ArrowDown className="h-4 w-4" />} tone="bad" loading={loading} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="hidden gap-4 sm:grid sm:grid-cols-3">
         {cards.map((card) => (
           <Card key={card.label} className="border-0 shadow-sm">
             <CardContent className="flex items-center gap-4 p-6">
@@ -169,8 +193,31 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-4">
-        <Card className={`border-0 shadow-sm ${bankTotal >= (closing?.summary.totalToPay ?? 0) ? "bg-success text-white" : "bg-destructive text-white"}`}>
+      <Card className="border-0 shadow-sm sm:hidden">
+        <CardContent className="space-y-4 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground">Caixa e compromissos</p>
+              <p className={`mt-1 text-xl font-bold tabular-nums ${available >= 0 ? "text-success" : "text-destructive"}`}>
+                {loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(available)}
+              </p>
+              <p className="mt-1 text-[11px] text-muted-foreground">Disponível depois do que falta pagar</p>
+            </div>
+            <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${hasCoverage ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
+              {hasCoverage ? "Coberto" : "Atenção"}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <MobileFinanceItem label="Saldo" value={bankTotal} icon={<Landmark className="h-4 w-4" />} tone={hasCoverage ? "good" : "bad"} loading={loading} />
+            <MobileFinanceItem label="A pagar" value={totalToPay} icon={<ArrowDown className="h-4 w-4" />} tone="bad" loading={loading} />
+            <MobileFinanceItem label="Disponível" value={available} icon={<Banknote className="h-4 w-4" />} tone={available >= 0 ? "good" : "bad"} loading={loading} />
+            <MobileFinanceItem label="Gastos" value={totalSpent} icon={<Banknote className="h-4 w-4" />} tone="bad" loading={loading} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="hidden gap-4 sm:grid sm:grid-cols-4">
+        <Card className={`border-0 shadow-sm ${hasCoverage ? "bg-success text-white" : "bg-destructive text-white"}`}>
           <CardContent className="flex items-center gap-4 p-6">
             <div className="rounded-xl bg-white/20 p-3"><Landmark className="h-5 w-5 text-white" /></div>
             <div>
@@ -185,7 +232,7 @@ export default function DashboardPage() {
             <div className="rounded-xl bg-destructive/10 p-3"><ArrowDown className="h-5 w-5 text-destructive" /></div>
             <div>
               <p className="text-xs font-medium text-muted-foreground">A pagar</p>
-              <p className="text-xl font-bold text-destructive">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(closing?.summary.totalToPay ?? 0)}</p>
+              <p className="text-xl font-bold text-destructive">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(totalToPay)}</p>
               <p className="text-[10px] text-muted-foreground/60">Faturas pendentes + contas fixas + avulsas</p>
             </div>
           </CardContent>
@@ -195,7 +242,7 @@ export default function DashboardPage() {
             <div className="rounded-xl bg-primary/10 p-3"><Banknote className="h-5 w-5 text-primary" /></div>
             <div>
               <p className="text-xs font-medium text-muted-foreground">Disponível</p>
-              <p className="text-xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(bankTotal - (closing?.summary.totalToPay ?? 0))}</p>
+              <p className="text-xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(available)}</p>
               <p className="text-[10px] text-muted-foreground/60">Saldo − A pagar</p>
             </div>
           </CardContent>
@@ -205,7 +252,7 @@ export default function DashboardPage() {
             <div className="rounded-xl bg-destructive/10 p-3"><Banknote className="h-5 w-5 text-destructive" /></div>
             <div>
               <p className="text-xs font-medium text-muted-foreground">Gastos do mês</p>
-              <p className="text-xl font-bold text-destructive">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(closing?.summary.totalSpent ?? 0)}</p>
+              <p className="text-xl font-bold text-destructive">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(totalSpent)}</p>
               <p className="text-[10px] text-muted-foreground/60">Tudo que entrou na fatura + PIX + avulsas</p>
             </div>
           </CardContent>
@@ -357,6 +404,36 @@ function InsightCard({
       <p className="text-xs font-medium text-muted-foreground">{title}</p>
       <p className={`mt-1 text-lg font-bold ${toneClass}`}>{loading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : value}</p>
       <p className="mt-1 text-[10px] text-muted-foreground/70">{description}</p>
+    </div>
+  )
+}
+
+function MobileFinanceItem({
+  label,
+  value,
+  icon,
+  tone,
+  loading = false,
+}: {
+  label: string
+  value: number
+  icon: React.ReactNode
+  tone: "good" | "bad"
+  loading?: boolean
+}) {
+  const toneClass = tone === "good" ? "text-success" : "text-destructive"
+  const bgClass = tone === "good" ? "bg-success/10" : "bg-destructive/10"
+  return (
+    <div className="min-w-0 rounded-lg bg-muted/50 p-3">
+      <div className="flex items-center gap-2">
+        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${bgClass} ${toneClass}`}>
+          {icon}
+        </span>
+        <span className="min-w-0 truncate text-xs font-medium text-muted-foreground">{label}</span>
+      </div>
+      <p className={`mt-2 truncate text-sm font-bold tabular-nums ${toneClass}`}>
+        {loading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : formatCurrency(value)}
+      </p>
     </div>
   )
 }
