@@ -44,6 +44,6 @@ test.describe("Transações", () => {
     await page.click('text=Selecione...')
     await page.getByText("E2E Cat", { exact: true }).click()
     await page.click('button:has-text("Salvar")')
-    await expect(page.locator("text=99,90").first()).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole("row", { name: /E2E Cat.*99,90/ })).toBeVisible({ timeout: 10000 })
   })
 })

@@ -67,10 +67,10 @@ test.describe("Fechamento Mensal", () => {
     await page.fill('input[name="dueDate"]', "2026-06-10")
     await page.fill('input[name="amount"]', "300")
     await page.click('button:has-text("Salvar")')
-    await expect(page.locator("text=R$ 300,00").first()).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('main :visible:text("R$ 300,00")').first()).toBeVisible({ timeout: 10000 })
 
     await page.goto("/monthly-closing")
-    await expect(page.locator("text=R$ 420,00").first()).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('main :visible:text("R$ 420,00")').first()).toBeVisible({ timeout: 10000 })
     await expect(page.locator("text=Incluído na fatura Cartão E2E")).toBeVisible()
   })
 })

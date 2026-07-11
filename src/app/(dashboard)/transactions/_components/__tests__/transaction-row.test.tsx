@@ -60,7 +60,7 @@ describe("TransactionRow", () => {
     expect(screen.getByText("Despesa")).toBeDefined()
   })
 
-  it("chama onEdit ao clicar no lápis", async () => {
+  it("chama onEdit pelo menu de ações", async () => {
     let called = false
     render(
       <TransactionRow
@@ -71,12 +71,12 @@ describe("TransactionRow", () => {
         onDelete={() => {}}
       />
     )
-    const buttons = screen.getAllByRole("button")
-    await userEvent.click(buttons[buttons.length - 2])
+    await userEvent.click(screen.getByRole("button", { name: /ações da transação/i }))
+    await userEvent.click(await screen.findByRole("menuitem", { name: /editar/i }))
     expect(called).toBe(true)
   })
 
-  it("chama onDelete ao clicar na lixeira", async () => {
+  it("chama onDelete pelo menu de ações", async () => {
     let called = false
     render(
       <TransactionRow
@@ -87,8 +87,8 @@ describe("TransactionRow", () => {
         }}
       />
     )
-    const buttons = screen.getAllByRole("button")
-    await userEvent.click(buttons[buttons.length - 1])
+    await userEvent.click(screen.getByRole("button", { name: /ações da transação/i }))
+    await userEvent.click(await screen.findByRole("menuitem", { name: /excluir/i }))
     expect(called).toBe(true)
   })
 })
