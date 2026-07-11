@@ -268,6 +268,48 @@ export async function unpayFixedCostOccurrence(
   })
 }
 
+export async function payFixedCostOccurrenceWithCard(
+  occurrenceId: string,
+  userId: string,
+  client?: PrismaClient
+) {
+  const db = client ?? defaultPrisma
+  const occurrence = await db.fixedCostOccurrence.findUnique({
+    where: { id: occurrenceId },
+    include: { fixedCost: true },
+  })
+  if (!occurrence || occurrence.userId !== userId || occurrence.deletedAt) return null
+  if (occurrence.status === "PAID") return occurrence
+  if (!occurrence.fixedCost.paidInsideCard) return null
+
+  return db.fixedCostOccurrence.update({
+    where: { id: occurrenceId },
+    data: { status: "PAID", paidAt: new Date(), paidViaCard: true },
+    include: { fixedCost: { include: { category: true, card: true, bankAccount: true } } },
+  })
+}
+
+export async function unpayFixedCostOccurrenceWithCard(
+  occurrenceId: string,
+  userId: string,
+  client?: PrismaClient
+) {
+  const db = client ?? defaultPrisma
+  const occurrence = await db.fixedCostOccurrence.findUnique({
+    where: { id: occurrenceId },
+    include: { fixedCost: true },
+  })
+  if (!occurrence || occurrence.userId !== userId || occurrence.deletedAt) return null
+  if (occurrence.status !== "PAID") return occurrence
+  if (!occurrence.fixedCost.paidInsideCard || !occurrence.paidViaCard) return null
+
+  return db.fixedCostOccurrence.update({
+    where: { id: occurrenceId },
+    data: { status: "PENDING", paidAt: null, paidViaCard: false },
+    include: { fixedCost: { include: { category: true, card: true, bankAccount: true } } },
+  })
+}
+
 export async function ensureFixedCostOccurrences(
   userId: string,
   month: string,
@@ -395,6 +437,7 @@ export async function markCardInvoiceFixedCostsPending(
       userId,
       month: invoice.month,
       status: "PAID",
+      paidViaCard: false,
       deletedAt: null,
       fixedCost: {
         paidInsideCard: true,

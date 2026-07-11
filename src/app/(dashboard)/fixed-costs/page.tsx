@@ -24,6 +24,7 @@ interface Occurrence {
   amount: number
   status: "PENDING" | "PAID"
   paidAt: string | null
+  paidViaCard: boolean
   fixedCost: FixedCostData
 }
 
@@ -99,6 +100,8 @@ function FixedCostsPageInner() {
   const [recEndAfterCount, setRecEndAfterCount] = useState("")
   const [payingId, setPayingId] = useState<string | null>(null)
   const [unpayingId, setUnpayingId] = useState<string | null>(null)
+  const [payingCardId, setPayingCardId] = useState<string | null>(null)
+  const [unpayingCardId, setUnpayingCardId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [creatingLoading, setCreatingLoading] = useState(false)
@@ -177,6 +180,36 @@ function FixedCostsPageInner() {
       }
     } finally {
       setUnpayingId(null)
+    }
+  }
+
+  const handlePayCard = async (fixedCostId: string) => {
+    setPayingCardId(fixedCostId)
+    try {
+      const res = await fetch(`/api/fixed-costs/${fixedCostId}/pay-card?month=${month}`, { method: "POST" })
+      if (res.ok) {
+        toast.success("Marcado como pago no cartão.")
+        fetchData()
+      } else {
+        toast.error("Não foi possível marcar como pago no cartão.")
+      }
+    } finally {
+      setPayingCardId(null)
+    }
+  }
+
+  const handleUnpayCard = async (fixedCostId: string) => {
+    setUnpayingCardId(fixedCostId)
+    try {
+      const res = await fetch(`/api/fixed-costs/${fixedCostId}/unpay-card?month=${month}`, { method: "POST" })
+      if (res.ok) {
+        toast.info("Pagamento no cartão estornado.")
+        fetchData()
+      } else {
+        toast.error("Não foi possível estornar pagamento no cartão.")
+      }
+    } finally {
+      setUnpayingCardId(null)
     }
   }
 
@@ -413,6 +446,7 @@ function FixedCostsPageInner() {
               </td></tr>
             ) : filteredOccurrences.map((occ) => {
               const isLoading = payingId === occ.fixedCostId || unpayingId === occ.fixedCostId
+              const isLoadingCard = payingCardId === occ.fixedCostId || unpayingCardId === occ.fixedCostId
               return (
                 <tr key={occ.id} className="border-b transition-colors hover:bg-muted/50">
                   <td className="w-10 px-3 py-3 text-center">
@@ -434,9 +468,35 @@ function FixedCostsPageInner() {
                   <td className="px-4 py-3 text-right font-medium">{formatCurrency(occ.amount)}</td>
                   <td className="px-4 py-3 text-center">
                     {occ.fixedCost.paidInsideCard ? (
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${occ.status === "PAID" ? "bg-success/10 text-success" : "bg-blue-500/10 text-blue-600"}`}>
-                        {occ.status === "PAID" ? (activeTab === "INCOME" ? "Recebido na fatura" : "Pago na fatura") : (activeTab === "INCOME" ? "Na fatura" : "Na fatura")}
-                      </span>
+                      <>
+                        {occ.status === "PAID" && occ.paidViaCard ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">Pago no cartão</span>
+                        ) : occ.status === "PAID" ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">{activeTab === "INCOME" ? "Recebido na fatura" : "Pago na fatura"}</span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-600">Na fatura</span>
+                        )}
+                        {occ.status === "PENDING" && activeTab === "EXPENSE" && (
+                          <button
+                            type="button"
+                            disabled={isLoadingCard}
+                            onClick={() => handlePayCard(occ.fixedCostId)}
+                            className="ml-2 inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                          >
+                            {isLoadingCard ? <Loader2 className="h-3 w-3 animate-spin" /> : "Pagar com Cartão"}
+                          </button>
+                        )}
+                        {occ.status === "PAID" && occ.paidViaCard && (
+                          <button
+                            type="button"
+                            disabled={isLoadingCard}
+                            onClick={() => handleUnpayCard(occ.fixedCostId)}
+                            className="ml-2 inline-flex items-center gap-1 text-xs text-success transition-colors hover:text-success"
+                          >
+                            {isLoadingCard ? <Loader2 className="h-3 w-3 animate-spin" /> : "Estornar"}
+                          </button>
+                        )}
+                      </>
                     ) : occ.status === "PAID" ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">{activeTab === "INCOME" ? "Recebido" : "Pago"}</span>
                     ) : (
@@ -477,6 +537,7 @@ function FixedCostsPageInner() {
           </CardContent></Card>
         ) : filteredOccurrences.map((occ) => {
           const isLoading = payingId === occ.fixedCostId || unpayingId === occ.fixedCostId
+          const isLoadingCard = payingCardId === occ.fixedCostId || unpayingCardId === occ.fixedCostId
           return (
             <div key={occ.id} className="rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50">
               <div className="flex items-center gap-3">
@@ -502,9 +563,51 @@ function FixedCostsPageInner() {
               </div>
               <div className="mt-2 ml-12">
                 {occ.fixedCost.paidInsideCard ? (
-                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${occ.status === "PAID" ? "bg-success/10 text-success" : "bg-blue-500/10 text-blue-600"}`}>
-                    {occ.status === "PAID" ? (activeTab === "INCOME" ? "Recebido na fatura" : "Pago na fatura") : "Na fatura"}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {occ.status === "PAID" && occ.paidViaCard ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-success/10 text-success">Pago no cartão</span>
+                    ) : occ.status === "PAID" ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-success/10 text-success">{activeTab === "INCOME" ? "Recebido na fatura" : "Pago na fatura"}</span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-500/10 text-blue-600">Na fatura</span>
+                    )}
+                    {occ.status === "PENDING" && activeTab === "EXPENSE" && (
+                      <span
+                        role="button" tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key !== "Enter") return
+                          e.stopPropagation()
+                          handlePayCard(occ.fixedCostId)
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handlePayCard(occ.fixedCostId)
+                        }}
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors bg-muted text-muted-foreground hover:bg-muted/80"
+                      >
+                        {isLoadingCard ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                        Pagar com Cartão
+                      </span>
+                    )}
+                    {occ.status === "PAID" && occ.paidViaCard && (
+                      <span
+                        role="button" tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key !== "Enter") return
+                          e.stopPropagation()
+                          handleUnpayCard(occ.fixedCostId)
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleUnpayCard(occ.fixedCostId)
+                        }}
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors bg-success/10 text-success hover:bg-success/20"
+                      >
+                        {isLoadingCard ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5 fill-success text-white" />}
+                        Estornar
+                      </span>
+                    )}
+                  </div>
                 ) : (
                   <span
                     role="button" tabIndex={0}

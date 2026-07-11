@@ -321,6 +321,7 @@ model FixedCostOccurrence {
   amount           Float
   status           PaymentStatus @default(PENDING)
   paidAt           DateTime?
+  paidViaCard      Boolean       @default(false)
   deletedAt        DateTime?
   userId           String
   createdAt        DateTime      @default(now())
