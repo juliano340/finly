@@ -316,9 +316,13 @@ export function InvoicesTab() {
             <span className="min-w-28 text-center text-sm font-medium capitalize">{monthLabel(month)}</span>
             <Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(nextMonth(month))}><ChevronRight className="size-4" /></Button>
           </div>
-          {month !== currentMonth() && (
-            <Button size="sm" variant="ghost" onClick={() => setMonth(currentMonth())}>Hoje</Button>
-          )}
+          <Button
+            size="sm"
+            variant={month === currentMonth() ? "default" : "ghost"}
+            onClick={() => setMonth(currentMonth())}
+          >
+            Hoje
+          </Button>
           <div className="h-5 w-px bg-border hidden sm:block" />
           <Button size="sm" variant="outline" onClick={openCopyDialog} disabled={copiando}>
             <Copy className="mr-1.5 h-3.5 w-3.5" />
