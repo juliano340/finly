@@ -123,10 +123,16 @@ export default function InvoicesPage() {
     })
   }
 
+  const loadedRef = useRef(false)
+
   useEffect(() => {
     let cancelled = false
+    if (loadedRef.current) setLoading(true)
     fetchData().then(() => {
-      if (!cancelled) setLoading(false)
+      if (!cancelled) {
+        loadedRef.current = true
+        setLoading(false)
+      }
     })
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -158,6 +164,7 @@ export default function InvoicesPage() {
     })
     setPaying(false)
     if (res.ok) {
+      toast.success("Fatura paga com sucesso!")
       setPayingInvoice(null)
       fetchData()
     } else {
@@ -342,7 +349,7 @@ export default function InvoicesPage() {
           <tbody>
             {invoices.length === 0 ? (
               <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                {loading ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</span> : "Nenhuma fatura neste mês."}
+                {loading ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Atualizando...</span> : "Nenhuma fatura neste mês."}
               </td></tr>
             ) : invoices.map((invoice) => (
               <tr key={invoice.id} className="border-b transition-colors hover:bg-muted/50">
@@ -398,7 +405,7 @@ export default function InvoicesPage() {
       <div className="space-y-2 md:hidden">
         {invoices.length === 0 ? (
           <Card className="border-0 shadow-sm"><CardContent className="p-8 text-center text-sm text-muted-foreground">
-            {loading ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</span> : "Nenhuma fatura neste mês."}
+            {loading ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Atualizando...</span> : "Nenhuma fatura neste mês."}
           </CardContent></Card>
         ) : invoices.map((invoice) => (
           <div key={invoice.id} className="flex items-center gap-2">
