@@ -132,6 +132,17 @@ export async function copyCardInvoices(
   return created
 }
 
+export async function getCardInvoiceMonths(userId: string, client?: PrismaClient) {
+  const db = client ?? defaultPrisma
+  const rows = await db.cardInvoice.findMany({
+    where: { userId },
+    distinct: ["month"],
+    select: { month: true },
+    orderBy: { month: "desc" },
+  })
+  return rows.map((r) => ({ month: r.month, count: 0 }))
+}
+
 function dueDateForTargetMonth(sourceDueDate: Date, targetMonth: string) {
   const [year, month] = targetMonth.split("-").map(Number)
   const sourceDay = sourceDueDate.getUTCDate()

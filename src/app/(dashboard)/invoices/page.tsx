@@ -105,6 +105,8 @@ export default function InvoicesPage() {
   const [prevInvoices, setPrevInvoices] = useState<Invoice[]>([])
   const [selectedCopyIds, setSelectedCopyIds] = useState<string[]>([])
   const [loadingPrev, setLoadingPrev] = useState(false)
+  const [copySourceMonth, setCopySourceMonth] = useState(() => previousMonth(month))
+  const [availableMonths, setAvailableMonths] = useState<{ month: string; count: number }[]>([])
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [confirmBatchDelete, setConfirmBatchDelete] = useState(false)
   const [batchDeleting, setBatchDeleting] = useState(false)
@@ -231,12 +233,11 @@ export default function InvoicesPage() {
   }
 
   const handleCopyFromPrevious = async (invoiceIds?: string[]) => {
-    const prev = previousMonth(month)
     setCopiando(true)
     await fetch("/api/invoices/copy", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fromMonth: prev, toMonth: month, invoiceIds }),
+      body: JSON.stringify({ fromMonth: copySourceMonth, toMonth: month, invoiceIds }),
     })
     setCopiando(false)
     setCopyDialogOpen(false)
@@ -244,17 +245,50 @@ export default function InvoicesPage() {
     fetchData()
   }
 
-  const openCopyDialog = async () => {
-    const prev = previousMonth(month)
+  const openCopyDialog = async (sourceMonth?: string) => {
+    const src = sourceMonth ?? copySourceMonth
+    setCopySourceMonth(src)
     setLoadingPrev(true)
-    const res = await fetch(`/api/invoices?month=${prev}`)
+    const [monthsRes, invoicesRes] = await Promise.all([
+      fetch("/api/invoices/months"),
+      fetch(`/api/invoices?month=${src}`),
+    ])
+    if (monthsRes.ok) {
+      const allMonths = (await monthsRes.json()) as { month: string; count: number }[]
+      const months = allMonths.filter((m) => m.month < month)
+      setAvailableMonths(months)
+      if (months.length > 0 && !months.some((m: { month: string }) => m.month === src)) {
+        setCopySourceMonth(months[0].month)
+        const fallbackRes = await fetch(`/api/invoices?month=${months[0].month}`)
+        if (fallbackRes.ok) {
+          const data = await fallbackRes.json()
+          setPrevInvoices(data)
+          setSelectedCopyIds(data.map((i: Invoice) => i.id))
+        }
+        setLoadingPrev(false)
+        setCopyDialogOpen(true)
+        return
+      }
+    }
+    if (invoicesRes.ok) {
+      const data = await invoicesRes.json()
+      setPrevInvoices(data)
+      setSelectedCopyIds(data.map((i: Invoice) => i.id))
+    }
+    setLoadingPrev(false)
+    setCopyDialogOpen(true)
+  }
+
+  const fetchPrevMonthInvoices = async (src: string) => {
+    setCopySourceMonth(src)
+    setLoadingPrev(true)
+    const res = await fetch(`/api/invoices?month=${src}`)
     if (res.ok) {
       const data = await res.json()
       setPrevInvoices(data)
       setSelectedCopyIds(data.map((i: Invoice) => i.id))
     }
     setLoadingPrev(false)
-    setCopyDialogOpen(true)
   }
 
   const toggleCopyId = (id: string) => {
@@ -305,9 +339,9 @@ export default function InvoicesPage() {
       <div className="flex items-center justify-between">
         <div><h1 className="text-2xl font-bold tracking-tight">Faturas</h1><p className="text-muted-foreground">Valor final lançado manualmente por cartão.</p></div>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={openCopyDialog} disabled={copiando}>
+          <Button size="sm" variant="outline" onClick={() => openCopyDialog()} disabled={copiando}>
             <Copy className="mr-1.5 h-3.5 w-3.5" />
-            Copiar de {previousMonth(month)}
+            Copiar
           </Button>
           <div className="flex items-center gap-1 rounded-md border bg-background px-2 py-1">
             <Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(previousMonth(month))}><ChevronLeft className="size-4" /></Button>
@@ -725,49 +759,69 @@ export default function InvoicesPage() {
       <Dialog open={copyDialogOpen} onOpenChange={(open) => { if (!open) setCopyDialogOpen(false) }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Copiar faturas de {previousMonth(month)}</DialogTitle>
+            <DialogTitle>Copiar faturas</DialogTitle>
           </DialogHeader>
-          {loadingPrev ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : prevInvoices.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">Nenhuma fatura encontrada no mês anterior.</p>
+          {availableMonths.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">Nenhuma fatura disponível para copiar.</p>
           ) : (
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">Selecione as faturas que deseja copiar para {monthLabel(month)}:</p>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {prevInvoices.map((inv) => (
-                  <button
-                    key={inv.id}
-                    type="button"
-                    onClick={() => toggleCopyId(inv.id)}
-                    className={`flex w-full items-center gap-3 rounded-lg border-2 p-3 text-left transition-colors ${selectedCopyIds.includes(inv.id) ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}
-                  >
-                    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 ${selectedCopyIds.includes(inv.id) ? "border-primary bg-primary" : "border-muted-foreground/40"}`}>
-                      {selectedCopyIds.includes(inv.id) && <Check className="h-3 w-3 text-primary-foreground" />}
-                    </span>
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: inv.card.color }}>{inv.card.name.charAt(0)}</span>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{inv.card.name}</p>
-                      <p className="text-xs text-muted-foreground">Vence {formatDate(inv.dueDate)}</p>
-                    </div>
-                    <span className="text-sm font-medium">{formatCurrency(inv.amount)}</span>
-                  </button>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => setCopyDialogOpen(false)}>Cancelar</Button>
-                <Button
-                  className="flex-1"
-                  disabled={selectedCopyIds.length === 0 || copiando}
-                  onClick={() => handleCopyFromPrevious(selectedCopyIds.length === prevInvoices.length ? undefined : selectedCopyIds)}
+            <>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Mês de origem</label>
+                <select
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                  value={copySourceMonth}
+                  onChange={(e) => fetchPrevMonthInvoices(e.target.value)}
                 >
-                  {copiando ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Copy className="mr-1 h-4 w-4" />}
-                  {selectedCopyIds.length === prevInvoices.length ? "Copiar todas" : `Copiar ${selectedCopyIds.length}`}
-                </Button>
+                  {availableMonths.map((m) => (
+                    <option key={m.month} value={m.month}>
+                      {monthLabel(m.month)}
+                    </option>
+                  ))}
+                </select>
               </div>
-            </div>
+              {loadingPrev ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : prevInvoices.length === 0 ? (
+                <p className="py-4 text-center text-sm text-muted-foreground">Nenhuma fatura encontrada neste mês.</p>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">Selecione as faturas que deseja copiar para {monthLabel(month)}:</p>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {prevInvoices.map((inv) => (
+                      <button
+                        key={inv.id}
+                        type="button"
+                        onClick={() => toggleCopyId(inv.id)}
+                        className={`flex w-full items-center gap-3 rounded-lg border-2 p-3 text-left transition-colors ${selectedCopyIds.includes(inv.id) ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}
+                      >
+                        <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 ${selectedCopyIds.includes(inv.id) ? "border-primary bg-primary" : "border-muted-foreground/40"}`}>
+                          {selectedCopyIds.includes(inv.id) && <Check className="h-3 w-3 text-primary-foreground" />}
+                        </span>
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: inv.card.color }}>{inv.card.name.charAt(0)}</span>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{inv.card.name}</p>
+                          <p className="text-xs text-muted-foreground">Vence {formatDate(inv.dueDate)}</p>
+                        </div>
+                        <span className="text-sm font-medium">{formatCurrency(inv.amount)}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" className="flex-1" onClick={() => setCopyDialogOpen(false)}>Cancelar</Button>
+                    <Button
+                      className="flex-1"
+                      disabled={selectedCopyIds.length === 0 || copiando}
+                      onClick={() => handleCopyFromPrevious(selectedCopyIds.length === prevInvoices.length ? undefined : selectedCopyIds)}
+                    >
+                      {copiando ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Copy className="mr-1 h-4 w-4" />}
+                      {selectedCopyIds.length === prevInvoices.length ? "Copiar todas" : `Copiar ${selectedCopyIds.length}`}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </DialogContent>
       </Dialog>
