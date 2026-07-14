@@ -217,6 +217,9 @@ export default function LoginPage() {
             <p className="mt-1 text-sm">
               <span className="font-mono">demo@finly.com</span> · <span className="font-mono">demo1234</span>
             </p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Acesso somente leitura. Alterações não são salvas na demo.
+            </p>
             <Button
               type="button"
               variant="outline"

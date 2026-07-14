@@ -2,9 +2,11 @@ import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { compare } from "bcryptjs"
 import { prisma } from "@/lib/prisma"
+import { AUTH_SECRET } from "@/lib/auth-secret"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
+  secret: AUTH_SECRET,
   pages: { signIn: "/login" },
   logger: {
     error(error) {
