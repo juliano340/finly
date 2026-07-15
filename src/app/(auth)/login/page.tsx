@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, LogIn, Sparkles } from "lucide-react";
+import { Eye, EyeOff, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -211,43 +211,6 @@ export default function LoginPage() {
               )}
             </Button>
           </form>
-
-          <div className="mt-6 rounded-lg border border-dashed bg-muted/30 p-4">
-            <p className="text-xs font-medium text-muted-foreground">Conta de demonstração</p>
-            <p className="mt-1 text-sm">
-              <span className="font-mono">demo@finly.com</span> · <span className="font-mono">demo1234</span>
-            </p>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Acesso somente leitura. Alterações não são salvas na demo.
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="mt-3 w-full"
-              onClick={async () => {
-                setEmail("demo@finly.com")
-                setPassword("demo1234")
-                setLoading(true)
-                const result = await signIn("credentials", {
-                  email: "demo@finly.com",
-                  password: "demo1234",
-                  redirect: false,
-                })
-                setLoading(false)
-                if (result?.error) {
-                  toast.error("Conta demo não encontrada. Rode: npm run seed:demo")
-                } else {
-                  localStorage.setItem("rememberChoice", "true")
-                  localStorage.setItem("rememberedEmail", "demo@finly.com")
-                  router.push("/dashboard")
-                  router.refresh()
-                }
-              }}
-            >
-              <Sparkles className="mr-2 h-4 w-4" /> Entrar como demo
-            </Button>
-          </div>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Não tem conta?{" "}
