@@ -359,6 +359,7 @@ function FixedCostsPageInner() {
       )
       toast.success("Custo fixo atualizado.")
       setSelectedOccurrence(null)
+      fetchData()
     } finally {
       setUpdatingId(null)
       inFlightUpdateRef.current = false
