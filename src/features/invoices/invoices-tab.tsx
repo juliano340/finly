@@ -339,6 +339,9 @@ export function InvoicesTab() {
   }
 
   const currentMethod = paymentMethods.find((m) => m.value === payMethod)
+  const totalAll = invoices.reduce((s, i) => s + i.amount, 0)
+  const totalPaid = invoices.filter((i) => i.status === "PAID").reduce((s, i) => s + i.amount, 0)
+  const totalPending = invoices.filter((i) => i.status === "PENDING").reduce((s, i) => s + i.amount, 0)
 
   return (
     <div className="space-y-6">
@@ -382,6 +385,29 @@ export function InvoicesTab() {
           <Button size="sm" variant="outline" onClick={clearSelection}>Limpar</Button>
         </div>
       )}
+
+      <div className="hidden gap-4 md:grid md:grid-cols-3">
+        <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-xs text-muted-foreground">Total do mês</p><p className="text-2xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(totalAll)}</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-xs text-muted-foreground">Pago</p><p className="text-2xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(totalPaid)}</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-xs text-muted-foreground">A pagar</p><p className="text-2xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(totalPending)}</p></CardContent></Card>
+      </div>
+
+      <Card className="border-0 shadow-sm md:hidden">
+        <CardContent className="grid grid-cols-3 gap-2 p-3">
+          <div className="min-w-0">
+            <p className="truncate text-[11px] font-medium text-muted-foreground">Total</p>
+            <p className="truncate text-sm font-bold tabular-nums">{loading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : formatCurrency(totalAll)}</p>
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-[11px] font-medium text-muted-foreground">Pago</p>
+            <p className="truncate text-sm font-bold tabular-nums">{loading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : formatCurrency(totalPaid)}</p>
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-[11px] font-medium text-muted-foreground">A pagar</p>
+            <p className="truncate text-sm font-bold tabular-nums">{loading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : formatCurrency(totalPending)}</p>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="hidden overflow-hidden rounded-lg border md:block">
         <table className="w-full text-sm">
@@ -458,6 +484,18 @@ export function InvoicesTab() {
                 </td>
               </tr>
             ))}
+            {invoices.length > 0 && (
+              <tr className="border-t bg-muted/50 font-medium">
+                <td className="w-10 px-3 py-3" />
+                <td className="px-4 py-3">Total</td>
+                <td className="px-4 py-3" />
+                <td className="px-4 py-3 text-right">{formatCurrency(totalAll)}</td>
+                <td className="px-4 py-3 text-center">
+                  <span className="text-xs text-muted-foreground">{invoices.filter((i) => i.status === "PAID").length} pago{invoices.filter((i) => i.status === "PAID").length !== 1 ? "s" : ""} · {invoices.filter((i) => i.status === "PENDING").length} pendente{invoices.filter((i) => i.status === "PENDING").length !== 1 ? "s" : ""}</span>
+                </td>
+                <td className="px-4 py-3" />
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
