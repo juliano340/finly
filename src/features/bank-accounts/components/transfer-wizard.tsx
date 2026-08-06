@@ -163,7 +163,7 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
                         <span className="text-muted-foreground">Selecione</span>
                       )}
                     </SelectTrigger>
-                    <SelectContent portal={false}>
+                    <SelectContent>
                       {fromAccounts.length === 0 ? (
                         <SelectItem value="" disabled>Nenhuma conta disponível</SelectItem>
                       ) : fromAccounts.map((a) => (
@@ -200,7 +200,7 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
                         <span className="text-muted-foreground">Selecione</span>
                       )}
                     </SelectTrigger>
-                    <SelectContent portal={false}>
+                    <SelectContent>
                       {toAccounts.length === 0 ? (
                         <SelectItem value="" disabled>Nenhuma conta disponível</SelectItem>
                       ) : toAccounts.map((a) => (
@@ -263,7 +263,7 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
                     <SelectTrigger className="w-full">
                       {method === "PIX" ? "Pix" : method === "TED" ? "TED" : "Transferência"}
                     </SelectTrigger>
-                    <SelectContent portal={false}>
+                    <SelectContent>
                       <SelectItem value="PIX">Pix</SelectItem>
                       <SelectItem value="TED">TED</SelectItem>
                       <SelectItem value="TRANSFER">Transferência</SelectItem>
