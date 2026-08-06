@@ -117,6 +117,7 @@ describe("monthly-closing.service", () => {
         paymentMethod: "CREDIT_CARD",
         paidInsideCard: true,
         cardId: card.id,
+        startDate: new Date("2026-06-01T12:00:00"),
         userId,
       },
     })
