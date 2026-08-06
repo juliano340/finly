@@ -113,6 +113,8 @@ export function InvoicesTab() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [confirmBatchDelete, setConfirmBatchDelete] = useState(false)
   const [batchDeleting, setBatchDeleting] = useState(false)
+  const [sortField, setSortField] = useState<"card" | "dueDate" | "amount" | "status">("dueDate")
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [importInvoiceId, setImportInvoiceId] = useState<string | null>(null)
   const [importStandaloneOpen, setImportStandaloneOpen] = useState(false)
@@ -343,6 +345,27 @@ export function InvoicesTab() {
   const totalPaid = invoices.filter((i) => i.status === "PAID").reduce((s, i) => s + i.amount, 0)
   const totalPending = invoices.filter((i) => i.status === "PENDING").reduce((s, i) => s + i.amount, 0)
 
+  const sortedInvoices = [...invoices].sort((a, b) => {
+    const dir = sortDir === "asc" ? 1 : -1
+    switch (sortField) {
+      case "card": return dir * a.card.name.localeCompare(b.card.name)
+      case "dueDate": return dir * (new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+      case "amount": return dir * (a.amount - b.amount)
+      case "status": return dir * (a.status === b.status ? 0 : a.status === "PAID" ? -1 : 1)
+      default: return 0
+    }
+  })
+
+  function toggleSort(field: typeof sortField) {
+    if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"))
+    else { setSortField(field); setSortDir("asc") }
+  }
+
+  function SortIcon({ field }: { field: typeof sortField }) {
+    if (sortField !== field) return <span className="ml-1 text-muted-foreground/40">&#8693;</span>
+    return <span className="ml-1">{sortDir === "asc" ? "\u25B2" : "\u25BC"}</span>
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -418,10 +441,10 @@ export function InvoicesTab() {
                   <input type="checkbox" className="h-4 w-4" checked={invoices.length > 0 && invoices.every((i) => selectedIds.has(i.id))} onChange={selectAll} />
                 </div>
               </th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Cartão</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Vencimento</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Valor</th>
-              <th className="px-4 py-3 text-center font-medium text-muted-foreground">Status</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("card")}>Cartão<SortIcon field="card" /></button></th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("dueDate")}>Vencimento<SortIcon field="dueDate" /></button></th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("amount")}>Valor<SortIcon field="amount" /></button></th>
+              <th className="px-4 py-3 text-center font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("status")}>Status<SortIcon field="status" /></button></th>
               <th className="w-[112px] px-4 py-3 text-center font-medium text-muted-foreground">Ações</th>
             </tr>
           </thead>
@@ -430,7 +453,7 @@ export function InvoicesTab() {
               <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
                 {loading ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Atualizando...</span> : "Nenhuma fatura neste mês."}
               </td></tr>
-            ) : invoices.map((invoice) => (
+            ) : sortedInvoices.map((invoice) => (
               <tr key={invoice.id} className="border-b transition-colors hover:bg-muted/50">
                 <td className="w-10 px-3 py-3">
                   <div className="flex items-center justify-center">
