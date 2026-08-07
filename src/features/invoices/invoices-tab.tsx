@@ -18,6 +18,12 @@ import { ImportPdfDialog } from "./import-pdf-dialog"
 interface CardItem { id: string; name: string; color: string }
 interface BankAccountItem { id: string; name: string; balance: number; overdraftLimit: number }
 interface Invoice { id: string; month: string; dueDate: string; amount: number; status: "PENDING" | "PAID"; card: CardItem; paymentMethod?: string | null; paymentBankAccountId?: string | null; importSessionId?: string | null }
+type InvoiceSortField = "card" | "dueDate" | "amount" | "status"
+
+function SortIcon({ field, activeField, direction }: { field: InvoiceSortField; activeField: InvoiceSortField; direction: "asc" | "desc" }) {
+  if (activeField !== field) return <span className="ml-1 text-muted-foreground/40">&#8693;</span>
+  return <span className="ml-1">{direction === "asc" ? "\u25B2" : "\u25BC"}</span>
+}
 
 function InvoiceActionIcon({
   label,
@@ -113,7 +119,7 @@ export function InvoicesTab() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [confirmBatchDelete, setConfirmBatchDelete] = useState(false)
   const [batchDeleting, setBatchDeleting] = useState(false)
-  const [sortField, setSortField] = useState<"card" | "dueDate" | "amount" | "status">("dueDate")
+  const [sortField, setSortField] = useState<InvoiceSortField>("dueDate")
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [importInvoiceId, setImportInvoiceId] = useState<string | null>(null)
@@ -361,11 +367,6 @@ export function InvoicesTab() {
     else { setSortField(field); setSortDir("asc") }
   }
 
-  function SortIcon({ field }: { field: typeof sortField }) {
-    if (sortField !== field) return <span className="ml-1 text-muted-foreground/40">&#8693;</span>
-    return <span className="ml-1">{sortDir === "asc" ? "\u25B2" : "\u25BC"}</span>
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -441,10 +442,10 @@ export function InvoicesTab() {
                   <input type="checkbox" className="h-4 w-4" checked={invoices.length > 0 && invoices.every((i) => selectedIds.has(i.id))} onChange={selectAll} />
                 </div>
               </th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("card")}>Cartão<SortIcon field="card" /></button></th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("dueDate")}>Vencimento<SortIcon field="dueDate" /></button></th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("amount")}>Valor<SortIcon field="amount" /></button></th>
-              <th className="px-4 py-3 text-center font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("status")}>Status<SortIcon field="status" /></button></th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("card")}>Cartão<SortIcon field="card" activeField={sortField} direction={sortDir} /></button></th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("dueDate")}>Vencimento<SortIcon field="dueDate" activeField={sortField} direction={sortDir} /></button></th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("amount")}>Valor<SortIcon field="amount" activeField={sortField} direction={sortDir} /></button></th>
+              <th className="px-4 py-3 text-center font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("status")}>Status<SortIcon field="status" activeField={sortField} direction={sortDir} /></button></th>
               <th className="w-[112px] px-4 py-3 text-center font-medium text-muted-foreground">Ações</th>
             </tr>
           </thead>

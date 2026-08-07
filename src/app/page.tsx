@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect } from "react"
 import { useTheme } from "next-themes"
 import Link from "next/link"
 import { ShowcaseMockup } from "./(marketing)/_components/showcase-mockup"
@@ -58,20 +58,15 @@ const stats = [
 ]
 
 const footerColumns = [
-  { title: "Produto", links: ["Recursos", "Demo", "App Mobile"] },
-  { title: "Suporte", links: ["Central de ajuda", "Contato", "Status"] },
-  { title: "Legal", links: ["Termos de uso", "Privacidade", "Segurança"] },
+  { title: "Produto", links: [{ label: "Recursos", href: "#recursos" }, { label: "Changelog", href: "/changelog" }] },
+  { title: "Legal", links: [{ label: "Termos de uso", href: "/termos-de-uso" }, { label: "Privacidade", href: "/privacidade" }] },
 ]
 
 export default function HomePage() {
-  const observedRef = useRef<boolean>(false)
   const { resolvedTheme, setTheme } = useTheme()
   const theme = (resolvedTheme === "light" ? "light" : "dark") as "dark" | "light"
 
   useEffect(() => {
-    if (observedRef.current) return
-    observedRef.current = true
-
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -108,6 +103,11 @@ export default function HomePage() {
       { threshold: 0.5 }
     )
     document.querySelectorAll(".stats-grid").forEach((el) => countObserver.observe(el))
+
+    if (window.location.hash) {
+      const target = document.querySelector(window.location.hash)
+      if (target) requestAnimationFrame(() => target.scrollIntoView({ behavior: "smooth" }))
+    }
 
     return () => { observer.disconnect(); countObserver.disconnect(); window.removeEventListener("scroll", onScroll) }
   }, [])
@@ -701,7 +701,7 @@ export default function HomePage() {
               <div key={col.title} className={`footer-col reveal reveal-delay-${idx + 1}`}>
                 <h4>{col.title}</h4>
                 {col.links.map((link) => (
-                  <a key={link} href="#">{link}</a>
+                  <Link key={link.label} href={link.href}>{link.label}</Link>
                 ))}
               </div>
             ))}
