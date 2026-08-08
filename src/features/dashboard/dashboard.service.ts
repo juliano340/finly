@@ -71,7 +71,7 @@ export async function getDashboardStats(
   const financialMonth = await ensureFinancialMonth(userId, month, db)
   await ensureFixedCostOccurrences(userId, month, financialMonth.id, db)
 
-  const [incomeTotal, expenseTotal, byCategory, dailyTrend, recentTransactions, fixedCostOccurrences, invoiceTotal] =
+  const [incomeTotal, expenseTotal, byCategory, dailyTrend, recentTransactions, fixedCostOccurrences, invoices] =
     await Promise.all([
       db.transaction.aggregate({
         where: { userId, type: "INCOME", date: { gte: startDate, lt: endDate } },
@@ -104,13 +104,27 @@ export async function getDashboardStats(
       db.fixedCostOccurrence.findMany({
         where: { userId, month, deletedAt: null },
         select: {
+          id: true,
           amount: true,
-          fixedCost: { select: { type: true, paidInsideCard: true } },
+          dueDate: true,
+          fixedCost: {
+            select: {
+              name: true,
+              type: true,
+              paidInsideCard: true,
+              category: { select: { name: true, color: true } },
+            },
+          },
         },
       }),
-      db.cardInvoice.aggregate({
+      db.cardInvoice.findMany({
         where: { userId, month },
-        _sum: { amount: true },
+        select: {
+          id: true,
+          amount: true,
+          dueDate: true,
+          card: { select: { name: true, color: true } },
+        },
       }),
     ])
 
@@ -132,6 +146,30 @@ export async function getDashboardStats(
     })
     .filter((item) => item.value > 0)
 
+  const categoryTotals = new Map<string, { value: number; color: string }>()
+  for (const entry of byCategoryFormatted) {
+    categoryTotals.set(entry.name, { value: entry.value, color: entry.color })
+  }
+  for (const occ of fixedCostOccurrences) {
+    if (occ.fixedCost.type !== "EXPENSE" || occ.fixedCost.paidInsideCard) continue
+    const name = occ.fixedCost.category.name
+    const current = categoryTotals.get(name)
+    categoryTotals.set(name, {
+      value: (current?.value ?? 0) + occ.amount,
+      color: occ.fixedCost.category.color,
+    })
+  }
+
+  const invoiceTotal = invoices.reduce((sum, inv) => sum + inv.amount, 0)
+  if (invoiceTotal > 0) {
+    categoryTotals.set("Faturas de cartão", { value: invoiceTotal, color: "#2563EB" })
+  }
+
+  const byCategoryFinal = Array.from(categoryTotals.entries())
+    .map(([name, { value, color }]) => ({ name, value, color }))
+    .filter((item) => item.value > 0)
+    .sort((a, b) => b.value - a.value)
+
   const dailyMap = new Map<string, { income: number; expense: number }>()
   for (const entry of dailyTrend) {
     const dayKey = entry.date.toISOString().slice(0, 10)
@@ -139,6 +177,19 @@ export async function getDashboardStats(
     const day = dailyMap.get(dayKey)!
     if (entry.type === "INCOME") day.income += entry._sum.amount ?? 0
     else day.expense += entry._sum.amount ?? 0
+  }
+  for (const occ of fixedCostOccurrences) {
+    if (occ.fixedCost.type === "EXPENSE" && occ.fixedCost.paidInsideCard) continue
+    const dayKey = occ.dueDate.toISOString().slice(0, 10)
+    if (!dailyMap.has(dayKey)) dailyMap.set(dayKey, { income: 0, expense: 0 })
+    const day = dailyMap.get(dayKey)!
+    if (occ.fixedCost.type === "INCOME") day.income += occ.amount
+    else day.expense += occ.amount
+  }
+  for (const inv of invoices) {
+    const dayKey = inv.dueDate.toISOString().slice(0, 10)
+    if (!dailyMap.has(dayKey)) dailyMap.set(dayKey, { income: 0, expense: 0 })
+    dailyMap.get(dayKey)!.expense += inv.amount
   }
 
   const dailyTrendFormatted = Array.from(dailyMap.entries())
@@ -148,16 +199,45 @@ export async function getDashboardStats(
       ...values,
     }))
 
-  const recentFormatted = recentTransactions.map((tx) => ({
-    id: tx.id,
-    description: tx.description,
-    amount: tx.amount,
-    type: tx.type,
-    date: tx.date,
-    categoryName: tx.category.name,
-    categoryColor: tx.category.color,
-    bankAccountName: tx.bankAccount?.name ?? null,
+  const occurrenceItems = fixedCostOccurrences
+    .filter((occ) => !(occ.fixedCost.type === "EXPENSE" && occ.fixedCost.paidInsideCard))
+    .map((occ) => ({
+      id: `occ-${occ.id}`,
+      description: occ.fixedCost.name,
+      amount: occ.amount,
+      type: occ.fixedCost.type,
+      date: occ.dueDate,
+      categoryName: occ.fixedCost.category.name,
+      categoryColor: occ.fixedCost.category.color,
+      bankAccountName: null,
+    }))
+  const invoiceItems = invoices.map((inv) => ({
+    id: `invoice-${inv.id}`,
+    description: `Fatura ${inv.card.name}`,
+    amount: inv.amount,
+    type: "EXPENSE" as const,
+    date: inv.dueDate,
+    categoryName: "Fatura",
+    categoryColor: inv.card.color ?? "#2563EB",
+    bankAccountName: null,
   }))
+
+  const recentFormatted = [
+    ...recentTransactions.map((tx) => ({
+      id: tx.id,
+      description: tx.description,
+      amount: tx.amount,
+      type: tx.type,
+      date: tx.date,
+      categoryName: tx.category.name,
+      categoryColor: tx.category.color,
+      bankAccountName: tx.bankAccount?.name ?? null,
+    })),
+    ...occurrenceItems,
+    ...invoiceItems,
+  ]
+    .sort((a, b) => b.date.getTime() - a.date.getTime())
+    .slice(0, 5)
 
   const fixedIncome = fixedCostOccurrences
     .filter((occ) => occ.fixedCost.type === "INCOME")
@@ -167,13 +247,13 @@ export async function getDashboardStats(
     .reduce((sum, occ) => sum + occ.amount, 0)
 
   const income = (incomeTotal._sum.amount ?? 0) + fixedIncome
-  const expense = (expenseTotal._sum.amount ?? 0) + fixedExpense + (invoiceTotal._sum.amount ?? 0)
+  const expense = (expenseTotal._sum.amount ?? 0) + fixedExpense + invoiceTotal
 
   return {
     balance: income - expense,
     income,
     expense,
-    byCategory: byCategoryFormatted,
+    byCategory: byCategoryFinal,
     dailyTrend: dailyTrendFormatted,
     recentTransactions: recentFormatted,
   }

@@ -132,6 +132,12 @@ describe("Dashboard Service", () => {
     expect(stats.expense).toBe(1250)
     expect(stats.balance).toBe(6750)
 
+    const faturasEntry = stats.byCategory.find((c) => c.name === "Faturas de cartão")
+    expect(faturasEntry?.value).toBe(800)
+    expect(stats.dailyTrend.some((d) => d.income > 0)).toBe(true)
+    expect(stats.recentTransactions.some((tx) => tx.description === fixedCost.name)).toBe(true)
+    expect(stats.recentTransactions.some((tx) => tx.description?.startsWith("Fatura "))).toBe(true)
+
     await prisma.fixedCostOccurrence.deleteMany({ where: { userId, month: "2026-06", fixedCostId: fixedCost.id } })
     await prisma.fixedCost.delete({ where: { id: fixedCost.id } })
     await prisma.cardInvoice.deleteMany({ where: { userId, month: "2026-06", cardId: card.id } })
