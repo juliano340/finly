@@ -1,7 +1,7 @@
 import { prisma as defaultPrisma } from "@/lib/prisma"
 import type { PrismaClient } from "@/generated/prisma/client"
 import { ensureFinancialMonth } from "@/features/financial-months/financial-months.service"
-import { ensureFixedCostOccurrencesForMonths } from "@/features/monthly-closing/monthly-closing.service"
+import { ensureFixedCostOccurrences, ensureFixedCostOccurrencesForMonths } from "@/features/monthly-closing/monthly-closing.service"
 
 export interface DashboardStats {
   balance: number
@@ -68,7 +68,10 @@ export async function getDashboardStats(
   const startDate = new Date(year, m - 1, 1)
   const endDate = new Date(year, m, 1)
 
-  const [incomeTotal, expenseTotal, byCategory, dailyTrend, recentTransactions] =
+  const financialMonth = await ensureFinancialMonth(userId, month, db)
+  await ensureFixedCostOccurrences(userId, month, financialMonth.id, db)
+
+  const [incomeTotal, expenseTotal, byCategory, dailyTrend, recentTransactions, fixedCostOccurrences, invoiceTotal] =
     await Promise.all([
       db.transaction.aggregate({
         where: { userId, type: "INCOME", date: { gte: startDate, lt: endDate } },
@@ -97,6 +100,17 @@ export async function getDashboardStats(
         },
         orderBy: [{ date: "desc" }, { createdAt: "desc" }],
         take: 5,
+      }),
+      db.fixedCostOccurrence.findMany({
+        where: { userId, month, deletedAt: null },
+        select: {
+          amount: true,
+          fixedCost: { select: { type: true, paidInsideCard: true } },
+        },
+      }),
+      db.cardInvoice.aggregate({
+        where: { userId, month },
+        _sum: { amount: true },
       }),
     ])
 
@@ -145,8 +159,15 @@ export async function getDashboardStats(
     bankAccountName: tx.bankAccount?.name ?? null,
   }))
 
-  const income = incomeTotal._sum.amount ?? 0
-  const expense = expenseTotal._sum.amount ?? 0
+  const fixedIncome = fixedCostOccurrences
+    .filter((occ) => occ.fixedCost.type === "INCOME")
+    .reduce((sum, occ) => sum + occ.amount, 0)
+  const fixedExpense = fixedCostOccurrences
+    .filter((occ) => occ.fixedCost.type === "EXPENSE" && !occ.fixedCost.paidInsideCard)
+    .reduce((sum, occ) => sum + occ.amount, 0)
+
+  const income = (incomeTotal._sum.amount ?? 0) + fixedIncome
+  const expense = (expenseTotal._sum.amount ?? 0) + fixedExpense + (invoiceTotal._sum.amount ?? 0)
 
   return {
     balance: income - expense,

@@ -102,6 +102,42 @@ describe("Dashboard Service", () => {
     expect(stats.recentTransactions).toHaveLength(0)
   })
 
+  it("inclui custos fixos e faturas nas receitas e despesas do mês", async () => {
+    const card = await createCard(
+      userId,
+      { name: `Stats ${Date.now()}`, brand: "Visa", color: "#22C55E", closingDay: 5, dueDay: 15, bankAccountId: null },
+      prisma
+    )
+    expect(card).not.toBeNull()
+    if (!card) return
+
+    await createCardInvoice(
+      userId,
+      { cardId: card.id, month: "2026-06", dueDate: new Date("2026-06-15T12:00:00"), amount: 800, status: "PENDING" },
+      prisma
+    )
+    const incomeCategory = await prisma.category.findFirst({
+      where: { userId, type: "INCOME" },
+    })
+    if (!incomeCategory) return
+    const fixedCost = await createFixedCost(
+      userId,
+      { name: `Salário fixo ${Date.now()}`, type: "INCOME" as const, defaultAmount: 3000, categoryId: incomeCategory.id, paymentMethod: "PIX", dueDay: 5, paidInsideCard: false, cardId: null, bankAccountId: null, active: true, startDate: "2026-01-01" },
+      prisma
+    )
+
+    const stats = await getDashboardStats(userId, "2026-06", prisma)
+
+    expect(stats.income).toBe(8000)
+    expect(stats.expense).toBe(1250)
+    expect(stats.balance).toBe(6750)
+
+    await prisma.fixedCostOccurrence.deleteMany({ where: { userId, month: "2026-06", fixedCostId: fixedCost.id } })
+    await prisma.fixedCost.delete({ where: { id: fixedCost.id } })
+    await prisma.cardInvoice.deleteMany({ where: { userId, month: "2026-06", cardId: card.id } })
+    await prisma.card.delete({ where: { id: card.id } })
+  })
+
   it("não mistura dados de outros usuários", async () => {
     const stats = await getDashboardStats(userId, "2026-06", prisma)
 

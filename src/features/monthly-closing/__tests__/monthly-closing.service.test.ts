@@ -79,6 +79,34 @@ describe("monthly-closing.service", () => {
     expect(closing.summary.estimatedInvoicesByCard[0]?.estimatedAmount).toBe(50)
   })
 
+  it("calcula saldo projetado como receitas totais menos gastos totais (pagos e não pagos)", async () => {
+    const month = "2026-09"
+    const suffix = Date.now()
+
+    await prisma.fixedCostOccurrence.deleteMany({ where: { userId, month } })
+    await prisma.fixedCost.deleteMany({ where: { userId } })
+
+    const account = await prisma.bankAccount.create({
+      data: { name: `Conta Saldo ${suffix}`, type: "CHECKING", color: "#000", initialBalance: 2000, userId },
+    })
+    await prisma.financialMonth.create({ data: { month, userId } })
+
+    await prisma.transaction.createMany({
+      data: [
+        { amount: 500, type: "EXPENSE", categoryId, bankAccountId: account.id, userId, date: new Date("2026-09-05T12:00:00") },
+        { amount: 200, type: "EXPENSE", categoryId, userId, date: new Date("2026-09-10T12:00:00") },
+        { amount: 4000, type: "INCOME", categoryId, userId, date: new Date("2026-09-01T12:00:00") },
+      ],
+    })
+
+    const closing = await getMonthlyClosing(userId, month, prisma)
+
+    expect(closing.summary.looseExpensesTotal).toBe(700)
+    expect(closing.summary.incomeTotal).toBe(4000)
+    expect(closing.summary.totalSpent).toBe(700)
+    expect(closing.summary.projectedBalance).toBe(3300)
+  })
+
   it("bloqueia pagamento de custo fixo quando saldo excede cheque especial", async () => {
     const month = "2026-08"
     const suffix = Date.now()

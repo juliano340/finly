@@ -121,7 +121,7 @@ export async function getMonthlyClosing(
       receivedIncomeTotal,
       totalToPay,
       totalSpent,
-      projectedBalance: totalIncome - totalToPay,
+      projectedBalance: totalIncome - totalSpent,
       estimatedInvoicesByCard: buildInvoiceEstimates(invoices, insideCard),
       incomeItems,
     } satisfies MonthlyClosingSummary,
@@ -185,7 +185,7 @@ export async function getMonthlyClosingSummary(
     receivedIncomeTotal,
     totalToPay,
     totalSpent,
-    projectedBalance: incomeTotal - totalToPay,
+    projectedBalance: incomeTotal - totalSpent,
     estimatedInvoicesByCard: [],
     incomeItems: [],
   } satisfies MonthlyClosingSummary
