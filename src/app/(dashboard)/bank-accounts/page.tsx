@@ -28,6 +28,13 @@ interface BankAccount {
   movements: { id: string; amount: number; type: "INCOME" | "EXPENSE"; description: string | null; date: string; transactionId: string | null }[]
 }
 
+type AccountSortField = "name" | "institution" | "balance"
+
+function SortIcon({ field, activeField, direction }: { field: AccountSortField; activeField: AccountSortField; direction: "asc" | "desc" }) {
+  if (activeField !== field) return <span className="ml-1 text-muted-foreground/40">&#8693;</span>
+  return <span className="ml-1">{direction === "asc" ? "\u25B2" : "\u25BC"}</span>
+}
+
 export default function BankAccountsPage() {
   const [accounts, setAccounts] = useState<BankAccount[]>([])
   const [selectedAccount, setSelectedAccount] = useState<BankAccount | null>(null)
@@ -39,6 +46,8 @@ export default function BankAccountsPage() {
   const [adjustTarget, setAdjustTarget] = useState("")
   const [adjustSubmitting, setAdjustSubmitting] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [sortField, setSortField] = useState<AccountSortField>("name")
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
 
   const fetchAccounts = async () => {
     setLoading(true)
@@ -166,6 +175,21 @@ export default function BankAccountsPage() {
   const linkedCards = accounts.reduce((acc, a) => acc + a.cards.length, 0)
   const negativeAccounts = accounts.filter((a) => isAccountNegative(a.balance, a.overdraftLimit)).length
 
+  const sortedAccounts = [...accounts].sort((a, b) => {
+    const dir = sortDir === "asc" ? 1 : -1
+    switch (sortField) {
+      case "name": return dir * a.name.localeCompare(b.name)
+      case "institution": return dir * (a.institution ?? "").localeCompare(b.institution ?? "")
+      case "balance": return dir * (a.balance - b.balance)
+      default: return 0
+    }
+  })
+
+  function toggleSort(field: AccountSortField) {
+    if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"))
+    else { setSortField(field); setSortDir("asc") }
+  }
+
   const openDetail = (account: BankAccount) => {
     setDetailTab("overview")
     setSelectedAccount(account)
@@ -215,9 +239,9 @@ export default function BankAccountsPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/50">
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Conta</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Instituição</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Saldo</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("name")}>Conta<SortIcon field="name" activeField={sortField} direction={sortDir} /></button></th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("institution")}>Instituição<SortIcon field="institution" activeField={sortField} direction={sortDir} /></button></th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("balance")}>Saldo<SortIcon field="balance" activeField={sortField} direction={sortDir} /></button></th>
               <th className="px-4 py-3 text-right font-medium text-muted-foreground">Ações</th>
             </tr>
           </thead>
@@ -226,7 +250,7 @@ export default function BankAccountsPage() {
               <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
                 {loading ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</span> : "Nenhuma conta bancária cadastrada."}
               </td></tr>
-            ) : accounts.map((account) => (
+            ) : sortedAccounts.map((account) => (
               <tr key={account.id} className="border-b transition-colors hover:bg-muted/50">
                 <td className="px-4 py-3">
                   <button type="button" onClick={() => openDetail(account)} className="flex items-center gap-3 text-left font-medium hover:underline">
@@ -251,6 +275,13 @@ export default function BankAccountsPage() {
                 </td>
               </tr>
             ))}
+            {accounts.length > 0 && (
+              <tr className="border-b bg-muted/50 font-medium">
+                <td className="px-4 py-3" colSpan={2}>Total</td>
+                <td className={`px-4 py-3 text-right ${totalBalance < 0 ? "text-destructive" : ""}`}>{formatCurrency(totalBalance)}</td>
+                <td className="px-4 py-3" />
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

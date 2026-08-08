@@ -180,7 +180,7 @@ export async function getDashboardStats(
   }
   for (const occ of fixedCostOccurrences) {
     if (occ.fixedCost.type === "EXPENSE" && occ.fixedCost.paidInsideCard) continue
-    const dayKey = occ.dueDate.toISOString().slice(0, 10)
+    const dayKey = (occ.dueDate ?? startDate).toISOString().slice(0, 10)
     if (!dailyMap.has(dayKey)) dailyMap.set(dayKey, { income: 0, expense: 0 })
     const day = dailyMap.get(dayKey)!
     if (occ.fixedCost.type === "INCOME") day.income += occ.amount
@@ -206,7 +206,7 @@ export async function getDashboardStats(
       description: occ.fixedCost.name,
       amount: occ.amount,
       type: occ.fixedCost.type,
-      date: occ.dueDate,
+      date: occ.dueDate ?? startDate,
       categoryName: occ.fixedCost.category.name,
       categoryColor: occ.fixedCost.category.color,
       bankAccountName: null,

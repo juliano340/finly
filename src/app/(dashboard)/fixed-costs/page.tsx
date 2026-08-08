@@ -36,6 +36,13 @@ interface Occurrence {
   fixedCost: FixedCostData
 }
 
+type OccurrenceSortField = "name" | "category" | "source" | "dueDate" | "amount" | "status"
+
+function SortIcon({ field, activeField, direction }: { field: OccurrenceSortField; activeField: OccurrenceSortField; direction: "asc" | "desc" }) {
+  if (activeField !== field) return <span className="ml-1 text-muted-foreground/40">&#8693;</span>
+  return <span className="ml-1">{direction === "asc" ? "\u25B2" : "\u25BC"}</span>
+}
+
 function StatusIconTooltip({
   label,
   icon,
@@ -157,6 +164,8 @@ function FixedCostsPageInner() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [confirmBatchDelete, setConfirmBatchDelete] = useState(false)
   const [batchDeleting, setBatchDeleting] = useState(false)
+  const [sortField, setSortField] = useState<OccurrenceSortField>("dueDate")
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
 
   const inFlightUpdateRef = useRef(false)
   const inFlightCreateRef = useRef(false)
@@ -415,6 +424,39 @@ function FixedCostsPageInner() {
   const totalPaid = filteredOccurrences.filter((o) => o.status === "PAID").reduce((s, o) => s + o.amount, 0)
   const totalAll = totalPending + totalPaid
 
+  const occurrenceDue = (occ: Occurrence) => {
+    if (occ.dueDate) return new Date(occ.dueDate).getTime()
+    if (occ.fixedCost.dueDay) {
+      const [year, m] = occ.month.split("-").map(Number)
+      const lastDay = new Date(year, m, 0).getDate()
+      return new Date(Date.UTC(year, m - 1, Math.min(occ.fixedCost.dueDay, lastDay))).getTime()
+    }
+    return 0
+  }
+
+  const occurrenceSource = (occ: Occurrence) =>
+    occ.fixedCost.paidInsideCard
+      ? `Cartão ${occ.fixedCost.card?.name ?? ""}`
+      : `Fora do cartão${occ.fixedCost.bankAccount ? ` · ${occ.fixedCost.bankAccount.name}` : ""}`
+
+  const sortedOccurrences = [...filteredOccurrences].sort((a, b) => {
+    const dir = sortDir === "asc" ? 1 : -1
+    switch (sortField) {
+      case "name": return dir * a.fixedCost.name.localeCompare(b.fixedCost.name)
+      case "category": return dir * a.fixedCost.category.name.localeCompare(b.fixedCost.category.name)
+      case "source": return dir * occurrenceSource(a).localeCompare(occurrenceSource(b))
+      case "dueDate": return dir * (occurrenceDue(a) - occurrenceDue(b))
+      case "amount": return dir * (a.amount - b.amount)
+      case "status": return dir * (a.status === b.status ? 0 : a.status === "PAID" ? -1 : 1)
+      default: return 0
+    }
+  })
+
+  function toggleSort(field: typeof sortField) {
+    if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"))
+    else { setSortField(field); setSortDir("asc") }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -497,12 +539,12 @@ function FixedCostsPageInner() {
               <th className="w-10 px-3 py-3 text-center">
                 <input type="checkbox" className="h-4 w-4" checked={filteredOccurrences.length > 0 && filteredOccurrences.every((o) => selectedIds.has(o.id))} onChange={selectAll} />
               </th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Nome</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Categoria</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Origem</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Vencimento</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Valor do mês</th>
-              <th className="w-[128px] px-4 py-3 text-center font-medium text-muted-foreground">Status</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("name")}>Nome<SortIcon field="name" activeField={sortField} direction={sortDir} /></button></th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("category")}>Categoria<SortIcon field="category" activeField={sortField} direction={sortDir} /></button></th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("source")}>Origem<SortIcon field="source" activeField={sortField} direction={sortDir} /></button></th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("dueDate")}>Vencimento<SortIcon field="dueDate" activeField={sortField} direction={sortDir} /></button></th>
+              <th className="w-[140px] px-4 py-3 text-right font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("amount")}>Valor do mês<SortIcon field="amount" activeField={sortField} direction={sortDir} /></button></th>
+              <th className="w-[160px] px-4 py-3 text-center font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("status")}>Status<SortIcon field="status" activeField={sortField} direction={sortDir} /></button></th>
               <th className="px-4 py-3 text-right font-medium text-muted-foreground">Ações</th>
             </tr>
           </thead>
@@ -511,7 +553,7 @@ function FixedCostsPageInner() {
               <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
                 {loading ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</span> : "Nenhum lançamento fixo neste mês."}
               </td></tr>
-            ) : filteredOccurrences.map((occ) => {
+            ) : sortedOccurrences.map((occ) => {
               const isLoading = payingId === occ.fixedCostId || unpayingId === occ.fixedCostId
               const isLoadingCard = payingCardId === occ.fixedCostId || unpayingCardId === occ.fixedCostId
               return (
@@ -532,8 +574,8 @@ function FixedCostsPageInner() {
                     }
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{occ.dueDate ? new Date(occ.dueDate).toLocaleDateString("pt-BR") : formatDueDate(occ.fixedCost.dueDay, occ.month)}</td>
-                  <td className="px-4 py-3 text-right font-medium">{formatCurrency(occ.amount)}</td>
-                  <td className="px-4 py-3">
+                  <td className="w-[140px] px-4 py-3 text-right font-medium">{formatCurrency(occ.amount)}</td>
+                  <td className="w-[160px] px-4 py-3">
                     <div className="flex min-w-[72px] items-center justify-center gap-2">
                       {occ.fixedCost.paidInsideCard ? (
                         occ.status === "PAID" && occ.paidViaCard ? (
@@ -593,6 +635,20 @@ function FixedCostsPageInner() {
                 </tr>
               )
             })}
+            {filteredOccurrences.length > 0 && (
+              <tr className="bg-muted/50 font-medium">
+                <td className="w-10 px-3 py-3" />
+                <td className="px-4 py-3">Total</td>
+                <td className="px-4 py-3" />
+                <td className="px-4 py-3" />
+                <td className="px-4 py-3" />
+                <td className="w-[140px] px-4 py-3 text-right">{formatCurrency(totalAll)}</td>
+                <td className="w-[160px] px-4 py-3 text-center">
+                  <span className="whitespace-nowrap text-xs text-muted-foreground">{filteredOccurrences.filter((o) => o.status === "PAID").length} pago{filteredOccurrences.filter((o) => o.status === "PAID").length !== 1 ? "s" : ""} · {filteredOccurrences.filter((o) => o.status === "PENDING").length} pendente{filteredOccurrences.filter((o) => o.status === "PENDING").length !== 1 ? "s" : ""}</span>
+                </td>
+                <td className="px-4 py-3" />
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
