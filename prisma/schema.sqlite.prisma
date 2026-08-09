@@ -318,6 +318,7 @@ model FixedCostOccurrence {
   fixedCostId      String
   financialMonthId String
   month            String
+  scheduledDate    DateTime?
   dueDate          DateTime?
   amount           Float
   status           PaymentStatus @default(PENDING)
@@ -335,6 +336,7 @@ model FixedCostOccurrence {
   user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([fixedCostId, dueDate])
+  @@unique([fixedCostId, scheduledDate])
   @@index([userId, month])
   @@index([userId, status, month])
   @@index([fixedCostId, month])

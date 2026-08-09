@@ -389,7 +389,7 @@ export async function ensureFixedCostOccurrencesForMonths(
   const maxMonth = months.reduce((a, b) => (a.month > b.month ? a : b)).month
   const maxDate = endOfMonth(parseISO(`${maxMonth}-01`))
 
-  const allDates: { fixedCostId: string; date: Date; month: string }[] = []
+  const allDates: { fixedCostId: string; scheduledDate: Date; dueDate: Date; month: string }[] = []
 
   for (const fc of fixedCosts) {
     const config: RecurrenceConfig = {
@@ -406,7 +406,7 @@ export async function ensureFixedCostOccurrencesForMonths(
       const due = occurrenceDueDate(date, fc.dueDay)
       const m = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, "0")}`
       if (months.some((item) => item.month === m)) {
-        allDates.push({ fixedCostId: fc.id, date: due, month: m })
+        allDates.push({ fixedCostId: fc.id, scheduledDate: date, dueDate: due, month: m })
       }
     }
   }
@@ -415,32 +415,79 @@ export async function ensureFixedCostOccurrencesForMonths(
 
   const existingOccurrences = await db.fixedCostOccurrence.findMany({
     where: { userId, month: { in: months.map((item) => item.month) } },
-    select: { fixedCostId: true, month: true },
+    select: { fixedCostId: true, month: true, scheduledDate: true, dueDate: true },
   })
+  const occurrenceKey = (fixedCostId: string, scheduledDate: Date) =>
+    `${fixedCostId}:${scheduledDate.getTime()}`
+  const groupKey = (fixedCostId: string, month: string) => `${fixedCostId}:${month}`
   const existingKeys = new Set(
-    existingOccurrences.map((item) => `${item.fixedCostId}:${item.month}`)
+    existingOccurrences
+      .filter((item) => item.scheduledDate)
+      .map((item) => occurrenceKey(item.fixedCostId, item.scheduledDate!))
   )
 
+  const generatedByGroup = new Map<string, typeof allDates>()
+  for (const item of allDates) {
+    const key = groupKey(item.fixedCostId, item.month)
+    const group = generatedByGroup.get(key) ?? []
+    group.push(item)
+    generatedByGroup.set(key, group)
+  }
+
+  const legacyByGroup = new Map<string, typeof existingOccurrences>()
+  for (const item of existingOccurrences.filter((occurrence) => !occurrence.scheduledDate)) {
+    const key = groupKey(item.fixedCostId, item.month)
+    const group = legacyByGroup.get(key) ?? []
+    group.push(item)
+    legacyByGroup.set(key, group)
+  }
+
+  for (const [key, legacyOccurrences] of legacyByGroup) {
+    const generated = generatedByGroup.get(key) ?? []
+    for (const legacy of legacyOccurrences) {
+      const matchingDueDate = generated.find((item) =>
+        !existingKeys.has(occurrenceKey(item.fixedCostId, item.scheduledDate)) &&
+        legacy.dueDate?.getTime() === item.dueDate.getTime()
+      )
+      const fallback = generated.find((item) =>
+        !existingKeys.has(occurrenceKey(item.fixedCostId, item.scheduledDate))
+      )
+      const consumed = matchingDueDate ?? fallback
+      if (consumed) existingKeys.add(occurrenceKey(consumed.fixedCostId, consumed.scheduledDate))
+    }
+  }
+
   const monthMap = new Map(months.map((item) => [item.month, item.financialMonthId]))
+  const fixedCostMap = new Map(fixedCosts.map((item) => [item.id, item]))
   const missingOccurrences = []
 
   for (const item of allDates) {
-    const key = `${item.fixedCostId}:${item.month}`
+    const key = occurrenceKey(item.fixedCostId, item.scheduledDate)
     if (existingKeys.has(key)) continue
-    const fc = fixedCosts.find((f) => f.id === item.fixedCostId)
+    const fc = fixedCostMap.get(item.fixedCostId)
     if (!fc) continue
     missingOccurrences.push({
       fixedCostId: item.fixedCostId,
       financialMonthId: monthMap.get(item.month)!,
       month: item.month,
-      dueDate: item.date,
+      scheduledDate: item.scheduledDate,
+      dueDate: item.dueDate,
       amount: fc.defaultAmount,
       userId,
     })
   }
 
-  if (missingOccurrences.length > 0) {
-    await db.fixedCostOccurrence.createMany({ data: missingOccurrences })
+  for (const occurrence of missingOccurrences) {
+    await db.fixedCostOccurrence.upsert({
+      where: {
+        fixedCostId_scheduledDate: {
+          fixedCostId: occurrence.fixedCostId,
+          scheduledDate: occurrence.scheduledDate,
+        },
+      },
+      update: {},
+      create: occurrence,
+    })
   }
 }
 

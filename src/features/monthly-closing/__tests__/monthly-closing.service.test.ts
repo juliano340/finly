@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest"
 import { getTestClient } from "@/__tests__/prisma"
 import { registerUser } from "@/features/auth/auth.service"
-import { getMonthlyClosing, markCardInvoiceFixedCostsPaid, markCardInvoiceFixedCostsPending, payFixedCostOccurrence, unpayFixedCostOccurrence } from "../monthly-closing.service"
+import { ensureFixedCostOccurrences, getMonthlyClosing, markCardInvoiceFixedCostsPaid, markCardInvoiceFixedCostsPending, payFixedCostOccurrence, unpayFixedCostOccurrence } from "../monthly-closing.service"
 
 const prisma = getTestClient()
 
@@ -216,6 +216,87 @@ describe("monthly-closing.service", () => {
     await expect(unpayFixedCostOccurrence(legacyOccurrence.id, userId, prisma)).resolves.toBeNull()
     await expect(prisma.fixedCostOccurrence.findUnique({ where: { id: legacyOccurrence.id } }))
       .resolves.toMatchObject({ status: "PAID", bankAccountMovementId: null })
+  })
+
+  it("gera recorrências diárias por data sem duplicar em reprocessamento concorrente", async () => {
+    const month = "2027-02"
+    const fixedCost = await prisma.fixedCost.create({
+      data: {
+        name: `Diário ${Date.now()}`,
+        defaultAmount: 15,
+        categoryId,
+        paymentMethod: "PIX",
+        dueDay: 10,
+        startDate: new Date("2027-02-01T12:00:00"),
+        frequency: "DAILY",
+        endType: "DATE",
+        endDate: new Date("2027-02-03T12:00:00"),
+        userId,
+      },
+    })
+    const financialMonth = await prisma.financialMonth.create({ data: { month, userId } })
+
+    await Promise.all([
+      ensureFixedCostOccurrences(userId, month, financialMonth.id, prisma),
+      ensureFixedCostOccurrences(userId, month, financialMonth.id, prisma),
+    ])
+
+    const occurrences = await prisma.fixedCostOccurrence.findMany({
+      where: { fixedCostId: fixedCost.id, month, userId },
+      orderBy: { scheduledDate: "asc" },
+    })
+    expect(occurrences).toHaveLength(3)
+    expect(new Set(occurrences.map((item) => item.scheduledDate?.getTime())).size).toBe(3)
+    expect(new Set(occurrences.map((item) => item.dueDate?.getTime())).size).toBe(1)
+
+    const removedScheduledDate = occurrences[1].scheduledDate
+    await prisma.fixedCostOccurrence.delete({ where: { id: occurrences[1].id } })
+    await ensureFixedCostOccurrences(userId, month, financialMonth.id, prisma)
+
+    const rebuilt = await prisma.fixedCostOccurrence.findMany({
+      where: { fixedCostId: fixedCost.id, month, userId },
+    })
+    expect(rebuilt).toHaveLength(3)
+    expect(rebuilt.some((item) => item.scheduledDate?.getTime() === removedScheduledDate?.getTime())).toBe(true)
+  })
+
+  it("preserva ocorrência legada e cria somente as datas recorrentes ausentes", async () => {
+    const month = "2027-03"
+    const fixedCost = await prisma.fixedCost.create({
+      data: {
+        name: `Diário legado ${Date.now()}`,
+        defaultAmount: 20,
+        categoryId,
+        paymentMethod: "PIX",
+        dueDay: 10,
+        startDate: new Date("2027-03-01T12:00:00"),
+        frequency: "DAILY",
+        endType: "DATE",
+        endDate: new Date("2027-03-03T12:00:00"),
+        userId,
+      },
+    })
+    const financialMonth = await prisma.financialMonth.create({ data: { month, userId } })
+    const legacy = await prisma.fixedCostOccurrence.create({
+      data: {
+        fixedCostId: fixedCost.id,
+        financialMonthId: financialMonth.id,
+        month,
+        dueDate: new Date("2027-03-10T12:00:00"),
+        amount: 20,
+        userId,
+      },
+    })
+
+    await ensureFixedCostOccurrences(userId, month, financialMonth.id, prisma)
+    await ensureFixedCostOccurrences(userId, month, financialMonth.id, prisma)
+
+    const occurrences = await prisma.fixedCostOccurrence.findMany({
+      where: { fixedCostId: fixedCost.id, month, userId },
+    })
+    expect(occurrences).toHaveLength(3)
+    expect(occurrences.some((item) => item.id === legacy.id && item.scheduledDate === null)).toBe(true)
+    expect(occurrences.filter((item) => item.scheduledDate !== null)).toHaveLength(2)
   })
 
   it("sincroniza custos fixos inclusos no cartão ao pagar e estornar fatura", async () => {
