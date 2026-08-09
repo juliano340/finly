@@ -489,8 +489,9 @@ export default function HomePage() {
         }
         @media (max-width: 640px) {
           .header-inner { height: 56px; }
-          .header .btn { padding: 8px 16px; font-size: 13px; }
-          .header .btn-primary { padding: 8px 14px; }
+          .header-actions { gap: 8px !important; }
+          .header .btn { padding: 8px 12px; font-size: 13px; }
+          .header .btn-primary { padding: 8px 10px; white-space: nowrap; flex-shrink: 0; }
           .hero { min-height: auto; padding: 100px 0 60px; }
           .hero h1 { font-size: 32px; }
           .hero p { font-size: 16px; }
@@ -499,7 +500,13 @@ export default function HomePage() {
           .stats-grid { grid-template-columns: 1fr; gap: 24px; }
           .cta-box { padding: 40px 24px; }
           .cta-box h2 { font-size: 28px; }
-          .footer-grid { grid-template-columns: 1fr; }
+          .footer { padding: 48px 0 24px; }
+          .footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 24px; margin-bottom: 32px; }
+          .footer-brand { grid-column: 1 / -1; }
+          .footer-brand p { max-width: 340px; }
+          .footer-col h4 { margin-bottom: 14px; }
+          .footer-col a { margin-bottom: 12px; }
+          .footer-bottom { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 16px; align-items: start; }
           .section-header h2 { font-size: 28px; }
           .showcase-frame { height: 420px; }
         }
@@ -517,7 +524,7 @@ export default function HomePage() {
             <a href="#showcase">Produto</a>
             <a href="#numeros">Números</a>
           </nav>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div className="header-actions" style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <button className="theme-toggle" aria-label="Alternar tema" suppressHydrationWarning onClick={toggleTheme}>
               {theme === "dark" ? "☀️" : "🌙"}
             </button>
