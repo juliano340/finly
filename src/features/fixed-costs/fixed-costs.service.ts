@@ -3,6 +3,7 @@ import type { PrismaClient } from "@/generated/prisma/client"
 import type { FixedCostInput } from "./fixed-costs.schema"
 import { ensureFinancialMonth } from "@/features/financial-months/financial-months.service"
 import { ensureFixedCostOccurrences } from "@/features/monthly-closing/monthly-closing.service"
+import { moneyToNumber, type MoneyValue } from "@/lib/money"
 
 export class DuplicateFixedCostNameError extends Error {
   constructor() {
@@ -29,11 +30,12 @@ async function validateFixedCostRelations(
 
 export async function getFixedCosts(userId: string, client?: PrismaClient) {
   const db = client ?? defaultPrisma
-  return db.fixedCost.findMany({
+  const fixedCosts = await db.fixedCost.findMany({
     where: { userId },
     include: { category: true, card: true, bankAccount: true },
     orderBy: [{ active: "desc" }, { name: "asc" }],
   })
+  return fixedCosts.map(normalizeFixedCost)
 }
 
 export async function createFixedCost(
@@ -80,7 +82,7 @@ export async function createFixedCost(
   const fm = await ensureFinancialMonth(userId, currentMonth, db)
   await ensureFixedCostOccurrences(userId, currentMonth, fm.id, db)
 
-  return created
+  return normalizeFixedCost(created)
 }
 
 export async function updateFixedCost(
@@ -147,8 +149,27 @@ export async function updateFixedCost(
         data: { amount: input.defaultAmount },
       })
     }
-    return updated
+    return normalizeFixedCost(updated)
   })
+}
+
+function normalizeFixedCost<
+  T extends {
+    defaultAmount: MoneyValue
+    bankAccount?: null | { initialBalance: MoneyValue; overdraftLimit: MoneyValue }
+  },
+>(fixedCost: T) {
+  return {
+    ...fixedCost,
+    defaultAmount: moneyToNumber(fixedCost.defaultAmount),
+    ...(fixedCost.bankAccount && {
+      bankAccount: {
+        ...fixedCost.bankAccount,
+        initialBalance: moneyToNumber(fixedCost.bankAccount.initialBalance),
+        overdraftLimit: moneyToNumber(fixedCost.bankAccount.overdraftLimit),
+      },
+    }),
+  }
 }
 
 export async function deleteFixedCost(

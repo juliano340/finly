@@ -76,7 +76,7 @@ describe("Relacionamentos — Prisma", () => {
       include: { budgets: true },
     })
     expect(cat?.budgets.length).toBe(1)
-    expect(cat?.budgets[0].amount).toBe(800)
+    expect(cat?.budgets[0].amount.toNumber()).toBe(800)
   })
 
   it("budget.category carrega a categoria", async () => {

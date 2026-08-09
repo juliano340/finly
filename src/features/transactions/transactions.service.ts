@@ -3,6 +3,7 @@ import type { PrismaClient } from "@/generated/prisma/client"
 import type { TransactionInput } from "./transactions.schema"
 import type { TransactionWithRelations } from "./transactions.types"
 import { validateExpenseLimit } from "@/features/bank-accounts/bank-accounts.service"
+import { moneyToNumber, type MoneyValue } from "@/lib/money"
 
 const includeRelations = {
   category: { select: { id: true, name: true, color: true, icon: true } },
@@ -49,7 +50,13 @@ export async function getTransactions(
     db.transaction.count({ where }),
   ])
 
-  return { transactions, total }
+  return {
+    transactions: transactions.map((transaction) => ({
+      ...transaction,
+      amount: moneyToNumber(transaction.amount),
+    })),
+    total,
+  }
 }
 
 export async function createTransaction(
@@ -91,11 +98,11 @@ export async function createTransaction(
         },
       })
 
-      return transaction
+      return normalizeTransaction(transaction)
     })
   }
 
-  return db.transaction.create({
+  const transaction = await db.transaction.create({
     data: {
       amount: input.amount,
       type: input.type,
@@ -106,6 +113,7 @@ export async function createTransaction(
     },
     include: includeRelations,
   })
+  return normalizeTransaction(transaction)
 }
 
 export async function updateTransaction(
@@ -121,11 +129,11 @@ export async function updateTransaction(
   const oldBankAccountId = existing.bankAccountId
   const newBankAccountId = input.bankAccountId
   const accountChanged = newBankAccountId !== undefined && newBankAccountId !== oldBankAccountId
-  const amountChanged = input.amount !== undefined && input.amount !== existing.amount
+  const amountChanged = input.amount !== undefined && input.amount !== moneyToNumber(existing.amount)
   const typeChanged = input.type !== undefined && input.type !== existing.type
 
   if (accountChanged || amountChanged || typeChanged) {
-    const finalAmount = input.amount ?? existing.amount
+    const finalAmount = input.amount ?? moneyToNumber(existing.amount)
     const finalType = input.type ?? existing.type
     const finalBankAccountId = newBankAccountId !== undefined ? newBankAccountId : oldBankAccountId
 
@@ -155,7 +163,7 @@ export async function updateTransaction(
         })
       }
 
-      return tx.transaction.update({
+      const updated = await tx.transaction.update({
         where: { id },
         data: {
           ...(input.amount !== undefined && { amount: input.amount }),
@@ -167,10 +175,11 @@ export async function updateTransaction(
         },
         include: includeRelations,
       })
+      return normalizeTransaction(updated)
     })
   }
 
-  return db.transaction.update({
+  const updated = await db.transaction.update({
     where: { id },
     data: {
       ...(input.amount !== undefined && { amount: input.amount }),
@@ -182,6 +191,11 @@ export async function updateTransaction(
     },
     include: includeRelations,
   })
+  return normalizeTransaction(updated)
+}
+
+function normalizeTransaction<T extends { amount: MoneyValue }>(transaction: T) {
+  return { ...transaction, amount: moneyToNumber(transaction.amount) }
 }
 
 export async function deleteTransaction(

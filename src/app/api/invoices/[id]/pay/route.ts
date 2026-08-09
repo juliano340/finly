@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { markCardInvoiceFixedCostsPaid } from "@/features/monthly-closing/monthly-closing.service"
 import { validateExpenseLimit } from "@/features/bank-accounts/bank-accounts.service"
+import { moneyToNumber } from "@/lib/money"
 
 export async function POST(
   request: Request,
@@ -39,7 +40,7 @@ export async function POST(
         return NextResponse.json({ error: "Conta não encontrada" }, { status: 400 })
       }
 
-      const check = await validateExpenseLimit(realBankAccountId, userId, invoice.amount, prisma)
+      const check = await validateExpenseLimit(realBankAccountId, userId, moneyToNumber(invoice.amount), prisma)
       if (!check.allowed) {
         return NextResponse.json({ error: check.reason }, { status: 400 })
       }

@@ -11,6 +11,7 @@ const entries = [
   {
     date: "Agosto 2026",
     items: [
+      { type: "fix", desc: "Valores monetários armazenados com precisão decimal no PostgreSQL e SQLite" },
       { type: "fix", desc: "Recorrências diárias e semanais identificadas por data, sem perdas ou duplicidades" },
       { type: "fix", desc: "Pagamento de lançamentos fixos idempotente contra requisições concorrentes" },
       { type: "fix", desc: "Estorno de lançamento fixo remove somente o movimento bancário vinculado" },

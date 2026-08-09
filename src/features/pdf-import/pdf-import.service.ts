@@ -1,5 +1,6 @@
 import { prisma as defaultPrisma } from "@/lib/prisma"
 import type { PrismaClient } from "@/generated/prisma/client"
+import { moneyToNumber } from "@/lib/money"
 import { extractTextFromPdf } from "@/lib/pdf/extract-text"
 import { getParser } from "@/lib/parsers"
 import { normalizeDescription } from "@/lib/formatters/normalize-description"
@@ -195,7 +196,7 @@ export async function listImportSessions(
 ): Promise<ImportSessionData[]> {
   const db = client ?? defaultPrisma
 
-  return db.importSession.findMany({
+  const sessions = await db.importSession.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
     select: {
@@ -208,6 +209,10 @@ export async function listImportSessions(
       _count: { select: { transactions: true } },
     },
   })
+  return sessions.map((session) => ({
+    ...session,
+    invoiceTotal: session.invoiceTotal === null ? null : moneyToNumber(session.invoiceTotal),
+  }))
 }
 
 export async function updateTransactionCategory(
@@ -442,10 +447,16 @@ export async function getInvoiceAnalysis(
     session.descriptionMappings.map((m) => [m.normalizedDesc, m.categoryId])
   )
 
-  const purchases = session.transactions.filter((t) => t.type !== "credit")
+  const purchases = session.transactions
+    .filter((t) => t.type !== "credit")
+    .map((transaction) => ({
+      ...transaction,
+      amount: moneyToNumber(transaction.amount),
+    }))
+  const invoiceTotal = session.invoiceTotal === null ? null : moneyToNumber(session.invoiceTotal)
   const totalTransactions = purchases.reduce((sum, t) => sum + Math.abs(t.amount), 0)
-  const diffFromInvoice = session.invoiceTotal
-    ? totalTransactions - session.invoiceTotal
+  const diffFromInvoice = invoiceTotal
+    ? totalTransactions - invoiceTotal
     : null
 
   const rankingMap = new Map<
@@ -569,7 +580,7 @@ export async function getInvoiceAnalysis(
       id: session.id,
       fileName: session.fileName,
       bank: session.bank,
-      invoiceTotal: session.invoiceTotal,
+      invoiceTotal,
       dueDate: session.dueDate,
       rawText: session.rawText,
       createdAt: session.createdAt,

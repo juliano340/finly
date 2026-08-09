@@ -2,6 +2,7 @@ import { prisma as defaultPrisma } from "@/lib/prisma"
 import type { PrismaClient } from "@/generated/prisma/client"
 import type { BudgetInput } from "./budgets.schema"
 import type { BudgetWithCategory, BudgetSummary } from "./budgets.types"
+import { moneyToNumber, subtractMoney } from "@/lib/money"
 
 export async function getBudgets(
   userId: string,
@@ -9,13 +10,14 @@ export async function getBudgets(
   client?: PrismaClient
 ): Promise<BudgetWithCategory[]> {
   const db = client ?? defaultPrisma
-  return db.budget.findMany({
+  const budgets = await db.budget.findMany({
     where: { userId, month },
     include: {
       category: { select: { id: true, name: true, color: true, icon: true } },
     },
     orderBy: { category: { name: "asc" } },
   })
+  return budgets.map((budget) => ({ ...budget, amount: moneyToNumber(budget.amount) }))
 }
 
 export async function createBudget(
@@ -24,7 +26,7 @@ export async function createBudget(
   client?: PrismaClient
 ): Promise<BudgetWithCategory> {
   const db = client ?? defaultPrisma
-  return db.budget.create({
+  const budget = await db.budget.create({
     data: {
       amount: input.amount,
       month: input.month,
@@ -35,6 +37,7 @@ export async function createBudget(
       category: { select: { id: true, name: true, color: true, icon: true } },
     },
   })
+  return { ...budget, amount: moneyToNumber(budget.amount) }
 }
 
 export async function updateBudget(
@@ -47,7 +50,7 @@ export async function updateBudget(
   const budget = await db.budget.findUnique({ where: { id } })
   if (!budget || budget.userId !== userId) return null
 
-  return db.budget.update({
+  const updated = await db.budget.update({
     where: { id },
     data: {
       ...(input.amount !== undefined && { amount: input.amount }),
@@ -57,6 +60,7 @@ export async function updateBudget(
       category: { select: { id: true, name: true, color: true, icon: true } },
     },
   })
+  return { ...updated, amount: moneyToNumber(updated.amount) }
 }
 
 export async function deleteBudget(
@@ -100,12 +104,13 @@ export async function getBudgetSummary(
       _sum: { amount: true },
     })
 
-    const spentAmount = spent._sum.amount ?? 0
+    const budgeted = moneyToNumber(budget.amount)
+    const spentAmount = moneyToNumber(spent._sum.amount ?? 0)
     summaries.push({
-      budgeted: budget.amount,
+      budgeted,
       spent: spentAmount,
-      remaining: budget.amount - spentAmount,
-      percentage: budget.amount > 0 ? Math.round((spentAmount / budget.amount) * 100) : 0,
+      remaining: subtractMoney(budgeted, spentAmount),
+      percentage: budgeted > 0 ? Math.round((spentAmount / budgeted) * 100) : 0,
     })
   }
 

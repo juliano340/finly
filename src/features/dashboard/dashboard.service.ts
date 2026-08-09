@@ -2,6 +2,7 @@ import { prisma as defaultPrisma } from "@/lib/prisma"
 import type { PrismaClient } from "@/generated/prisma/client"
 import { ensureFinancialMonth } from "@/features/financial-months/financial-months.service"
 import { ensureFixedCostOccurrences, ensureFixedCostOccurrencesForMonths } from "@/features/monthly-closing/monthly-closing.service"
+import { moneyToNumber, sumMoney } from "@/lib/money"
 
 export interface DashboardStats {
   balance: number
@@ -140,7 +141,7 @@ export async function getDashboardStats(
       const cat = categoryMap.get(item.categoryId)
       return {
         name: cat?.name ?? "Sem categoria",
-        value: item._sum.amount ?? 0,
+        value: moneyToNumber(item._sum.amount ?? 0),
         color: cat?.color ?? "#9CA3AF",
       }
     })
@@ -155,12 +156,12 @@ export async function getDashboardStats(
     const name = occ.fixedCost.category.name
     const current = categoryTotals.get(name)
     categoryTotals.set(name, {
-      value: (current?.value ?? 0) + occ.amount,
+      value: sumMoney([current?.value ?? 0, occ.amount]),
       color: occ.fixedCost.category.color,
     })
   }
 
-  const invoiceTotal = invoices.reduce((sum, inv) => sum + inv.amount, 0)
+  const invoiceTotal = sumMoney(invoices.map((invoice) => invoice.amount))
   if (invoiceTotal > 0) {
     categoryTotals.set("Faturas de cartão", { value: invoiceTotal, color: "#2563EB" })
   }
@@ -175,21 +176,21 @@ export async function getDashboardStats(
     const dayKey = entry.date.toISOString().slice(0, 10)
     if (!dailyMap.has(dayKey)) dailyMap.set(dayKey, { income: 0, expense: 0 })
     const day = dailyMap.get(dayKey)!
-    if (entry.type === "INCOME") day.income += entry._sum.amount ?? 0
-    else day.expense += entry._sum.amount ?? 0
+    if (entry.type === "INCOME") day.income = sumMoney([day.income, entry._sum.amount ?? 0])
+    else day.expense = sumMoney([day.expense, entry._sum.amount ?? 0])
   }
   for (const occ of fixedCostOccurrences) {
     if (occ.fixedCost.type === "EXPENSE" && occ.fixedCost.paidInsideCard) continue
     const dayKey = (occ.dueDate ?? startDate).toISOString().slice(0, 10)
     if (!dailyMap.has(dayKey)) dailyMap.set(dayKey, { income: 0, expense: 0 })
     const day = dailyMap.get(dayKey)!
-    if (occ.fixedCost.type === "INCOME") day.income += occ.amount
-    else day.expense += occ.amount
+    if (occ.fixedCost.type === "INCOME") day.income = sumMoney([day.income, occ.amount])
+    else day.expense = sumMoney([day.expense, occ.amount])
   }
   for (const inv of invoices) {
     const dayKey = inv.dueDate.toISOString().slice(0, 10)
     if (!dailyMap.has(dayKey)) dailyMap.set(dayKey, { income: 0, expense: 0 })
-    dailyMap.get(dayKey)!.expense += inv.amount
+    dailyMap.get(dayKey)!.expense = sumMoney([dailyMap.get(dayKey)!.expense, inv.amount])
   }
 
   const dailyTrendFormatted = Array.from(dailyMap.entries())
@@ -204,7 +205,7 @@ export async function getDashboardStats(
     .map((occ) => ({
       id: `occ-${occ.id}`,
       description: occ.fixedCost.name,
-      amount: occ.amount,
+      amount: moneyToNumber(occ.amount),
       type: occ.fixedCost.type,
       date: occ.dueDate ?? startDate,
       categoryName: occ.fixedCost.category.name,
@@ -214,7 +215,7 @@ export async function getDashboardStats(
   const invoiceItems = invoices.map((inv) => ({
     id: `invoice-${inv.id}`,
     description: `Fatura ${inv.card.name}`,
-    amount: inv.amount,
+    amount: moneyToNumber(inv.amount),
     type: "EXPENSE" as const,
     date: inv.dueDate,
     categoryName: "Fatura",
@@ -226,7 +227,7 @@ export async function getDashboardStats(
     ...recentTransactions.map((tx) => ({
       id: tx.id,
       description: tx.description,
-      amount: tx.amount,
+      amount: moneyToNumber(tx.amount),
       type: tx.type,
       date: tx.date,
       categoryName: tx.category.name,
@@ -241,13 +242,13 @@ export async function getDashboardStats(
 
   const fixedIncome = fixedCostOccurrences
     .filter((occ) => occ.fixedCost.type === "INCOME")
-    .reduce((sum, occ) => sum + occ.amount, 0)
+    .reduce((sum, occ) => sumMoney([sum, occ.amount]), 0)
   const fixedExpense = fixedCostOccurrences
     .filter((occ) => occ.fixedCost.type === "EXPENSE" && !occ.fixedCost.paidInsideCard)
-    .reduce((sum, occ) => sum + occ.amount, 0)
+    .reduce((sum, occ) => sumMoney([sum, occ.amount]), 0)
 
-  const income = (incomeTotal._sum.amount ?? 0) + fixedIncome
-  const expense = (expenseTotal._sum.amount ?? 0) + fixedExpense + invoiceTotal
+  const income = sumMoney([incomeTotal._sum.amount ?? 0, fixedIncome])
+  const expense = sumMoney([expenseTotal._sum.amount ?? 0, fixedExpense, invoiceTotal])
 
   return {
     balance: income - expense,
@@ -323,7 +324,7 @@ async function getInvoiceTotalsByMonth(userId: string, months: string[], db: Pri
     where: { userId, month: { in: months } },
     _sum: { amount: true },
   })
-  return new Map(rows.map((row) => [row.month, row._sum.amount ?? 0]))
+  return new Map(rows.map((row) => [row.month, moneyToNumber(row._sum.amount ?? 0)]))
 }
 
 async function getFixedCostTotalsByMonth(userId: string, months: string[], db: PrismaClient) {
@@ -340,9 +341,9 @@ async function getFixedCostTotalsByMonth(userId: string, months: string[], db: P
 
   for (const occurrence of occurrences) {
     if (occurrence.fixedCost.type === "INCOME") {
-      income.set(occurrence.month, (income.get(occurrence.month) ?? 0) + occurrence.amount)
+      income.set(occurrence.month, sumMoney([income.get(occurrence.month) ?? 0, occurrence.amount]))
     } else if (!occurrence.fixedCost.paidInsideCard) {
-      expenses.set(occurrence.month, (expenses.get(occurrence.month) ?? 0) + occurrence.amount)
+      expenses.set(occurrence.month, sumMoney([expenses.get(occurrence.month) ?? 0, occurrence.amount]))
     }
   }
 
@@ -366,7 +367,7 @@ async function getLooseExpenseTotalsByMonth(userId: string, months: string[], db
   for (const transaction of transactions) {
     const month = formatMonthKey(transaction.date)
     if (!monthSet.has(month)) continue
-    totals.set(month, (totals.get(month) ?? 0) + transaction.amount)
+    totals.set(month, sumMoney([totals.get(month) ?? 0, transaction.amount]))
   }
 
   return totals
@@ -407,8 +408,8 @@ export async function getCardInvoiceEvolution(
   for (const invoice of invoices) {
     const item = byMonth.get(invoice.month)
     if (!item) continue
-    item.total += invoice.amount
-    item.cards[invoice.cardId] = (item.cards[invoice.cardId] ?? 0) + invoice.amount
+    item.total = sumMoney([item.total, invoice.amount])
+    item.cards[invoice.cardId] = sumMoney([item.cards[invoice.cardId] ?? 0, invoice.amount])
   }
 
   return {

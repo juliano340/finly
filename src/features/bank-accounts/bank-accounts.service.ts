@@ -1,6 +1,7 @@
 import { prisma as defaultPrisma } from "@/lib/prisma"
 import type { PrismaClient } from "@/generated/prisma/client"
 import { randomUUID } from "node:crypto"
+import { moneyToNumber, subtractMoney, sumMoney } from "@/lib/money"
 import type { BankAccountAdjustmentInput, BankAccountInput, BankAccountMovementInput, BankAccountTransferInput } from "./bank-accounts.schema"
 
 export async function getBankAccounts(userId: string, client?: PrismaClient) {
@@ -25,7 +26,13 @@ export async function getBankAccounts(userId: string, client?: PrismaClient) {
     const expense = sums.find((sum) => sum.bankAccountId === account.id && sum.type === "EXPENSE")?._sum.amount ?? 0
     return {
       ...account,
-      balance: account.initialBalance + income - expense,
+      initialBalance: moneyToNumber(account.initialBalance),
+      overdraftLimit: moneyToNumber(account.overdraftLimit),
+      movements: account.movements.map((movement) => ({
+        ...movement,
+        amount: moneyToNumber(movement.amount),
+      })),
+      balance: subtractMoney(sumMoney([account.initialBalance, income]), expense),
     }
   })
 }
@@ -41,10 +48,10 @@ export async function getBankAccountsTotal(userId: string, client?: PrismaClient
     }),
   ])
 
-  const initialBalance = accounts.reduce((sum, account) => sum + account.initialBalance, 0)
+  const initialBalance = sumMoney(accounts.map((account) => account.initialBalance))
   const income = sums.find((sum) => sum.type === "INCOME")?._sum.amount ?? 0
   const expense = sums.find((sum) => sum.type === "EXPENSE")?._sum.amount ?? 0
-  return initialBalance + income - expense
+  return subtractMoney(sumMoney([initialBalance, income]), expense)
 }
 
 export async function getBankAccountOptions(userId: string, client?: PrismaClient) {
@@ -72,7 +79,7 @@ export async function getBankAccountBalance(
   })
   const income = sums.find((sum) => sum.type === "INCOME")?._sum.amount ?? 0
   const expense = sums.find((sum) => sum.type === "EXPENSE")?._sum.amount ?? 0
-  return account.initialBalance + income - expense
+  return subtractMoney(sumMoney([account.initialBalance, income]), expense)
 }
 
 export async function createBankAccount(
@@ -149,18 +156,19 @@ export async function validateExpenseLimit(
     return { allowed: false, reason: "Conta não encontrada" }
   }
 
-  const minBalance = -(account.overdraftLimit)
-  const balanceAfter = balance - amount
+  const overdraftLimit = moneyToNumber(account.overdraftLimit)
+  const minBalance = -overdraftLimit
+  const balanceAfter = subtractMoney(balance, amount)
 
   if (balanceAfter < minBalance) {
-    const totalAvailable = balance + account.overdraftLimit
+    const totalAvailable = sumMoney([balance, overdraftLimit])
     return {
       allowed: false,
-      reason: `Saldo insuficiente. Transferência de R$ ${amount.toFixed(2)} excede o limite disponível de R$ ${totalAvailable.toFixed(2)} (saldo: R$ ${balance.toFixed(2)} + cheque especial: R$ ${account.overdraftLimit.toFixed(2)}).`,
+      reason: `Saldo insuficiente. Transferência de R$ ${amount.toFixed(2)} excede o limite disponível de R$ ${totalAvailable.toFixed(2)} (saldo: R$ ${balance.toFixed(2)} + cheque especial: R$ ${overdraftLimit.toFixed(2)}).`,
     }
   }
 
-  return { allowed: true, balance, overdraftLimit: account.overdraftLimit }
+  return { allowed: true, balance, overdraftLimit }
 }
 
 export async function createBankAccountMovement(

@@ -1,5 +1,6 @@
 import { prisma as defaultPrisma } from "@/lib/prisma"
 import type { PrismaClient } from "@/generated/prisma/client"
+import { moneyToNumber } from "@/lib/money"
 
 export interface DueNotification {
   id: string
@@ -48,7 +49,7 @@ export async function getDueSoonNotifications(
     id: invoice.id,
     type: "INVOICE" as const,
     title: `Fatura ${invoice.card.name}`,
-    amount: invoice.amount,
+    amount: moneyToNumber(invoice.amount),
     dueDate: invoice.dueDate.toISOString(),
     href: "/invoices",
   }))
@@ -62,7 +63,7 @@ export async function getDueSoonNotifications(
       id: occurrence.id,
       type: "FIXED_COST" as const,
       title: occurrence.fixedCost.name,
-      amount: occurrence.amount,
+      amount: moneyToNumber(occurrence.amount),
       dueDate: dueDate.toISOString(),
       href: `/fixed-costs?month=${occurrence.month}`,
     }]

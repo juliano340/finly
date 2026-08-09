@@ -46,7 +46,7 @@ describe("Prisma Schema — banco de teste", () => {
         date: new Date(),
       },
     })
-    expect(tx.amount).toBe(99.9)
+    expect(tx.amount.toNumber()).toBe(99.9)
     await testPrisma.transaction.delete({ where: { id: tx.id } })
     await testPrisma.category.delete({ where: { id: cat.id } })
     await testPrisma.user.delete({ where: { id: user.id } })
@@ -67,7 +67,7 @@ describe("Prisma Schema — banco de teste", () => {
         userId: user.id,
       },
     })
-    expect(budget.amount).toBe(1000)
+    expect(budget.amount.toNumber()).toBe(1000)
     await testPrisma.budget.delete({ where: { id: budget.id } })
     await testPrisma.category.delete({ where: { id: cat.id } })
     await testPrisma.user.delete({ where: { id: user.id } })

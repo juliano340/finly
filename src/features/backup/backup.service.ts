@@ -1,6 +1,7 @@
 import { prisma as defaultPrisma } from "@/lib/prisma"
 import type { PrismaClient } from "@/generated/prisma/client"
 import type { BackupData, ImportMode } from "./backup.schema"
+import { moneyToNumber } from "@/lib/money"
 
 export interface ImportResult {
   imported: {
@@ -35,14 +36,18 @@ export async function exportData(userId: string, client: PrismaClient = defaultP
     data: {
       categories,
       financialMonths,
-      bankAccounts,
+      bankAccounts: bankAccounts.map((item) => ({
+        ...item,
+        initialBalance: moneyToNumber(item.initialBalance),
+        overdraftLimit: moneyToNumber(item.overdraftLimit),
+      })),
       cards,
-      transactions,
-      budgets,
-      bankAccountMovements,
-      fixedCosts,
-      cardInvoices,
-      fixedCostOccurrences,
+      transactions: transactions.map((item) => ({ ...item, amount: moneyToNumber(item.amount) })),
+      budgets: budgets.map((item) => ({ ...item, amount: moneyToNumber(item.amount) })),
+      bankAccountMovements: bankAccountMovements.map((item) => ({ ...item, amount: moneyToNumber(item.amount) })),
+      fixedCosts: fixedCosts.map((item) => ({ ...item, defaultAmount: moneyToNumber(item.defaultAmount) })),
+      cardInvoices: cardInvoices.map((item) => ({ ...item, amount: moneyToNumber(item.amount) })),
+      fixedCostOccurrences: fixedCostOccurrences.map((item) => ({ ...item, amount: moneyToNumber(item.amount) })),
     },
   }
 }

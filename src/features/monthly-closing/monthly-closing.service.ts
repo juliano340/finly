@@ -4,6 +4,7 @@ import type { PrismaClient } from "@/generated/prisma/client"
 import { ensureFinancialMonth } from "@/features/financial-months/financial-months.service"
 import { computeRecurrenceDates, occurrenceDueDate, type RecurrenceConfig } from "@/lib/recurrence"
 import { validateExpenseLimit } from "@/features/bank-accounts/bank-accounts.service"
+import { moneyToNumber, sumMoney, type MoneyValue } from "@/lib/money"
 
 type FixedCostOccurrenceClient = Pick<PrismaClient, "fixedCost" | "fixedCostOccurrence">
 
@@ -85,7 +86,7 @@ export async function getMonthlyClosing(
   const allCardInvoices = sum(invoices.map((inv) => inv.amount))
   const allOutsideCard = sum(outsideCard.map((item) => item.amount))
   const totalSpent = allCardInvoices + allOutsideCard + looseExpenses
-  const looseIncomeTotal = looseIncome.reduce((acc, tx) => acc + tx.amount, 0)
+  const looseIncomeTotal = sum(looseIncome.map((tx) => tx.amount))
   const totalIncome = fixedIncomeTotal + looseIncomeTotal
   const receivedFixedIncomeTotal = sum(incomeOccurrences.filter((item) => item.status === "PAID").map((item) => item.amount))
   const receivedIncomeTotal = receivedFixedIncomeTotal + looseIncomeTotal
@@ -93,13 +94,13 @@ export async function getMonthlyClosing(
   const incomeItems = [
     ...incomeOccurrences.map((item) => ({
       name: item.fixedCost.name,
-      amount: item.amount,
+      amount: moneyToNumber(item.amount),
       type: "FIXED" as const,
       status: item.status,
     })),
     ...looseIncome.map((tx) => ({
       name: tx.description ?? tx.category.name,
-      amount: tx.amount,
+      amount: moneyToNumber(tx.amount),
       type: "LOOSE" as const,
       status: "PAID" as const,
     })),
@@ -207,7 +208,12 @@ export async function payFixedCostOccurrence(
   if (occurrence.status === "PAID") return occurrence
 
   if (occurrence.fixedCost.type === "EXPENSE" && occurrence.fixedCost.bankAccountId) {
-    const check = await validateExpenseLimit(occurrence.fixedCost.bankAccountId, userId, occurrence.amount, client)
+    const check = await validateExpenseLimit(
+      occurrence.fixedCost.bankAccountId,
+      userId,
+      moneyToNumber(occurrence.amount),
+      client
+    )
     if (!check.allowed) return null
   }
 
@@ -554,7 +560,7 @@ async function aggregateTransactions(
     },
     _sum: { amount: true },
   })
-  return result._sum.amount ?? 0
+  return moneyToNumber(result._sum.amount ?? 0)
 }
 
 async function getLooseIncomeTransactions(
@@ -563,7 +569,7 @@ async function getLooseIncomeTransactions(
   db: PrismaClient
 ) {
   const [year, m] = month.split("-").map(Number)
-  return db.transaction.findMany({
+  const transactions = await db.transaction.findMany({
     where: {
       userId,
       type: "INCOME",
@@ -577,11 +583,15 @@ async function getLooseIncomeTransactions(
     },
     orderBy: { date: "desc" },
   })
+  return transactions.map((transaction) => ({
+    ...transaction,
+    amount: moneyToNumber(transaction.amount),
+  }))
 }
 
 function buildInvoiceEstimates(
-  invoices: { cardId: string; amount: number; card: { name: string } }[],
-  insideCard: { amount: number; fixedCost: { cardId: string | null; card: { name: string } | null } }[]
+  invoices: { cardId: string; amount: MoneyValue; card: { name: string } }[],
+  insideCard: { amount: MoneyValue; fixedCost: { cardId: string | null; card: { name: string } | null } }[]
 ) {
   const byCard = new Map<string, { cardName: string; estimatedAmount: number; invoiceAmount: number }>()
 
@@ -589,7 +599,7 @@ function buildInvoiceEstimates(
     byCard.set(invoice.cardId, {
       cardName: invoice.card.name,
       estimatedAmount: 0,
-      invoiceAmount: invoice.amount,
+      invoiceAmount: moneyToNumber(invoice.amount),
     })
   }
 
@@ -601,7 +611,7 @@ function buildInvoiceEstimates(
       estimatedAmount: 0,
       invoiceAmount: 0,
     }
-    current.estimatedAmount += item.amount
+    current.estimatedAmount = sumMoney([current.estimatedAmount, item.amount])
     byCard.set(cardId, current)
   }
 
@@ -614,6 +624,6 @@ function buildInvoiceEstimates(
   }))
 }
 
-function sum(values: number[]) {
-  return values.reduce((acc, value) => acc + value, 0)
+function sum(values: MoneyValue[]) {
+  return sumMoney(values)
 }

@@ -89,7 +89,7 @@ describe("fixed-costs.service - update amount propagation", () => {
       where: { fixedCostId: created.id, userId },
     })
     expect(occs).toHaveLength(2)
-    expect(occs.every(o => o.amount === 250)).toBe(true)
+    expect(occs.every(o => o.amount.toNumber() === 250)).toBe(true)
   })
 
   it("NÃO altera ocorrências PAID (já foram pagas com o valor antigo)", async () => {
@@ -134,7 +134,7 @@ describe("fixed-costs.service - update amount propagation", () => {
     const occ = await prisma.fixedCostOccurrence.findFirst({
       where: { fixedCostId: created.id, month, userId },
     })
-    expect(occ?.amount).toBe(50)
+    expect(occ?.amount.toNumber()).toBe(50)
     expect(occ?.status).toBe("PAID")
   })
 
@@ -167,7 +167,7 @@ describe("fixed-costs.service - update amount propagation", () => {
     const occurrence = await prisma.fixedCostOccurrence.findFirst({
       where: { fixedCostId: created.id, month: futureMonth, userId, deletedAt: null },
     })
-    expect(occurrence?.amount).toBe(88.77)
+    expect(occurrence?.amount.toNumber()).toBe(88.77)
     expect(occurrence?.dueDate?.toISOString().slice(0, 10)).toBe(`${futureMonth}-10`)
   })
 
