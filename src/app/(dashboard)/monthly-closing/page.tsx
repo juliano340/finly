@@ -1,10 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { ChevronLeft, ChevronRight, Info, Loader2 } from "lucide-react"
+import Link from "next/link"
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { formatCurrency, formatDate } from "@/lib/utils"
 
   interface ClosingData {
@@ -87,10 +87,6 @@ export default function MonthlyClosingPage() {
     { label: "Avulsas", value: summary?.looseExpensesTotal ?? 0 },
   ]
 
-  const expenseFixedCosts = data?.fixedCosts?.filter((fc) => fc.fixedCost.type === "EXPENSE") ?? []
-  const outsideCardCosts = expenseFixedCosts.filter((fc) => !fc.fixedCost.paidInsideCard)
-  const insideCardCosts = expenseFixedCosts.filter((fc) => fc.fixedCost.paidInsideCard)
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -120,12 +116,6 @@ export default function MonthlyClosingPage() {
         loading={loading}
       />
 
-      <div className="hidden gap-4 md:grid md:grid-cols-3">
-        <Metric title="Saídas totais do mês" value={summary?.totalSpent ?? 0} description="Tudo: faturas + fixos + avulsas" highlight loading={loading} detailItems={totalFormula} />
-        <Metric title="Já pago" value={paidTotal} description="Desse total, já foi pago" loading={loading} detailItems={paidFormula.map((item) => ({ ...item, status: "PAID" }))} />
-        <Metric title="Ainda a pagar" value={summary?.totalToPay ?? 0} description="Restante pendente" loading={loading} detailItems={pendingFormula.map((item) => ({ ...item, status: "PENDING" }))} />
-      </div>
-
       {!loading && (summary?.totalToPay ?? 0) === 0 && (summary?.totalSpent ?? 0) > 0 && (
         <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900 dark:bg-emerald-950/30">
           <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Tudo pago neste mês! 🎉</p>
@@ -134,35 +124,20 @@ export default function MonthlyClosingPage() {
           </Button>
         </div>
       )}
-      <Card className="hidden border-0 shadow-sm md:block">
-        <CardContent className="p-5">
-          <p className="text-xs font-medium text-muted-foreground">Detalhamento do que ainda falta pagar</p>
-          <div className="mt-3 grid gap-3 md:grid-cols-3">
-            {pendingFormula.map((item) => (
-              <div key={item.label} className="rounded-lg bg-muted p-3">
-                <p className="text-xs text-muted-foreground">{item.label}</p>
-                <p className="text-lg font-bold">{formatCurrency(item.value)}</p>
-              </div>
-            ))}
-          </div>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Custos fixos dentro do cartão não somam de novo (já estão na fatura). Gastos já pagos também são excluídos do &ldquo;a pagar&rdquo;.
-          </p>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-4 md:grid-cols-4">
-        <Metric title="Faturas totais" value={(summary?.cardInvoicesTotal ?? 0) + (summary?.cardInvoicesPaidTotal ?? 0)} description={`${formatCurrency(summary?.cardInvoicesPaidTotal ?? 0)} já pago · ${formatCurrency(summary?.cardInvoicesTotal ?? 0)} pendente`} loading={loading} detailItems={data?.invoices.map((inv) => ({ name: `${inv.card.name} — ${formatDate(inv.dueDate)}`, amount: inv.amount, status: inv.status }))} />
-        <Metric title="Fixos fora do cartão" value={summary?.fixedCostsOutsideCardTotalAll ?? 0} description={`${formatCurrency(summary?.fixedCostsOutsideCardTotal ?? 0)} pendente · ${formatCurrency((summary?.fixedCostsOutsideCardTotalAll ?? 0) - (summary?.fixedCostsOutsideCardTotal ?? 0))} já pago`} loading={loading} detailItems={outsideCardCosts.map((fc) => ({ name: fc.fixedCost.name, amount: fc.amount, status: fc.status }))} />
-        <Metric title="Despesas avulsas" value={summary?.looseExpensesTotal ?? 0} description="Transações não recorrentes" loading={loading} />
-        <Metric title="Receitas do mês" value={summary?.receivedIncomeTotal ?? 0} description={`${formatCurrency(summary?.receivedIncomeTotal ?? 0)} recebido · ${formatCurrency((summary?.incomeTotal ?? 0) - (summary?.receivedIncomeTotal ?? 0))} pendente`} loading={loading} detailItems={summary?.incomeItems?.map((item) => ({ name: `${item.name} (${item.type === "FIXED" ? "Fixa" : "Avulsa"})`, amount: item.amount, status: item.status }))} />
-        <Metric title="Fixos totais" value={summary?.fixedCostsTotal ?? 0} description="Dentro + fora do cartão" loading={loading} detailItems={expenseFixedCosts.map((fc) => ({ name: fc.fixedCost.name, amount: fc.amount, status: fc.status }))} />
-        <Metric title="Fixos dentro do cartão" value={summary?.fixedCostsInsideCardTotal ?? 0} description="Previstos na fatura" loading={loading} detailItems={insideCardCosts.map((fc) => ({ name: fc.fixedCost.name, amount: fc.amount, status: fc.status }))} />
-        <Metric title="Resultado do mês" value={summary?.projectedBalance ?? 0} description="Receitas - gastos (pagos e não pagos)" loading={loading} />
+      <div className="hidden space-y-4 md:block">
+        <MonthlyOverview
+          income={summary?.incomeTotal ?? 0}
+          receivedIncome={summary?.receivedIncomeTotal ?? 0}
+          expenses={summary?.totalSpent ?? 0}
+          result={summary?.projectedBalance ?? 0}
+          paid={paidTotal}
+          pending={summary?.totalToPay ?? 0}
+          loading={loading}
+        />
+        <ExpenseComposition items={totalFormula} pendingItems={pendingFormula} loading={loading} />
       </div>
       <section className="grid gap-4 lg:grid-cols-2">
-        <Card className="border-0 shadow-sm"><CardHeader><CardTitle className="text-base">Faturas por cartão</CardTitle></CardHeader><CardContent className="space-y-3">{loading ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div> : data?.invoices.map((invoice) => <div key={invoice.id} className="rounded-lg border p-3"><div className="flex justify-between"><strong>{invoice.card.name}</strong><span>{formatCurrency(invoice.amount)}</span></div><p className="text-sm text-muted-foreground">Vence em {formatDate(invoice.dueDate)} · {invoice.status === "PAID" ? "Pago" : "Pendente"}</p></div>)}</CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardHeader><CardTitle className="text-base">Previsão por cartão</CardTitle></CardHeader><CardContent className="space-y-3">{loading ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div> : summary?.estimatedInvoicesByCard.map((item) => <div key={item.cardId} className="rounded-lg border p-3"><div className="flex justify-between"><strong>{item.cardName}</strong><span>{formatCurrency(item.estimatedAmount)}</span></div><p className="text-sm text-muted-foreground">Previsto pelos fixos no cartão. Fatura manual: {formatCurrency(item.invoiceAmount)} · diferença: {formatCurrency(item.difference)}</p></div>)}</CardContent></Card>
+        <Card className="border-0 shadow-sm lg:col-span-2"><CardHeader><CardTitle className="text-base">Cartões e faturas</CardTitle><p className="text-sm text-muted-foreground">Compare o valor lançado com a previsão dos custos fixos por cartão.</p></CardHeader><CardContent><CardRows loading={loading} invoices={data?.invoices} estimates={summary?.estimatedInvoicesByCard} /></CardContent></Card>
       </section>
       <Card className="border-0 shadow-sm"><CardHeader><CardTitle className="text-base">Custos fixos do mês</CardTitle></CardHeader><CardContent className="space-y-3">{loading ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div> : data?.fixedCosts.map((item) => <div key={item.id} className="rounded-lg border p-3"><div className="flex items-start justify-between gap-3"><div><strong>{item.fixedCost.name}</strong><p className="text-sm text-muted-foreground">{item.fixedCost.category.name} · {item.fixedCost.paidInsideCard ? `Incluído na fatura ${item.fixedCost.card?.name ?? ""}` : "Fora do cartão"} · Conta prevista: {item.fixedCost.bankAccount?.name ?? "não definida"} · {item.status === "PAID" ? "Pago" : "Pendente"}</p></div><div className="text-right"><span className="font-medium">{formatCurrency(item.amount)}</span>{item.status === "PENDING" && item.fixedCost.bankAccount && <Button className="mt-2 block" size="sm" variant="outline" onClick={() => handlePayFixedCost(item.id)}>Lançar na conta</Button>}</div></div></div>)}</CardContent></Card>
     </div>
@@ -170,6 +145,144 @@ export default function MonthlyClosingPage() {
 }
 
 type DetailItem = { name?: string; label?: string; amount?: number; value?: number; status?: string }
+
+function MonthlyOverview({ income, receivedIncome, expenses, result, paid, pending, loading }: {
+  income: number
+  receivedIncome: number
+  expenses: number
+  result: number
+  paid: number
+  pending: number
+  loading: boolean
+}) {
+  const total = paid + pending
+  const paidPercent = total > 0 ? Math.min(100, Math.max(0, (paid / total) * 100)) : 0
+
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Como o mês fecha</CardTitle>
+        <p className="text-sm text-muted-foreground">Uma visão rápida das receitas, despesas e resultado projetado.</p>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <OverviewValue label="Receitas do mês" value={income} detail={`${formatCurrency(receivedIncome)} recebido`} loading={loading} />
+          <OverviewValue label="Despesas do mês" value={expenses} detail="Pagas e pendentes" loading={loading} />
+          <OverviewValue label={result >= 0 ? "Saldo projetado" : "Déficit projetado"} value={result} detail="Receitas menos despesas" loading={loading} tone={result >= 0 ? "positive" : "negative"} />
+        </div>
+        <div className="rounded-lg bg-muted/60 p-4">
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <span className="font-medium">Progresso dos pagamentos</span>
+            <span className="text-muted-foreground">{loading ? "Calculando..." : `${Math.round(paidPercent)}% pago`}</span>
+          </div>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-background">
+            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${paidPercent}%` }} />
+          </div>
+          <div className="mt-2 flex justify-between text-xs text-muted-foreground">
+            <span>Pago: {formatCurrency(paid)}</span>
+            <span>Pendente: {formatCurrency(pending)}</span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function OverviewValue({ label, value, detail, loading, tone = "default" }: {
+  label: string
+  value: number
+  detail: string
+  loading: boolean
+  tone?: "default" | "positive" | "negative"
+}) {
+  return (
+    <div>
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <p className={`mt-1 text-xl font-bold tabular-nums ${tone === "positive" ? "text-success" : tone === "negative" ? "text-destructive" : ""}`}>
+        {loading ? <Loader2 className="h-5 w-5 animate-spin opacity-60" /> : formatCurrency(value)}
+      </p>
+      <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
+    </div>
+  )
+}
+
+function ExpenseComposition({ items, pendingItems, loading }: { items: DetailItem[]; pendingItems: DetailItem[]; loading: boolean }) {
+  const pendingByLabel = new Map(pendingItems.map((item) => [item.label, item.value ?? 0]))
+  const pendingLabels: Record<string, string> = {
+    Faturas: "Faturas pendentes",
+    "Fixos fora": "Fixos fora pendentes",
+    Avulsas: "Avulsas",
+  }
+  const links: Record<string, string> = {
+    Faturas: "/invoices",
+    "Fixos fora": "/fixed-costs",
+    Avulsas: "/transactions",
+  }
+
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Composição das despesas</CardTitle>
+        <p className="text-sm text-muted-foreground">De onde vem o total de saídas e o que ainda está pendente.</p>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <div className="min-w-[560px] text-sm">
+            <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr] gap-4 border-b px-3 pb-2 text-xs font-medium text-muted-foreground">
+              <span>Origem</span><span className="text-right">Total</span><span className="text-right">Pago</span><span className="text-right">Pendente</span>
+            </div>
+            {loading ? <div className="flex items-center gap-2 px-3 py-6 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div> : items.map((item) => {
+              const total = item.value ?? item.amount ?? 0
+              const pending = pendingByLabel.get(pendingLabels[item.label ?? ""] ?? "") ?? 0
+              return (
+                <Link href={links[item.label ?? ""] ?? "#"} key={item.label} className="group grid grid-cols-[1.5fr_1fr_1fr_1fr] gap-4 border-b px-3 py-3 last:border-0 hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:outline-none">
+                  <span className="font-medium underline-offset-4 group-hover:underline">{item.label}</span>
+                  <span className="text-right font-semibold tabular-nums">{formatCurrency(total)}</span>
+                  <span className="text-right tabular-nums text-success">{formatCurrency(total - pending)}</span>
+                  <span className="text-right tabular-nums text-muted-foreground">{formatCurrency(pending)}</span>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">Custos fixos dentro do cartão já estão incluídos na fatura e não são somados novamente.</p>
+      </CardContent>
+    </Card>
+  )
+}
+
+function CardRows({ loading, invoices = [], estimates = [] }: {
+  loading: boolean
+  invoices?: ClosingData["invoices"]
+  estimates?: ClosingData["summary"]["estimatedInvoicesByCard"]
+}) {
+  if (loading) return <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div>
+  if (invoices.length === 0 && estimates.length === 0) return <p className="py-4 text-sm text-muted-foreground">Nenhuma fatura ou previsão para este mês.</p>
+
+  const names = [...new Set([...invoices.map((invoice) => invoice.card.name), ...estimates.map((item) => item.cardName)])]
+  return (
+    <div className="divide-y">
+      <div className="hidden grid-cols-[1.5fr_1fr_1fr_1fr] gap-4 border-b px-3 pb-2 text-xs font-medium text-muted-foreground sm:grid">
+        <span>Cartão</span><span className="text-right">Fatura</span><span className="text-right">Previsão</span><span className="text-right">Diferença</span>
+      </div>
+      {names.map((name) => {
+        const invoice = invoices.find((item) => item.card.name === name)
+        const estimate = estimates.find((item) => item.cardName === name)
+        return (
+          <div key={name} className="grid gap-2 border-b px-3 py-3 text-sm last:border-0 sm:grid-cols-[1.5fr_1fr_1fr_1fr] sm:gap-4">
+            <div>
+              <span className="font-medium">{name}</span>
+              <p className="mt-1 text-xs text-muted-foreground">{invoice ? `Vence em ${formatDate(invoice.dueDate)} · ${invoice.status === "PAID" ? "Pago" : "Pendente"}` : "Sem fatura manual"}</p>
+            </div>
+            <span className="flex justify-between gap-3 sm:block sm:text-right"><span className="text-muted-foreground sm:hidden">Fatura</span>{formatCurrency(invoice?.amount ?? 0)}</span>
+            <span className="flex justify-between gap-3 sm:block sm:text-right"><span className="text-muted-foreground sm:hidden">Previsão</span>{formatCurrency(estimate?.estimatedAmount ?? 0)}</span>
+            <span className="flex justify-between gap-3 sm:block sm:text-right"><span className="text-muted-foreground sm:hidden">Diferença</span>{formatCurrency(estimate?.difference ?? 0)}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 function MobileClosingSummary({
   total,
@@ -244,44 +357,4 @@ function BreakdownRows({ items, className = "bg-muted/50" }: { items: DetailItem
       ))}
     </div>
   )
-}
-
-function Metric({ title, value, description, highlight = false, loading = false, detailItems }: { title: string; value: number; description?: string; highlight?: boolean; loading?: boolean; detailItems?: DetailItem[] }) {
-  return <Card className={`border-0 shadow-sm ${highlight ? "bg-primary text-primary-foreground" : ""}`}><CardContent className="p-5">
-    <p className="text-xs font-medium opacity-80 flex items-center gap-1.5">
-      {title}
-      {detailItems && detailItems.length > 0 && !loading && (
-        <span className="hidden md:inline-flex">
-          <Tooltip>
-            <TooltipTrigger>
-              <span tabIndex={0} className="inline-flex cursor-help"><Info className="size-3.5" /></span>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" align="start" className="p-0">
-              <div className="max-h-48 overflow-y-auto py-1.5">
-                {detailItems.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between gap-4 px-3 py-1 text-sm">
-                    <span className="flex min-w-0 items-center gap-2">
-                      <span className="truncate">{item.name ?? item.label}</span>
-                      {item.status && <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${item.status === "PAID" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400" : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"}`}>{item.status === "PAID" ? "Recebido" : "Pendente"}</span>}
-                    </span>
-                    <span className="shrink-0 whitespace-nowrap font-medium tabular-nums">{formatCurrency(item.amount ?? item.value ?? 0)}</span>
-                  </div>
-                ))}
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        </span>
-      )}
-    </p>
-    <p className="text-xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin opacity-60" /> : formatCurrency(value)}</p>
-    {description && <p className="mt-1 text-xs opacity-75">{description}</p>}
-    {detailItems && detailItems.length > 0 && !loading && (
-      <details className="mt-3 rounded-lg bg-muted/60 p-3 md:hidden">
-        <summary className="cursor-pointer text-xs font-medium text-muted-foreground">Ver composição</summary>
-        <div className="mt-2">
-          <BreakdownRows items={detailItems} className="bg-background" />
-        </div>
-      </details>
-    )}
-  </CardContent></Card>
 }
