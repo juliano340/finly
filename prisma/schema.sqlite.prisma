@@ -246,6 +246,7 @@ model BankAccountMovement {
 
   bankAccount BankAccount  @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
   transaction Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  fixedCostOccurrence FixedCostOccurrence?
   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, type])
@@ -322,6 +323,7 @@ model FixedCostOccurrence {
   status           PaymentStatus @default(PENDING)
   paidAt           DateTime?
   paidViaCard      Boolean       @default(false)
+  bankAccountMovementId String?  @unique
   deletedAt        DateTime?
   userId           String
   createdAt        DateTime      @default(now())
@@ -329,6 +331,7 @@ model FixedCostOccurrence {
 
   fixedCost      FixedCost      @relation(fields: [fixedCostId], references: [id], onDelete: Cascade)
   financialMonth FinancialMonth @relation(fields: [financialMonthId], references: [id], onDelete: Cascade)
+  bankAccountMovement BankAccountMovement? @relation(fields: [bankAccountMovementId], references: [id], onDelete: SetNull)
   user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([fixedCostId, dueDate])

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useSearchParams } from "next/navigation"
-import { ArrowDown, ArrowUp, Loader2, Plus, Wallet } from "lucide-react"
+import { ArrowDown, ArrowUp, Plus, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -109,16 +109,8 @@ export default function TransactionsPage() {
     }
   }
 
-  if (loading && transactions.length === 0) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    )
-  }
-
   return (
-    <div className="space-y-6">
+    <div className="dashboard-content-enter space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Transações</h1>

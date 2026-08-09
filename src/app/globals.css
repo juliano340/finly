@@ -165,6 +165,12 @@
   will-change: filter, opacity, transform;
 }
 
+.dashboard-content-enter {
+  animation: dashboard-page-enter 450ms cubic-bezier(0.22, 1.2, 0.36, 1) both;
+  transform-origin: top center;
+  will-change: opacity, transform;
+}
+
 ::view-transition-old(dashboard-content) {
   animation: 250ms cubic-bezier(0.22, 1.2, 0.36, 1) both fade-out;
 }
@@ -184,6 +190,7 @@
   }
 
   .dashboard-page-transition,
+  .dashboard-content-enter,
   ::view-transition-old(dashboard-content),
   ::view-transition-new(dashboard-content) {
     animation: none;

@@ -11,6 +11,10 @@ const entries = [
   {
     date: "Agosto 2026",
     items: [
+      { type: "fix", desc: "Pagamento de lançamentos fixos idempotente contra requisições concorrentes" },
+      { type: "fix", desc: "Estorno de lançamento fixo remove somente o movimento bancário vinculado" },
+      { type: "fix", desc: "Teste de fechamento mensal independente de data histórica fixa" },
+      { type: "feat", desc: "Transições de entrada e melhor aproveitamento de espaço nas telas do dashboard" },
       { type: "feat", desc: "Totalizadores na tela de Faturas (Total, Pago, A pagar)" },
       { type: "feat", desc: "Ordenação nas colunas da tabela de Faturas" },
       { type: "feat", desc: "Atualização automática da tabela ao editar lançamento fixo" },

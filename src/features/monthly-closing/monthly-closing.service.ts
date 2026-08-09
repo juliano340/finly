@@ -7,6 +7,8 @@ import { validateExpenseLimit } from "@/features/bank-accounts/bank-accounts.ser
 
 type FixedCostOccurrenceClient = Pick<PrismaClient, "fixedCost" | "fixedCostOccurrence">
 
+class AmbiguousLegacyMovementError extends Error {}
+
 interface CardInvoiceFixedCostSyncInput {
   cardId: string
   financialMonthId: string
@@ -210,8 +212,22 @@ export async function payFixedCostOccurrence(
   }
 
   return db.$transaction(async (tx) => {
+    const paidAt = new Date()
+    const claimed = await tx.fixedCostOccurrence.updateMany({
+      where: { id: occurrenceId, userId, status: "PENDING", deletedAt: null },
+      data: { status: "PAID", paidAt },
+    })
+
+    if (claimed.count === 0) {
+      return tx.fixedCostOccurrence.findFirst({
+        where: { id: occurrenceId, userId, deletedAt: null },
+        include: { fixedCost: { include: { category: true, card: true, bankAccount: true } } },
+      })
+    }
+
+    let bankAccountMovementId: string | null = null
     if (occurrence.fixedCost.bankAccountId) {
-      await tx.bankAccountMovement.create({
+      const movement = await tx.bankAccountMovement.create({
         data: {
           bankAccountId: occurrence.fixedCost.bankAccountId,
           amount: occurrence.amount,
@@ -221,11 +237,12 @@ export async function payFixedCostOccurrence(
           userId,
         },
       })
+      bankAccountMovementId = movement.id
     }
 
     return tx.fixedCostOccurrence.update({
       where: { id: occurrenceId },
-      data: { status: "PAID", paidAt: new Date() },
+      data: { bankAccountMovementId },
       include: { fixedCost: { include: { category: true, card: true, bankAccount: true } } },
     })
   })
@@ -244,28 +261,54 @@ export async function unpayFixedCostOccurrence(
   if (!occurrence || occurrence.userId !== userId || occurrence.deletedAt) return null
   if (occurrence.status !== "PAID") return occurrence
 
-  return db.$transaction(async (tx) => {
-    if (occurrence.fixedCost.bankAccountId) {
-      const description = `PAGAMENTO ${occurrence.fixedCost.name}`
-      const mov = await tx.bankAccountMovement.findFirst({
-        where: {
-          bankAccountId: occurrence.fixedCost.bankAccountId,
-          amount: occurrence.amount,
-          type: occurrence.fixedCost.type,
-          description,
-          userId,
-        },
-        orderBy: { createdAt: "desc" },
+  try {
+    return await db.$transaction(async (tx) => {
+      const claimed = await tx.fixedCostOccurrence.updateMany({
+        where: { id: occurrenceId, userId, status: "PAID", deletedAt: null },
+        data: { status: "PENDING", paidAt: null },
       })
-      if (mov) await tx.bankAccountMovement.delete({ where: { id: mov.id } })
-    }
 
-    return tx.fixedCostOccurrence.update({
-      where: { id: occurrenceId },
-      data: { status: "PENDING", paidAt: null },
-      include: { fixedCost: { include: { category: true, card: true, bankAccount: true } } },
+      if (claimed.count === 0) {
+        return tx.fixedCostOccurrence.findFirst({
+          where: { id: occurrenceId, userId, deletedAt: null },
+          include: { fixedCost: { include: { category: true, card: true, bankAccount: true } } },
+        })
+      }
+
+      if (occurrence.bankAccountMovementId) {
+        await tx.bankAccountMovement.deleteMany({
+          where: { id: occurrence.bankAccountMovementId, userId },
+        })
+      } else if (occurrence.fixedCost.bankAccountId) {
+        const description = `PAGAMENTO ${occurrence.fixedCost.name}`
+        const legacyMovements = await tx.bankAccountMovement.findMany({
+          where: {
+            bankAccountId: occurrence.fixedCost.bankAccountId,
+            amount: occurrence.amount,
+            type: occurrence.fixedCost.type,
+            description,
+            userId,
+            fixedCostOccurrence: null,
+          },
+          orderBy: { createdAt: "desc" },
+          take: 2,
+        })
+        if (legacyMovements.length > 1) throw new AmbiguousLegacyMovementError()
+        if (legacyMovements.length === 1) {
+          await tx.bankAccountMovement.delete({ where: { id: legacyMovements[0].id } })
+        }
+      }
+
+      return tx.fixedCostOccurrence.update({
+        where: { id: occurrenceId },
+        data: { bankAccountMovementId: null },
+        include: { fixedCost: { include: { category: true, card: true, bankAccount: true } } },
+      })
     })
-  })
+  } catch (error) {
+    if (error instanceof AmbiguousLegacyMovementError) return null
+    throw error
+  }
 }
 
 export async function payFixedCostOccurrenceWithCard(

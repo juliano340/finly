@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest"
 import { getTestClient } from "@/__tests__/prisma"
 import { registerUser } from "@/features/auth/auth.service"
-import { getMonthlyClosing, markCardInvoiceFixedCostsPaid, markCardInvoiceFixedCostsPending, payFixedCostOccurrence } from "../monthly-closing.service"
+import { getMonthlyClosing, markCardInvoiceFixedCostsPaid, markCardInvoiceFixedCostsPending, payFixedCostOccurrence, unpayFixedCostOccurrence } from "../monthly-closing.service"
 
 const prisma = getTestClient()
 
@@ -131,6 +131,91 @@ describe("monthly-closing.service", () => {
 
     const result = await payFixedCostOccurrence(occurrence.id, userId, prisma)
     expect(result).toBeNull()
+  })
+
+  it("mantém pagamento idempotente e estorna somente o movimento vinculado", async () => {
+    const month = "2026-10"
+    const suffix = Date.now()
+    const account = await prisma.bankAccount.create({
+      data: { name: `Conta Idempotente ${suffix}`, type: "CHECKING", color: "#000", initialBalance: 1000, userId },
+    })
+    const fixedCost = await prisma.fixedCost.create({
+      data: {
+        name: `Internet Idempotente ${suffix}`,
+        defaultAmount: 120,
+        categoryId,
+        paymentMethod: "PIX",
+        bankAccountId: account.id,
+        paidInsideCard: false,
+        userId,
+      },
+    })
+    const financialMonth = await prisma.financialMonth.create({ data: { month, userId } })
+    const occurrence = await prisma.fixedCostOccurrence.create({
+      data: { fixedCostId: fixedCost.id, financialMonthId: financialMonth.id, month, amount: 120, dueDate: new Date("2026-10-10T12:00:00"), userId },
+    })
+
+    const [firstPayment, repeatedPayment] = await Promise.all([
+      payFixedCostOccurrence(occurrence.id, userId, prisma),
+      payFixedCostOccurrence(occurrence.id, userId, prisma),
+    ])
+
+    expect(firstPayment).not.toBeNull()
+    expect(repeatedPayment).not.toBeNull()
+
+    const paidOccurrence = await prisma.fixedCostOccurrence.findUnique({ where: { id: occurrence.id } })
+    const linkedMovementId = paidOccurrence?.bankAccountMovementId
+    expect(paidOccurrence?.status).toBe("PAID")
+    expect(linkedMovementId).toBeTruthy()
+    await expect(prisma.bankAccountMovement.count({
+      where: { bankAccountId: account.id, description: `PAGAMENTO ${fixedCost.name}`, userId },
+    })).resolves.toBe(1)
+
+    const decoy = await prisma.bankAccountMovement.create({
+      data: {
+        bankAccountId: account.id,
+        amount: occurrence.amount,
+        type: fixedCost.type,
+        description: `PAGAMENTO ${fixedCost.name}`,
+        date: new Date(),
+        userId,
+      },
+    })
+
+    const unpaid = await unpayFixedCostOccurrence(occurrence.id, userId, prisma)
+    expect(unpaid?.status).toBe("PENDING")
+    expect(unpaid?.bankAccountMovementId).toBeNull()
+    await expect(prisma.bankAccountMovement.findUnique({ where: { id: linkedMovementId! } })).resolves.toBeNull()
+    await expect(prisma.bankAccountMovement.findUnique({ where: { id: decoy.id } })).resolves.not.toBeNull()
+
+    const legacyMonth = "2026-11"
+    const legacyFinancialMonth = await prisma.financialMonth.create({ data: { month: legacyMonth, userId } })
+    const legacyOccurrence = await prisma.fixedCostOccurrence.create({
+      data: {
+        fixedCostId: fixedCost.id,
+        financialMonthId: legacyFinancialMonth.id,
+        month: legacyMonth,
+        amount: 120,
+        dueDate: new Date("2026-11-10T12:00:00"),
+        status: "PAID",
+        paidAt: new Date(),
+        userId,
+      },
+    })
+    await prisma.bankAccountMovement.create({
+      data: {
+        bankAccountId: account.id,
+        amount: legacyOccurrence.amount,
+        type: fixedCost.type,
+        description: `PAGAMENTO ${fixedCost.name}`,
+        date: new Date(),
+        userId,
+      },
+    })
+
+    await expect(unpayFixedCostOccurrence(legacyOccurrence.id, userId, prisma)).resolves.toBeNull()
+    await expect(prisma.fixedCostOccurrence.findUnique({ where: { id: legacyOccurrence.id } }))
+      .resolves.toMatchObject({ status: "PAID", bankAccountMovementId: null })
   })
 
   it("sincroniza custos fixos inclusos no cartão ao pagar e estornar fatura", async () => {

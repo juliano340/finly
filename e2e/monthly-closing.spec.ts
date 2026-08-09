@@ -61,10 +61,13 @@ test.describe("Fechamento Mensal", () => {
     await page.click('button:has-text("Salvar")')
     await expect(page.getByRole("button", { name: "Streaming E2E" })).toBeVisible({ timeout: 10000 })
 
+    const now = new Date()
+    const invoiceDueDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-10`
+
     await page.goto("/invoices")
     await page.getByRole("button", { name: "Nova fatura" }).click()
     await page.selectOption('select[name="cardId"]', { label: "Cartão E2E" })
-    await page.fill('input[name="dueDate"]', "2026-06-10")
+    await page.fill('input[name="dueDate"]', invoiceDueDate)
     await page.fill('input[name="amount"]', "300")
     await page.click('button:has-text("Salvar")')
     await expect(page.locator('main :visible:text("R$ 300,00")').first()).toBeVisible({ timeout: 10000 })
