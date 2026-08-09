@@ -13,6 +13,23 @@ export default defineConfig({
     hookTimeout: 30000,
     fileParallelism: false,
     pool: "forks",
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "lcov"],
+      include: [
+        "src/features/**/*.service.ts",
+        "src/lib/accessible-sort.ts",
+        "src/lib/balance.ts",
+        "src/lib/money.ts",
+        "src/lib/recurrence.ts",
+      ],
+      thresholds: {
+        statements: 60,
+        branches: 50,
+        functions: 60,
+        lines: 60,
+      },
+    },
   },
   resolve: {
     alias: {

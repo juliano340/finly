@@ -135,6 +135,16 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+model LoginAttempt {
+  key             String   @id
+  failedAttempts  Int      @default(0)
+  windowStartedAt DateTime @default(now())
+  lockedUntil     DateTime?
+  updatedAt       DateTime @updatedAt
+
+  @@index([lockedUntil])
+}
+
 model Category {
   id     String          @id @default(cuid())
   name   String

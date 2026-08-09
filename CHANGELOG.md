@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-08-09
+
+### Corrigido
+
+- **Configuração local**: `.env.example` e README agora distinguem claramente SQLite local e PostgreSQL de produção.
+- **Acessibilidade**: tabelas ordenáveis de contas bancárias e lançamentos fixos agora comunicam coluna e direção via `aria-sort` e rótulos acessíveis.
+- **Autenticação**: tentativas inválidas agora têm limite persistente por conta e IP, resposta uniforme e bloqueio temporário sem armazenar identificadores em texto puro.
+- **Dependências**: Next.js, Auth.js e Prisma atualizados para versões compatíveis com correções de segurança disponíveis.
+
+### Adicionado
+
+- **Qualidade**: cobertura automatizada com limites mínimos de 60% para linhas, funções e statements e 50% para branches.
+- **Segurança no CI**: audit de dependências críticas, Semgrep SAST, detecção de segredos e atualizações semanais pelo Dependabot.
+- **Documentação**: README operacional com produto, arquitetura, ambiente, scripts, testes, migrações e regras de segurança.
+
 ## 2026-08-05
 
 ### Corrigido

@@ -20,6 +20,8 @@ jobs:
 
       - run: npm ci
 
+      - run: npm audit --omit=dev --audit-level=critical
+
       - run: npm run prisma:generate
 
       - run: npx prisma db push --schema prisma/schema.sqlite.prisma
@@ -28,7 +30,7 @@ jobs:
 
       - run: npm run lint
 
-      - run: npm test
+      - run: npm run test:coverage
 
       - run: npm run build
 

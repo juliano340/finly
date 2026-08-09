@@ -13,6 +13,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { TransferWizard } from "@/features/bank-accounts/components/transfer-wizard"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { isAccountNegative, getAvailableBalance } from "@/lib/balance"
+import { ariaSort, sortButtonLabel } from "@/lib/accessible-sort"
 
 interface BankAccount {
   id: string
@@ -31,8 +32,8 @@ interface BankAccount {
 type AccountSortField = "name" | "institution" | "balance"
 
 function SortIcon({ field, activeField, direction }: { field: AccountSortField; activeField: AccountSortField; direction: "asc" | "desc" }) {
-  if (activeField !== field) return <span className="ml-1 text-muted-foreground/40">&#8693;</span>
-  return <span className="ml-1">{direction === "asc" ? "\u25B2" : "\u25BC"}</span>
+  if (activeField !== field) return <span aria-hidden="true" className="ml-1 text-muted-foreground/40">&#8693;</span>
+  return <span aria-hidden="true" className="ml-1">{direction === "asc" ? "\u25B2" : "\u25BC"}</span>
 }
 
 export default function BankAccountsPage() {
@@ -239,9 +240,9 @@ export default function BankAccountsPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/50">
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("name")}>Conta<SortIcon field="name" activeField={sortField} direction={sortDir} /></button></th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("institution")}>Instituição<SortIcon field="institution" activeField={sortField} direction={sortDir} /></button></th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("balance")}>Saldo<SortIcon field="balance" activeField={sortField} direction={sortDir} /></button></th>
+              <th aria-sort={sortField === "name" ? ariaSort(sortDir) : undefined} className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" aria-label={sortButtonLabel("Conta", sortField === "name", sortDir)} className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("name")}>Conta<SortIcon field="name" activeField={sortField} direction={sortDir} /></button></th>
+              <th aria-sort={sortField === "institution" ? ariaSort(sortDir) : undefined} className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" aria-label={sortButtonLabel("Instituição", sortField === "institution", sortDir)} className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("institution")}>Instituição<SortIcon field="institution" activeField={sortField} direction={sortDir} /></button></th>
+              <th aria-sort={sortField === "balance" ? ariaSort(sortDir) : undefined} className="px-4 py-3 text-right font-medium text-muted-foreground"><button type="button" aria-label={sortButtonLabel("Saldo", sortField === "balance", sortDir)} className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("balance")}>Saldo<SortIcon field="balance" activeField={sortField} direction={sortDir} /></button></th>
               <th className="px-4 py-3 text-right font-medium text-muted-foreground">Ações</th>
             </tr>
           </thead>

@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn, formatCurrency } from "@/lib/utils"
+import { ariaSort, sortButtonLabel } from "@/lib/accessible-sort"
 
 interface Category { id: string; name: string; type: string }
 interface CardItem { id: string; name: string; color: string }
@@ -39,8 +40,8 @@ interface Occurrence {
 type OccurrenceSortField = "name" | "category" | "source" | "dueDate" | "amount" | "status"
 
 function SortIcon({ field, activeField, direction }: { field: OccurrenceSortField; activeField: OccurrenceSortField; direction: "asc" | "desc" }) {
-  if (activeField !== field) return <span className="ml-1 text-muted-foreground/40">&#8693;</span>
-  return <span className="ml-1">{direction === "asc" ? "\u25B2" : "\u25BC"}</span>
+  if (activeField !== field) return <span aria-hidden="true" className="ml-1 text-muted-foreground/40">&#8693;</span>
+  return <span aria-hidden="true" className="ml-1">{direction === "asc" ? "\u25B2" : "\u25BC"}</span>
 }
 
 function StatusIconTooltip({
@@ -539,12 +540,12 @@ function FixedCostsPageInner() {
               <th className="w-10 px-3 py-3 text-center">
                 <input type="checkbox" className="h-4 w-4" checked={filteredOccurrences.length > 0 && filteredOccurrences.every((o) => selectedIds.has(o.id))} onChange={selectAll} />
               </th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("name")}>Nome<SortIcon field="name" activeField={sortField} direction={sortDir} /></button></th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("category")}>Categoria<SortIcon field="category" activeField={sortField} direction={sortDir} /></button></th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("source")}>Origem<SortIcon field="source" activeField={sortField} direction={sortDir} /></button></th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("dueDate")}>Vencimento<SortIcon field="dueDate" activeField={sortField} direction={sortDir} /></button></th>
-              <th className="w-[140px] px-4 py-3 text-right font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("amount")}>Valor do mês<SortIcon field="amount" activeField={sortField} direction={sortDir} /></button></th>
-              <th className="w-[160px] px-4 py-3 text-center font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("status")}>Status<SortIcon field="status" activeField={sortField} direction={sortDir} /></button></th>
+              <th aria-sort={sortField === "name" ? ariaSort(sortDir) : undefined} className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" aria-label={sortButtonLabel("Nome", sortField === "name", sortDir)} className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("name")}>Nome<SortIcon field="name" activeField={sortField} direction={sortDir} /></button></th>
+              <th aria-sort={sortField === "category" ? ariaSort(sortDir) : undefined} className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" aria-label={sortButtonLabel("Categoria", sortField === "category", sortDir)} className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("category")}>Categoria<SortIcon field="category" activeField={sortField} direction={sortDir} /></button></th>
+              <th aria-sort={sortField === "source" ? ariaSort(sortDir) : undefined} className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" aria-label={sortButtonLabel("Origem", sortField === "source", sortDir)} className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("source")}>Origem<SortIcon field="source" activeField={sortField} direction={sortDir} /></button></th>
+              <th aria-sort={sortField === "dueDate" ? ariaSort(sortDir) : undefined} className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" aria-label={sortButtonLabel("Vencimento", sortField === "dueDate", sortDir)} className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("dueDate")}>Vencimento<SortIcon field="dueDate" activeField={sortField} direction={sortDir} /></button></th>
+              <th aria-sort={sortField === "amount" ? ariaSort(sortDir) : undefined} className="w-[140px] px-4 py-3 text-right font-medium text-muted-foreground"><button type="button" aria-label={sortButtonLabel("Valor do mês", sortField === "amount", sortDir)} className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("amount")}>Valor do mês<SortIcon field="amount" activeField={sortField} direction={sortDir} /></button></th>
+              <th aria-sort={sortField === "status" ? ariaSort(sortDir) : undefined} className="w-[160px] px-4 py-3 text-center font-medium text-muted-foreground"><button type="button" aria-label={sortButtonLabel("Status", sortField === "status", sortDir)} className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("status")}>Status<SortIcon field="status" activeField={sortField} direction={sortDir} /></button></th>
               <th className="px-4 py-3 text-right font-medium text-muted-foreground">Ações</th>
             </tr>
           </thead>

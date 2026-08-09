@@ -1,36 +1,110 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Finly
 
-## Getting Started
+Aplicação web de finanças pessoais para acompanhar receitas, despesas, contas bancárias, cartões, faturas, orçamentos, lançamentos recorrentes e fechamento mensal.
 
-First, run the development server:
+## Stack
+
+- Next.js 16, React 19 e TypeScript
+- Prisma ORM
+- SQLite no desenvolvimento e testes
+- PostgreSQL em produção
+- Vitest e Testing Library
+- Playwright para testes ponta a ponta
+- GitHub Actions para integração contínua
+
+## Pré-requisitos
+
+- Node.js 22+
+- npm
+
+## Desenvolvimento local
 
 ```bash
+npm install
+cp .env.example .env
+npm run prisma:generate
+npm run db:push:sqlite
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+A aplicação estará disponível em `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+O fluxo local usa `DATABASE_URL="file:./dev.db"` e o schema [prisma/schema.sqlite.prisma](prisma/schema.sqlite.prisma). Não execute `prisma migrate deploy` contra o SQLite.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Bancos e migrações
 
-## Learn More
+O projeto mantém dois schemas equivalentes:
 
-To learn more about Next.js, take a look at the following resources:
+- `prisma/schema.sqlite.prisma`: desenvolvimento local e testes.
+- `prisma/schema.prisma`: PostgreSQL de produção e migrations versionadas.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Depois de alterar modelos, mantenha ambos os schemas alinhados e gere os dois clients:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run prisma:generate
+npm run db:push:sqlite
+```
 
-## Deploy on Vercel
+Migrações PostgreSQL devem ser criadas em `prisma/migrations` e aplicadas em produção pelo usuário exclusivo de migração:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run db:migrate:prod
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Consulte [docs/MIGRATIONS.md](docs/MIGRATIONS.md) para recuperação de falhas e [docs/deployment-vercel-vps-postgres.md](docs/deployment-vercel-vps-postgres.md) para o ambiente de produção.
+
+## Variáveis de ambiente
+
+Parta de `.env.example`. Valores sensíveis nunca devem ser commitados.
+
+| Variável | Uso |
+|---|---|
+| `DATABASE_URL` | SQLite local ou conexão PostgreSQL da aplicação |
+| `AUTH_SECRET` | Assinatura de sessões do Auth.js |
+| `AUTH_URL` | URL pública da aplicação |
+| `SMTP_*` e `EMAIL_FROM` | Recuperação de senha por e-mail |
+| `MIGRATE_DATABASE_URL` | Conexão privilegiada usada somente em migrations de produção |
+
+## Scripts principais
+
+```bash
+npm run dev                 # servidor local
+npm run lint                # análise estática
+npm test                    # testes Vitest
+npm run test:coverage       # testes com cobertura
+npm run test:e2e            # testes Playwright
+npm run build               # build de produção
+npm run prisma:generate     # clients PostgreSQL e SQLite
+npm run db:push:sqlite      # sincroniza banco SQLite local
+npm run db:migrate:prod     # aplica migrations PostgreSQL via túnel SSH
+```
+
+## Organização
+
+- `src/app`: páginas e rotas HTTP.
+- `src/features`: regras de negócio por domínio.
+- `src/lib`: infraestrutura e utilitários compartilhados.
+- `prisma`: schemas, migrations e seed.
+- `e2e`: cenários ponta a ponta.
+- `docs`: operação, deploy e decisões técnicas.
+
+Toda consulta financeira deve ser isolada por `userId`. Valores monetários são persistidos como `Decimal(19,2)` no PostgreSQL e convertidos para números somente nas fronteiras da aplicação. Pagamentos e estornos devem manter vínculo único com seus movimentos bancários.
+
+## Qualidade
+
+Antes de publicar uma alteração:
+
+```bash
+npm run lint
+npm test
+npm run build
+```
+
+O CI repete essas verificações, mede cobertura, audita dependências de produção e executa os testes E2E.
+
+## Segurança operacional
+
+- `finly_app` é o usuário restrito de runtime.
+- `finly_migrator` é usado apenas para alterações de schema.
+- A conta de demonstração bloqueia operações mutáveis.
+- Credenciais, URLs com senha e arquivos `.env` não devem aparecer em commits, logs ou documentação.

@@ -3,6 +3,14 @@ import Credentials from "next-auth/providers/credentials"
 import { compare } from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 import { AUTH_SECRET } from "@/lib/auth-secret"
+import {
+  clearLoginFailures,
+  loginRateLimitKeys,
+  isLoginBlocked,
+  recordLoginFailure,
+} from "@/features/auth/login-rate-limit.service"
+
+const DUMMY_PASSWORD_HASH = "$2b$12$AFX1qqGxoGwG6.wcRv2GoOPr1r4vsEfaPdCjHY/rdZof1Zkc0Os4e"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
@@ -21,15 +29,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: {},
         password: {},
       },
-      async authorize(credentials) {
-        const { email, password } = credentials as { email: string; password: string }
+      async authorize(credentials, request) {
+        const { email: rawEmail, password } = credentials as { email: string; password: string }
+        const email = rawEmail?.trim().toLowerCase()
         if (!email || !password) return null
 
-        const user = await prisma.user.findUnique({ where: { email } })
-        if (!user?.passwordHash) return null
+        const rateLimitKeys = loginRateLimitKeys(email, request)
+        if (await isLoginBlocked(rateLimitKeys)) {
+          await compare(password, DUMMY_PASSWORD_HASH)
+          return null
+        }
 
-        const valid = await compare(password, user.passwordHash)
-        if (!valid) return null
+        const user = await prisma.user.findUnique({ where: { email } })
+        const valid = await compare(password, user?.passwordHash ?? DUMMY_PASSWORD_HASH)
+        if (!user?.passwordHash || !valid) {
+          await recordLoginFailure(rateLimitKeys)
+          return null
+        }
+
+        await clearLoginFailures(rateLimitKeys)
 
         return { id: user.id, email: user.email, name: user.name }
       },
