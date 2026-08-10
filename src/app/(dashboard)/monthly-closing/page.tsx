@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatCurrency, formatDate } from "@/lib/utils"
+import { MonthNavigator, changeMonth, getCurrentMonth } from "@/components/month-navigator"
 
   interface ClosingData {
     summary: {
@@ -17,31 +18,8 @@ import { formatCurrency, formatDate } from "@/lib/utils"
   fixedCosts: { id: string; amount: number; status: "PENDING" | "PAID"; fixedCost: { name: string; type: "INCOME" | "EXPENSE"; paidInsideCard: boolean; paymentMethod: string; category: { name: string }; card: { name: string } | null; bankAccount: { name: string } | null } }[]
 }
 
-function currentMonth() {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
-}
-
-function previousMonth(month: string) {
-  const [y, m] = month.split("-").map(Number)
-  const d = new Date(y, m - 2, 1)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
-}
-
-function nextMonth(month: string) {
-  const [y, m] = month.split("-").map(Number)
-  const d = new Date(y, m, 1)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
-}
-
-function monthLabel(month: string) {
-  const [y, m] = month.split("-").map(Number)
-  const date = new Date(y, m - 1, 1)
-  return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
-}
-
 export default function MonthlyClosingPage() {
-  const [month, setMonth] = useState(currentMonth)
+  const [month, setMonth] = useState(getCurrentMonth)
   const [data, setData] = useState<ClosingData | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -94,16 +72,7 @@ export default function MonthlyClosingPage() {
           <h1 className="text-2xl font-bold tracking-tight">Fechamento Mensal</h1>
           <p className="text-muted-foreground">Gastos do mês: realizado vs. a pagar.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 rounded-md border bg-background px-2 py-1">
-            <Button size="sm" variant="ghost" className="size-7 p-0" disabled={loading} onClick={() => setMonth(previousMonth(month))}><ChevronLeft className="size-4" /></Button>
-            <span className="min-w-28 text-center text-sm font-medium capitalize">{loading ? <Loader2 className="inline h-4 w-4 animate-spin" /> : monthLabel(month)}</span>
-            <Button size="sm" variant="ghost" className="size-7 p-0" disabled={loading} onClick={() => setMonth(nextMonth(month))}><ChevronRight className="size-4" /></Button>
-          </div>
-          {month !== currentMonth() && (
-            <Button size="sm" variant="ghost" disabled={loading} onClick={() => setMonth(currentMonth())}>Hoje</Button>
-          )}
-        </div>
+        <MonthNavigator month={month} disabled={loading} onMonthChange={setMonth} />
       </div>
 
       <MobileClosingSummary
@@ -119,7 +88,7 @@ export default function MonthlyClosingPage() {
       {!loading && (summary?.totalToPay ?? 0) === 0 && (summary?.totalSpent ?? 0) > 0 && (
         <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900 dark:bg-emerald-950/30">
           <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Tudo pago neste mês! 🎉</p>
-          <Button size="sm" variant="outline" onClick={() => setMonth(nextMonth(month))}>
+          <Button size="sm" variant="outline" onClick={() => setMonth(changeMonth(month, 1))}>
             Ver próximo mês
           </Button>
         </div>

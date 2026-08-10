@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, Suspense, type ReactNode } from "react"
 import { useSearchParams } from "next/navigation"
-import { CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, Clock3, CreditCard, Loader2, RotateCcw, Settings, Trash2 } from "lucide-react"
+import { CalendarClock, CheckCircle2, Clock3, CreditCard, Loader2, RotateCcw, Settings, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -19,6 +19,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn, formatCurrency } from "@/lib/utils"
 import { ariaSort, sortButtonLabel } from "@/lib/accessible-sort"
+import { MonthNavigator, changeMonth, formatMonth, getCurrentMonth } from "@/components/month-navigator"
 
 interface Category { id: string; name: string; type: string }
 interface CardItem { id: string; name: string; color: string }
@@ -85,29 +86,6 @@ function StatusIconTooltip({
   )
 }
 
-function currentMonth() {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
-}
-
-function previousMonth(month: string) {
-  const [y, m] = month.split("-").map(Number)
-  const d = new Date(y, m - 2, 1)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
-}
-
-function nextMonth(month: string) {
-  const [y, m] = month.split("-").map(Number)
-  const d = new Date(y, m, 1)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
-}
-
-function monthLabel(month: string) {
-  const [y, m] = month.split("-").map(Number)
-  const date = new Date(y, m - 1, 1)
-  return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
-}
-
 function formatDueDate(dueDay: number | null, month: string) {
   if (!dueDay) return "-"
   const [year, m] = month.split("-").map(Number)
@@ -133,7 +111,7 @@ function FixedCostsPageInner() {
     setPrevUrlKey(urlKey)
   }
 
-  const month = interactiveMonth ?? validUrlMonth ?? currentMonth()
+  const month = interactiveMonth ?? validUrlMonth ?? getCurrentMonth()
   const setMonth = useCallback((m: string) => setInteractiveMonth(m), [])
 
   const [categories, setCategories] = useState<Category[]>([])
@@ -463,14 +441,7 @@ function FixedCostsPageInner() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div><h1 className="text-2xl font-bold tracking-tight">Lançamentos Fixos</h1><p className="text-muted-foreground">Entradas e saídas recorrentes.</p></div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 rounded-md border bg-background px-2 py-1">
-            <Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(previousMonth(month))}><ChevronLeft className="size-4" /></Button>
-            <span className="min-w-28 text-center text-sm font-medium capitalize">{monthLabel(month)}</span>
-            <Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(nextMonth(month))}><ChevronRight className="size-4" /></Button>
-          </div>
-          {month !== currentMonth() && (
-            <Button size="sm" variant="ghost" onClick={() => setMonth(currentMonth())}>Hoje</Button>
-          )}
+          <MonthNavigator month={month} onMonthChange={setMonth} />
           <Button onClick={() => {
             setInsideCard(false)
             setCreating(true)
@@ -517,7 +488,7 @@ function FixedCostsPageInner() {
       {!loading && totalPending === 0 && totalAll > 0 && (
         <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900 dark:bg-emerald-950/30">
           <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">{activeTab === "INCOME" ? "Tudo recebido neste mês! 🎉" : "Tudo pago neste mês! 🎉"}</p>
-          <Button size="sm" variant="outline" onClick={() => setMonth(nextMonth(month))}>
+           <Button size="sm" variant="outline" onClick={() => setMonth(changeMonth(month, 1))}>
             Ver próximo mês
           </Button>
         </div>
@@ -924,7 +895,7 @@ function FixedCostsPageInner() {
                 <div className="mt-4 space-y-4">
                   <div className="grid gap-3">
                     <div className="rounded-lg bg-muted p-4">
-                      <p className="text-xs text-muted-foreground">Valor deste mês ({monthLabel(selectedOccurrence.month)})</p>
+                       <p className="text-xs text-muted-foreground">Valor deste mês ({formatMonth(selectedOccurrence.month)})</p>
                       <p className="text-2xl font-bold">{formatCurrency(selectedOccurrence.amount)}</p>
                     </div>
                     <div className="rounded-lg border p-4">

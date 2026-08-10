@@ -71,6 +71,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
     return false
   })
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [notifications, setNotifications] = useState<DueNotification[]>([])
   const [notified, setNotified] = useState(false)
@@ -145,8 +146,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex h-screen overflow-hidden bg-muted/30">
       {/* Sidebar */}
       <aside
-        className={`flex flex-col bg-sidebar-background text-sidebar-foreground transition-all duration-300 ${
-          collapsed ? "w-16" : "w-56"
+        className={`flex shrink-0 flex-col overflow-hidden bg-sidebar-background text-sidebar-foreground transition-all duration-300 ${
+          collapsed
+            ? mobileNavOpen ? "w-16 md:w-16" : "w-0 md:w-16"
+            : "w-56"
         }`}
       >
         <div className="flex h-14 items-center gap-3 px-4">
@@ -159,27 +162,36 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </>
           )}
           <button
-            onClick={() => setCollapsed(!collapsed)}
+            type="button"
+            aria-label={collapsed ? (mobileNavOpen ? "Ocultar menu" : "Mostrar menu") : "Recolher menu"}
+            aria-expanded={collapsed ? mobileNavOpen : !collapsed}
+            onClick={() => {
+              if (window.innerWidth < 768) {
+                setMobileNavOpen((open) => !open)
+                return
+              }
+              setCollapsed(!collapsed)
+            }}
             className={`ml-auto rounded-md p-1 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground ${
               collapsed ? "mx-auto" : ""
-            }`}
+            } ${mobileNavOpen ? "bg-sidebar-accent text-sidebar-foreground" : ""}`}
           >
             {collapsed ? (
-              <Menu className="h-4 w-4" />
+              <Menu className="h-4 w-4" aria-hidden="true" />
             ) : (
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             )}
           </button>
         </div>
         <Separator className="bg-sidebar-border" />
-        <nav className="flex-1 space-y-1 p-2">
+        <nav className={`${mobileNavOpen ? "block" : "hidden"} flex-1 space-y-1 p-2 md:block`}>
           {navItems.map((item) => {
             const isActive = item.href === "/cards" ? pathname.startsWith("/cards") || pathname.startsWith("/invoices/") : pathname === item.href
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={() => { if (window.innerWidth < 768) setCollapsed(true) }}
+                onClick={() => { if (window.innerWidth < 768) setMobileNavOpen(false) }}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
                   isActive
                     ? "bg-primary text-primary-foreground"
@@ -192,10 +204,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             )
           })}
         </nav>
-        <div className="p-2">
+        <div className={`${mobileNavOpen ? "block" : "hidden"} p-2 md:block`}>
           <Separator className="bg-sidebar-border" />
           <button
-            onClick={() => { if (window.innerWidth < 768) setCollapsed(true); setLogoutOpen(true) }}
+            type="button"
+            onClick={() => { if (window.innerWidth < 768) setMobileNavOpen(false); setLogoutOpen(true) }}
             className={`mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground ${
               collapsed ? "justify-center px-2" : ""
             }`}
@@ -210,9 +223,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
         <header className="flex h-14 items-center justify-between border-b border-border bg-background px-6">
-          <h2 className="text-sm font-medium text-muted-foreground">
-            {navItems.find((i) => i.href === pathname)?.label ?? ""}
-          </h2>
+          <div className="flex min-w-0 items-center">
+            {collapsed && !mobileNavOpen && (
+              <button
+                type="button"
+                aria-label="Mostrar menu"
+                aria-expanded={false}
+                onClick={() => setMobileNavOpen(true)}
+                className="mr-3 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground md:hidden"
+              >
+                <Menu className="h-4 w-4" aria-hidden="true" />
+              </button>
+            )}
+            <h2 className="truncate text-sm font-medium text-muted-foreground">
+              {navItems.find((i) => i.href === pathname)?.label ?? ""}
+            </h2>
+          </div>
           <div className="relative flex items-center gap-3">
             <div ref={notificationsRef} className="relative">
               <button

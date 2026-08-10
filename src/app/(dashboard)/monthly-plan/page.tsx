@@ -2,15 +2,15 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
-import { ChevronLeft, ChevronRight, Loader2, RefreshCw } from "lucide-react"
+import { Loader2, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { getBusinessMonthKey, getSupportedMonthWindow } from "@/features/monthly-plan/monthly-plan.schema"
 import type { MonthlyPlanDto, MonthlyPlanUpdateInput } from "@/features/monthly-plan/monthly-plan.types"
 import { MonthlyPlanForm } from "./_components/monthly-plan-form"
 import { MonthlyPlanSummary } from "./_components/monthly-plan-summary"
+import { MonthNavigator } from "@/components/month-navigator"
 
 export default function MonthlyPlanPage() {
   return (
@@ -104,38 +104,14 @@ function MonthlyPlanPageContent() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2" aria-label="Navegação entre meses">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            aria-label="Mês anterior"
-            disabled={loading || saving || month === min}
-            onClick={() => selectMonth(changeMonth(month, -1))}
-          >
-            <ChevronLeft aria-hidden="true" />
-          </Button>
-          <Input
-            aria-label="Mês do plano"
-            className="w-36"
-            type="month"
-            min={min}
-            max={max}
-            value={month}
-            disabled={loading || saving}
-            onChange={(event) => selectMonth(event.target.value)}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            aria-label="Próximo mês"
-            disabled={loading || saving || month === max}
-            onClick={() => selectMonth(changeMonth(month, 1))}
-          >
-            <ChevronRight aria-hidden="true" />
-          </Button>
-        </div>
+        <MonthNavigator
+          month={month}
+          minMonth={min}
+          maxMonth={max}
+          todayMonth={getBusinessMonthKey(new Date())}
+          disabled={loading || saving}
+          onMonthChange={selectMonth}
+        />
       </div>
 
       {loading ? (
@@ -177,10 +153,4 @@ function PlanLoading() {
       Carregando plano do mês…
     </div>
   )
-}
-
-function changeMonth(month: string, amount: -1 | 1) {
-  const [year, monthNumber] = month.split("-").map(Number)
-  const date = new Date(Date.UTC(year, monthNumber - 1 + amount, 1))
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`
 }

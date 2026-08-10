@@ -6,8 +6,6 @@ import {
   ArrowDown,
   ArrowUp,
   Banknote,
-  ChevronLeft,
-  ChevronRight,
   BarChart3,
   Landmark,
   Loader2,
@@ -23,6 +21,7 @@ import { CardInvoiceEvolutionChart } from "./_components/card-invoice-evolution-
 import { RecentTransactions } from "./_components/recent-transactions"
 import { DailySafeLimitCard } from "./_components/daily-safe-limit-card"
 import { formatCurrency } from "@/lib/utils"
+import { MonthNavigator } from "@/components/month-navigator"
 import type { CardInvoiceEvolutionStats, DashboardStats, MonthlyEvolutionItem, MonthlyEvolutionStats } from "@/features/dashboard/dashboard.service"
 import type { MonthlyPlanDto } from "@/features/monthly-plan/monthly-plan.types"
 import { getBusinessMonthKey, getSupportedMonthWindow } from "@/features/monthly-plan/monthly-plan.schema"
@@ -36,12 +35,6 @@ const evolutionMetrics: { key: EvolutionMetric; label: string }[] = [
   { key: "incomeFixedCosts", label: "Receitas fixas" },
   { key: "looseExpenses", label: "Avulsas" },
 ]
-
-function formatMonth(month: string) {
-  const [year, m] = month.split("-")
-  const date = new Date(Number(year), Number(m) - 1)
-  return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
-}
 
 export default function DashboardPage() {
   const { data: session } = useSession()
@@ -78,20 +71,6 @@ export default function DashboardPage() {
   useEffect(() => {
     if (session?.user) fetchStats() // eslint-disable-line react-hooks/set-state-in-effect
   }, [session, fetchStats])
-
-  const prevMonth = () => {
-    if (month === minMonth) return
-    const [y, m] = month.split("-").map(Number)
-    const d = new Date(y, m - 2)
-    setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`)
-  }
-
-  const nextMonth = () => {
-    if (month === maxMonth) return
-    const [y, m] = month.split("-").map(Number)
-    const d = new Date(y, m)
-    setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`)
-  }
 
   const summary = stats
     ? { balance: stats.balance, income: stats.income, expense: stats.expense }
@@ -137,29 +116,14 @@ export default function DashboardPage() {
             Visão geral das suas finanças
           </p>
         </div>
-        <div className="flex w-full items-center justify-between gap-2 rounded-lg border bg-background px-2 py-1 sm:w-auto sm:justify-start sm:border-0 sm:bg-transparent sm:p-0">
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="Mês anterior"
-            disabled={loading || month === minMonth}
-            onClick={prevMonth}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="min-w-0 flex-1 text-center text-sm font-medium capitalize sm:min-w-28 sm:flex-none">
-            {formatMonth(month)}
-          </span>
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="Próximo mês"
-            disabled={loading || month === maxMonth}
-            onClick={nextMonth}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
+        <MonthNavigator
+          month={month}
+          minMonth={minMonth}
+          maxMonth={maxMonth}
+          todayMonth={getBusinessMonthKey(new Date())}
+          disabled={loading}
+          onMonthChange={setMonth}
+        />
       </div>
 
       <Card className="border-0 shadow-sm sm:hidden">
