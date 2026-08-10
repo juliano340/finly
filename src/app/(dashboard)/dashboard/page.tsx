@@ -21,8 +21,11 @@ import { DailyTrendChart } from "./_components/daily-trend-chart"
 import { MonthlyEvolutionChart } from "./_components/monthly-evolution-chart"
 import { CardInvoiceEvolutionChart } from "./_components/card-invoice-evolution-chart"
 import { RecentTransactions } from "./_components/recent-transactions"
+import { DailySafeLimitCard } from "./_components/daily-safe-limit-card"
 import { formatCurrency } from "@/lib/utils"
 import type { CardInvoiceEvolutionStats, DashboardStats, MonthlyEvolutionItem, MonthlyEvolutionStats } from "@/features/dashboard/dashboard.service"
+import type { MonthlyPlanDto } from "@/features/monthly-plan/monthly-plan.types"
+import { getBusinessMonthKey, getSupportedMonthWindow } from "@/features/monthly-plan/monthly-plan.schema"
 
 type EvolutionMetric = keyof Pick<MonthlyEvolutionItem, "total" | "invoices" | "fixedCosts" | "incomeFixedCosts" | "looseExpenses">
 
@@ -34,11 +37,6 @@ const evolutionMetrics: { key: EvolutionMetric; label: string }[] = [
   { key: "looseExpenses", label: "Avulsas" },
 ]
 
-function getCurrentMonth() {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
-}
-
 function formatMonth(month: string) {
   const [year, m] = month.split("-")
   const date = new Date(Number(year), Number(m) - 1)
@@ -47,7 +45,8 @@ function formatMonth(month: string) {
 
 export default function DashboardPage() {
   const { data: session } = useSession()
-  const [month, setMonth] = useState(getCurrentMonth)
+  const [{ min: minMonth, max: maxMonth }] = useState(() => getSupportedMonthWindow())
+  const [month, setMonth] = useState(() => getBusinessMonthKey(new Date()))
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [closing, setClosing] = useState<{ summary: { totalToPay: number; totalSpent: number } } | null>(null)
@@ -56,9 +55,11 @@ export default function DashboardPage() {
   const [evolutionMetric, setEvolutionMetric] = useState<EvolutionMetric>("total")
   const [cardEvolution, setCardEvolution] = useState<CardInvoiceEvolutionStats | null>(null)
   const [selectedCardId, setSelectedCardId] = useState("all")
+  const [monthlyPlan, setMonthlyPlan] = useState<MonthlyPlanDto | null>(null)
 
   const fetchStats = useCallback(async () => {
     setLoading(true)
+    setMonthlyPlan(null)
     try {
       const res = await fetch(`/api/dashboard/summary?month=${month}&months=6`)
       if (!res.ok) return
@@ -68,6 +69,7 @@ export default function DashboardPage() {
       setClosing(data.closing)
       setEvolution(data.evolution)
       setCardEvolution(data.cardEvolution)
+      setMonthlyPlan(data.monthlyPlan)
     } finally {
       setLoading(false)
     }
@@ -78,12 +80,14 @@ export default function DashboardPage() {
   }, [session, fetchStats])
 
   const prevMonth = () => {
+    if (month === minMonth) return
     const [y, m] = month.split("-").map(Number)
     const d = new Date(y, m - 2)
     setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`)
   }
 
   const nextMonth = () => {
+    if (month === maxMonth) return
     const [y, m] = month.split("-").map(Number)
     const d = new Date(y, m)
     setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`)
@@ -134,13 +138,25 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex w-full items-center justify-between gap-2 rounded-lg border bg-background px-2 py-1 sm:w-auto sm:justify-start sm:border-0 sm:bg-transparent sm:p-0">
-          <Button variant="outline" size="icon" onClick={prevMonth}>
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Mês anterior"
+            disabled={loading || month === minMonth}
+            onClick={prevMonth}
+          >
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="min-w-0 flex-1 text-center text-sm font-medium capitalize sm:min-w-28 sm:flex-none">
             {formatMonth(month)}
           </span>
-          <Button variant="outline" size="icon" onClick={nextMonth}>
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Próximo mês"
+            disabled={loading || month === maxMonth}
+            onClick={nextMonth}
+          >
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -192,6 +208,8 @@ export default function DashboardPage() {
           </Card>
         ))}
       </div>
+
+      <DailySafeLimitCard plan={monthlyPlan} month={month} loading={loading} />
 
       <Card className="border-0 shadow-sm sm:hidden">
         <CardContent className="space-y-4 p-4">

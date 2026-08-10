@@ -10,6 +10,7 @@ import {
   Tags,
   ArrowRightLeft,
   CalendarCheck,
+  CalendarRange,
   CreditCard,
   Landmark,
   Repeat,
@@ -36,6 +37,7 @@ import { computeDaysUntilDue, deriveStatus, type DueNotificationStatus } from "@
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/monthly-plan", label: "Plano do Mês", icon: CalendarRange },
   { href: "/monthly-closing", label: "Fechamento Mensal", icon: CalendarCheck },
   { href: "/bank-accounts", label: "Contas Bancárias", icon: Landmark },
   { href: "/cards", label: "Cartões", icon: CreditCard },
