@@ -155,6 +155,7 @@ describe("monthly-closing.service", () => {
       data: { fixedCostId: fixedCost.id, financialMonthId: financialMonth.id, month, amount: 120, dueDate: new Date("2026-10-10T12:00:00"), userId },
     })
 
+    const transactionsBefore = await prisma.transaction.count({ where: { userId } })
     const [firstPayment, repeatedPayment] = await Promise.all([
       payFixedCostOccurrence(occurrence.id, userId, prisma),
       payFixedCostOccurrence(occurrence.id, userId, prisma),
@@ -170,6 +171,7 @@ describe("monthly-closing.service", () => {
     await expect(prisma.bankAccountMovement.count({
       where: { bankAccountId: account.id, description: `PAGAMENTO ${fixedCost.name}`, userId },
     })).resolves.toBe(1)
+    await expect(prisma.transaction.count({ where: { userId } })).resolves.toBe(transactionsBefore)
 
     const decoy = await prisma.bankAccountMovement.create({
       data: {

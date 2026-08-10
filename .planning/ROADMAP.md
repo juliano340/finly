@@ -38,7 +38,7 @@
 
 - [x] `01-01-PLAN.md` — entidade MonthlyPlan, schemas duais, migration e permissões runtime (Wave 1).
 - [x] `01-02-PLAN.md` — contratos, validação, Decimal e calendário America/Sao_Paulo com TDD (Wave 1).
-- [ ] `01-03-PLAN.md` — composição financeira sem dupla contagem e serviço isolado (Wave 2; depende 01-01/01-02).
+- [x] `01-03-PLAN.md` — composição financeira sem dupla contagem e serviço isolado (Wave 2; depende 01-01/01-02).
 - [ ] `01-04-PLAN.md` — API GET/PUT autenticada e estrita (Wave 3; depende 01-03).
 - [ ] `01-05-PLAN.md` — página Plano do Mês, formulário, estados e menu acessíveis (Wave 4; depende 01-04).
 - [ ] `01-06-PLAN.md` — card Limite diário seguro no summary do dashboard (Wave 4; depende 01-04).

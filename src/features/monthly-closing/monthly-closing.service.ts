@@ -1,10 +1,11 @@
 import { endOfMonth, parseISO } from "date-fns"
 import { prisma as defaultPrisma } from "@/lib/prisma"
-import type { PrismaClient } from "@/generated/prisma/client"
+import { Prisma, type PrismaClient } from "@/generated/prisma/client"
 import { ensureFinancialMonth } from "@/features/financial-months/financial-months.service"
 import { computeRecurrenceDates, occurrenceDueDate, type RecurrenceConfig } from "@/lib/recurrence"
 import { validateExpenseLimit } from "@/features/bank-accounts/bank-accounts.service"
 import { moneyToNumber, sumMoney, type MoneyValue } from "@/lib/money"
+import { composeMonthlyFinancialSources } from "@/features/monthly-plan/monthly-plan.sources"
 
 type FixedCostOccurrenceClient = Pick<PrismaClient, "fixedCost" | "fixedCostOccurrence">
 
@@ -84,8 +85,13 @@ export async function getMonthlyClosing(
   const totalToPay = cardInvoicesTotal + fixedCostsOutsideCardTotal + looseExpenses
 
   const allCardInvoices = sum(invoices.map((inv) => inv.amount))
-  const allOutsideCard = sum(outsideCard.map((item) => item.amount))
-  const totalSpent = allCardInvoices + allOutsideCard + looseExpenses
+  const totalSpent = moneyToNumber(
+    composeMonthlyFinancialSources({
+      invoices,
+      occurrences,
+      variableSpent: new Prisma.Decimal(looseExpenses),
+    }).committedExpenses.plus(looseExpenses),
+  )
   const looseIncomeTotal = sum(looseIncome.map((tx) => tx.amount))
   const totalIncome = fixedIncomeTotal + looseIncomeTotal
   const receivedFixedIncomeTotal = sum(incomeOccurrences.filter((item) => item.status === "PAID").map((item) => item.amount))
@@ -171,7 +177,13 @@ export async function getMonthlyClosingSummary(
   const fixedCostsOutsideCardTotal = sum(outsideCard.filter((item) => item.status === "PENDING").map((item) => item.amount))
   const fixedCostsOutsideCardTotalAll = sum(outsideCard.map((item) => item.amount))
   const totalToPay = cardInvoicesTotal + fixedCostsOutsideCardTotal + looseExpenses
-  const totalSpent = allCardInvoices + fixedCostsOutsideCardTotalAll + looseExpenses
+  const totalSpent = moneyToNumber(
+    composeMonthlyFinancialSources({
+      invoices,
+      occurrences,
+      variableSpent: new Prisma.Decimal(looseExpenses),
+    }).committedExpenses.plus(looseExpenses),
+  )
   const incomeTotal = income + fixedIncomeTotal
 
   return {
