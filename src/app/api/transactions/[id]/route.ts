@@ -12,14 +12,21 @@ export async function PUT(
   }
 
   const { id } = await params
-  const body = await request.json()
-  const updated = await updateTransaction(id, session.user.id, body)
+  try {
+    const body = await request.json()
+    const updated = await updateTransaction(id, session.user.id, body)
 
-  if (!updated) {
-    return NextResponse.json({ error: "Transação não encontrada" }, { status: 404 })
+    if (!updated) {
+      return NextResponse.json({ error: "Transação não encontrada" }, { status: 404 })
+    }
+
+    return NextResponse.json(updated)
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Erro ao atualizar transação" },
+      { status: 400 }
+    )
   }
-
-  return NextResponse.json(updated)
 }
 
 export async function DELETE(

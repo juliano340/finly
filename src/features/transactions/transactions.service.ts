@@ -138,8 +138,16 @@ export async function updateTransaction(
     const finalBankAccountId = newBankAccountId !== undefined ? newBankAccountId : oldBankAccountId
 
     if (finalType === "EXPENSE" && finalBankAccountId) {
-      const check = await validateExpenseLimit(finalBankAccountId, userId, finalAmount, db)
-      if (!check.allowed) throw new Error(check.reason)
+      const oldAmount = moneyToNumber(existing.amount)
+      const oldEffect = existing.type === "EXPENSE" ? -oldAmount : oldAmount
+      const amountToValidate = finalBankAccountId === oldBankAccountId
+        ? Math.max(0, finalAmount + oldEffect)
+        : finalAmount
+
+      if (amountToValidate > 0) {
+        const check = await validateExpenseLimit(finalBankAccountId, userId, amountToValidate, db)
+        if (!check.allowed) throw new Error(check.reason)
+      }
     }
 
     return db.$transaction(async (tx) => {

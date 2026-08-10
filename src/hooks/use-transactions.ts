@@ -71,7 +71,7 @@ export function useTransactions() {
         setTransactions((prev) => prev.map((t) => (t.id === id ? updated : t)))
         return updated
       }
-      const err = await res.json()
+      const err = await res.json().catch(() => ({}))
       throw new Error(err.error ?? "Erro ao atualizar transação")
     },
     []

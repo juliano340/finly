@@ -524,5 +524,41 @@ describe("Transactions Service", () => {
       })
       expect(newMovement).toBeTruthy()
     })
+
+    it("valida apenas diferença ao aumentar despesa vinculada à conta", async () => {
+      const account = await createBankAccount(
+        userAId,
+        {
+          name: "Conta de atualização",
+          institution: "Banco Teste",
+          type: "CHECKING",
+          color: "#22C55E",
+          initialBalance: 200,
+          overdraftLimit: 0,
+          active: true,
+        },
+        testPrisma
+      )
+      const tx = await createTransaction(
+        userAId,
+        {
+          amount: 100,
+          type: "EXPENSE",
+          categoryId: catExpenseId,
+          date: new Date("2026-06-15T12:00:00"),
+          bankAccountId: account.id,
+        },
+        testPrisma
+      )
+
+      const updated = await updateTransaction(
+        tx.id,
+        userAId,
+        { amount: 150 },
+        testPrisma
+      )
+
+      expect(updated?.amount).toBe(150)
+    })
   })
 })
