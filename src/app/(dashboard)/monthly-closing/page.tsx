@@ -139,7 +139,7 @@ export default function MonthlyClosingPage() {
       <section className="grid gap-4 lg:grid-cols-2">
         <Card className="border-0 shadow-sm lg:col-span-2"><CardHeader><CardTitle className="text-base">Cartões e faturas</CardTitle><p className="text-sm text-muted-foreground">Compare o valor lançado com a previsão dos custos fixos por cartão.</p></CardHeader><CardContent><CardRows loading={loading} invoices={data?.invoices} estimates={summary?.estimatedInvoicesByCard} /></CardContent></Card>
       </section>
-      <Card className="border-0 shadow-sm"><CardHeader><CardTitle className="text-base">Custos fixos do mês</CardTitle></CardHeader><CardContent className="space-y-3">{loading ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div> : data?.fixedCosts.map((item) => <div key={item.id} className="rounded-lg border p-3"><div className="flex items-start justify-between gap-3"><div><strong>{item.fixedCost.name}</strong><p className="text-sm text-muted-foreground">{item.fixedCost.category.name} · {item.fixedCost.paidInsideCard ? `Incluído na fatura ${item.fixedCost.card?.name ?? ""}` : "Fora do cartão"} · Conta prevista: {item.fixedCost.bankAccount?.name ?? "não definida"} · {item.status === "PAID" ? "Pago" : "Pendente"}</p></div><div className="text-right"><span className="font-medium">{formatCurrency(item.amount)}</span>{item.status === "PENDING" && item.fixedCost.bankAccount && <Button className="mt-2 block" size="sm" variant="outline" onClick={() => handlePayFixedCost(item.id)}>Lançar na conta</Button>}</div></div></div>)}</CardContent></Card>
+      <Card className="border-0 shadow-sm"><CardHeader><CardTitle className="text-base">Custos fixos do mês</CardTitle></CardHeader><CardContent><FixedCostRows loading={loading} items={data?.fixedCosts} onPay={handlePayFixedCost} /></CardContent></Card>
     </div>
   )
 }
@@ -280,6 +280,46 @@ function CardRows({ loading, invoices = [], estimates = [] }: {
           </div>
         )
       })}
+    </div>
+  )
+}
+
+function FixedCostRows({ loading, items = [], onPay }: {
+  loading: boolean
+  items?: ClosingData["fixedCosts"]
+  onPay: (id: string) => void
+}) {
+  if (loading) return <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div>
+  if (items.length === 0) return <p className="py-4 text-sm text-muted-foreground">Nenhum custo fixo neste mês.</p>
+
+  return (
+    <div className="space-y-3">
+      {items.map((item) => (
+        <div key={item.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-lg border p-3 sm:items-start">
+          <div className="min-w-0">
+            <p className="truncate font-semibold">{item.fixedCost.name}</p>
+            <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-xs text-muted-foreground">
+              <span>{item.fixedCost.category.name}</span>
+              <span aria-hidden="true">·</span>
+              <span>{item.fixedCost.paidInsideCard ? `Incluído na fatura ${item.fixedCost.card?.name ?? ""}` : "Fora do cartão"}</span>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Conta: {item.fixedCost.bankAccount?.name ?? "não definida"}
+            </p>
+            <span className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${item.status === "PAID" ? "bg-success/10 text-success" : "bg-amber-500/10 text-amber-600"}`}>
+              {item.status === "PAID" ? "Pago" : "Pendente"}
+            </span>
+          </div>
+          <div className="text-right">
+            <p className="whitespace-nowrap font-semibold tabular-nums">{formatCurrency(item.amount)}</p>
+            {item.status === "PENDING" && item.fixedCost.bankAccount && (
+              <Button className="mt-2" size="sm" variant="outline" onClick={() => onPay(item.id)}>
+                Lançar na conta
+              </Button>
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
