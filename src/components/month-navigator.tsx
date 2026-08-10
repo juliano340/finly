@@ -10,6 +10,7 @@ interface MonthNavigatorProps {
   maxMonth?: string
   todayMonth?: string
   disabled?: boolean
+  inputLabel?: string
 }
 
 export function getCurrentMonth() {
@@ -38,6 +39,7 @@ export function MonthNavigator({
   maxMonth,
   todayMonth = getCurrentMonth(),
   disabled = false,
+  inputLabel,
 }: MonthNavigatorProps) {
   const previous = changeMonth(month, -1)
   const next = changeMonth(month, 1)
@@ -51,7 +53,20 @@ export function MonthNavigator({
         <Button type="button" variant="ghost" size="icon" className="size-8" aria-label="Mês anterior" disabled={previousDisabled} onClick={() => onMonthChange(previous)}>
           <ChevronLeft aria-hidden="true" className="size-4" />
         </Button>
-        <span className="min-w-36 px-2 text-center text-sm font-medium capitalize">{formatMonth(month)}</span>
+        {inputLabel ? (
+          <input
+            aria-label={inputLabel}
+            className="h-8 min-w-36 bg-transparent px-2 text-center text-sm font-medium outline-none"
+            type="month"
+            min={minMonth}
+            max={maxMonth}
+            value={month}
+            disabled={disabled}
+            onChange={(event) => onMonthChange(event.target.value)}
+          />
+        ) : (
+          <span className="min-w-36 px-2 text-center text-sm font-medium capitalize">{formatMonth(month)}</span>
+        )}
         <Button type="button" variant="ghost" size="icon" className="size-8" aria-label="Próximo mês" disabled={nextDisabled} onClick={() => onMonthChange(next)}>
           <ChevronRight aria-hidden="true" className="size-4" />
         </Button>

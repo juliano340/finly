@@ -110,6 +110,7 @@ function MonthlyPlanPageContent() {
           maxMonth={max}
           todayMonth={getBusinessMonthKey(new Date())}
           disabled={loading || saving}
+          inputLabel="Mês do plano"
           onMonthChange={selectMonth}
         />
       </div>
