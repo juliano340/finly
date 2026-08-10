@@ -72,4 +72,28 @@ describe("Prisma Schema — banco de teste", () => {
     await testPrisma.category.delete({ where: { id: cat.id } })
     await testPrisma.user.delete({ where: { id: user.id } })
   })
+
+  it("tabela MonthlyPlan preserva configuração mensal em Decimal", async () => {
+    await testPrisma.monthlyPlan.deleteMany({ where: { userId: "test_schema_05" } })
+    await testPrisma.user.deleteMany({ where: { id: "test_schema_05" } })
+    const user = await testPrisma.user.create({
+      data: { id: "test_schema_05", email: "monthly-plan@test.com" },
+    })
+    const monthlyPlan = await testPrisma.monthlyPlan.create({
+      data: {
+        month: "2026-08",
+        incomeOverride: 1500,
+        savingsGoal: 300,
+        safetyMargin: 50,
+        userId: user.id,
+      },
+    })
+
+    expect(monthlyPlan.incomeOverride?.toNumber()).toBe(1500)
+    expect(monthlyPlan.savingsGoal.toNumber()).toBe(300)
+    expect(monthlyPlan.safetyMargin.toNumber()).toBe(50)
+
+    await testPrisma.monthlyPlan.delete({ where: { id: monthlyPlan.id } })
+    await testPrisma.user.delete({ where: { id: user.id } })
+  })
 })

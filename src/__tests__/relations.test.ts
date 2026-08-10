@@ -111,4 +111,40 @@ describe("Relacionamentos — Prisma", () => {
     })
     expect(remainingTx).toBeNull()
   })
+
+  it("user.monthlyPlans carrega planos e aplica unicidade mensal", async () => {
+    await testPrisma.monthlyPlan.deleteMany({ where: { userId: "monthly_plan_rel" } })
+    await testPrisma.user.deleteMany({ where: { id: "monthly_plan_rel" } })
+    const tempUser = await testPrisma.user.create({
+      data: { id: "monthly_plan_rel", email: "monthly-plan-rel@test.com" },
+    })
+    await testPrisma.monthlyPlan.create({
+      data: {
+        month: "2026-08",
+        savingsGoal: 300,
+        userId: tempUser.id,
+      },
+    })
+
+    const userWithPlans = await testPrisma.user.findUnique({
+      where: { id: tempUser.id },
+      include: { monthlyPlans: true },
+    })
+    expect(userWithPlans?.monthlyPlans).toHaveLength(1)
+
+    await expect(
+      testPrisma.monthlyPlan.create({
+        data: {
+          month: "2026-08",
+          savingsGoal: 100,
+          userId: tempUser.id,
+        },
+      }),
+    ).rejects.toMatchObject({ code: "P2002" })
+
+    await testPrisma.user.delete({ where: { id: tempUser.id } })
+    expect(
+      await testPrisma.monthlyPlan.findFirst({ where: { userId: tempUser.id } }),
+    ).toBeNull()
+  })
 })
