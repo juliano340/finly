@@ -146,7 +146,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="flex h-screen overflow-hidden bg-muted/30">
       {/* Sidebar */}
       <aside
-        className={`flex shrink-0 flex-col overflow-hidden bg-sidebar-background text-sidebar-foreground transition-all duration-300 ${
+        className={`flex shrink-0 flex-col overflow-hidden bg-sidebar-background text-sidebar-foreground transition-none md:transition-all md:duration-300 ${
           collapsed
             ? mobileNavOpen ? "w-16 md:w-16" : "w-0 md:w-16"
             : "w-56"
