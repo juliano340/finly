@@ -43,4 +43,4 @@
 - [x] `01-05-PLAN.md` — página Plano do Mês, formulário, estados e menu acessíveis (Wave 4; depende 01-04).
 - [x] `01-06-PLAN.md` — card Limite diário seguro no summary do dashboard (Wave 4; depende 01-04).
 - [x] `01-07-PLAN.md` — E2E desktop/mobile/multiusuário e contrato Transaction/janela (Wave 5; depende 01-01/01-05/01-06).
-- [ ] `01-08-PLAN.md` — PostgreSQL smoke, build fail-closed, changelog e runbooks migration-before-deploy (Wave 6; depende 01-01/01-07).
+- [x] `01-08-PLAN.md` — PostgreSQL smoke, build fail-closed, changelog e runbooks migration-before-deploy (Wave 6; depende 01-01/01-07).

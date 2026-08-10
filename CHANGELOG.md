@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-08-10
+
+### Adicionado
+
+- **Plano do Mês**: configuração mensal por usuário com receita sugerida ou ajustada, meta de economia, margem de segurança, limite diário e estados de acompanhamento; página responsiva e resumo integrado ao dashboard.
+- **Contrato contábil (D-16)**: o plano soma compromissos e somente `Transaction` de despesa avulsa. Pagamentos internos de fatura e lançamento fixo usam `BankAccountMovement`; itens importados já pertencem à fatura. Uma transação manual semanticamente duplicada continua avulsa porque não há deduplicação fuzzy; proveniência explícita fica fora deste escopo.
+- **Janela mensal (D-17)**: consultas e alterações aceitam meses do início do ano anterior ao fim do próximo ano, com limites calculados em `America/Sao_Paulo`; meses externos são rejeitados antes da materialização de recorrências.
+- **Validação PostgreSQL**: teste com banco efêmero aplica as migrations e verifica tabela, chave estrangeira, unicidade, ownership e separação entre DML do runtime e DDL do migrator.
+
+### Corrigido
+
+- **Rollout de produção**: build Vercel agora segue migration-before-deploy e falha fechado sem a credencial de migração ou quando migration/smoke estrutural falha, antes de compilar a aplicação.
+
 ## 2026-08-09
 
 ### Corrigido

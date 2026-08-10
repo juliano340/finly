@@ -20,7 +20,21 @@ Commita e sobe pro GitHub
 Puxa o código na VPS
        ↓
 Roda a migration no PostgreSQL da VPS
+       ↓
+Valida schema e permissões
+       ↓
+Só então compila e publica a aplicação
 ```
+
+Em produção, migration-before-deploy é obrigatória. O rollout seguro segue esta ordem:
+
+1. Confirmar backup recuperável e consultar o status das migrations.
+2. Aplicar migrations pendentes.
+3. Executar o smoke estrutural e de permissões.
+4. Compilar e publicar.
+5. Fazer smoke funcional autenticado no ambiente publicado.
+
+Se qualquer etapa falhar, interrompa o rollout. Não tente compensar removendo a tabela nem edite uma migration que já tenha sido aplicada.
 
 ---
 
@@ -172,13 +186,13 @@ DATABASE_URL="postgresql://finly_migrator:${PW}@127.0.0.1:5432/finly_production?
 | Role | Faz login? | Usada para | Pode criar tabelas? |
 |------|-----------|------------|-------------------|
 | `finly_app` | Sim | Runtime da aplicação (Vercel) | ❌ Não |
-| `finly_runtime` | Sim | Runtime alternativo | ✅ Sim |
+| `finly_runtime` | Sim | Runtime alternativo | ❌ Não |
 | `finly_migrator` | Sim | **Apenas deploy/migration** | ✅ Sim (herda finly_owner) |
 | `finly_owner` | **Não** | Dono dos objetos do schema | ✅ Sim (sem login) |
 
 ### Por que essa separação?
 
-- O `finly_app` (usado no dia a dia pela aplicação) **não pode** criar tabelas ou alterar schema. Segurança: se a aplicação for comprometida, não consegue destruir a estrutura do banco.
+- Os roles runtime `finly_app` e `finly_runtime` **não podem** criar tabelas ou alterar schema. Eles recebem somente `USAGE` no schema e DML (`SELECT`, `INSERT`, `UPDATE`, `DELETE`) nas tabelas necessárias.
 - O `finly_migrator` só é usado no momento do deploy e tem poder de alterar schema. A senha dele fica guardada na Vercel como variável sensível.
 - O `finly_owner` é o dono real dos objetos, mas não tem login — ninguém conecta como ele. O migrator só herda os privilégios dele.
 
@@ -190,3 +204,50 @@ DATABASE_URL="postgresql://finly_migrator:${PW}@127.0.0.1:5432/finly_production?
 - Se a migration for muito grande (várias tabelas), faça uma migration de cada vez
 - Depois de rodar na VPS, o próximo deploy da Vercel vai passar sem tentar aplicar nada (porque não tem migration pendente)
 - Se quiser que a Vercel aplique automaticamente, mantenha a env `MIGRATE_DATABASE_URL` configurada no painel da Vercel
+
+---
+
+## Plano do Mês: migration, teste e rollout
+
+A migration `20260809180000_add_monthly_plan` cria `MonthlyPlan`, a chave estrangeira para `User` com exclusão em cascata e a unicidade `(month, userId)`. Ela também mantém ownership separado dos roles runtime e concede a estes somente DML.
+
+O teste PostgreSQL efêmero executa a cadeia real de migrations em um container temporário e valida estrutura e permissões:
+
+```bash
+npm test -- src/__tests__/monthly-plan.postgres.test.ts
+```
+
+Esse teste requer Docker disponível; sem Docker, a suíte é ignorada. Antes de publicar, trate execução efetiva do teste como gate operacional, não como validação opcional.
+
+### Deploy automático na Vercel
+
+O comando de build configurado é:
+
+```bash
+npm run vercel-build
+```
+
+Em produção, `MIGRATE_DATABASE_URL` é obrigatória. O script usa essa URL apenas no subprocesso de migration/smoke, executa `npm run db:migrate:deploy`, valida `MonthlyPlan` e as permissões, e somente depois chama o build do Next.js. `DATABASE_URL` continua sendo a credencial runtime restrita.
+
+Não escreva nenhuma das URLs em documentação, commits ou logs. Configure-as como variáveis protegidas do ambiente de deploy. O smoke verifica que `finly_app` e `finly_runtime` têm DML, mas não `CREATE`, ownership da tabela nem associação ao role proprietário.
+
+### Deploy manual pela estação
+
+Para aplicar migrations pela conexão SSH encapsulada do projeto, use o script existente:
+
+```bash
+npm run db:migrate:prod
+```
+
+O script solicita a senha, abre o túnel e limita `DATABASE_URL` ao subprocesso Prisma. Depois da migration, o rollout ainda precisa cumprir o smoke estrutural, build/deploy e smoke funcional.
+
+### Smoke funcional do Plano do Mês
+
+Após publicar, abra uma sessão autenticada e confirme:
+
+- a página **Plano do Mês** carrega o mês sem erro 500;
+- salvar meta, margem ou receita ajustada persiste e recalcula os derivados;
+- o card do dashboard abre o mesmo mês;
+- meses fora da janela D-17 não são consultados.
+
+Pela decisão D-16, `Transaction` representa somente receita/despesa avulsa. Pagamentos internos usam `BankAccountMovement`, e `ImportedTransaction` já compõe a fatura. Não existe deduplicação fuzzy: uma `Transaction` manual que reproduza semanticamente uma compra de cartão permanece avulsa. Uma futura ligação por proveniência está fora do escopo desta migration.

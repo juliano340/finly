@@ -29,6 +29,7 @@ Variaveis de ambiente na Vercel, ambiente Production:
 
 ```env
 DATABASE_URL=postgresql://finly_app:<DB_PASSWORD>@api.juliano340.com:5432/finly_production?schema=public&sslmode=no-verify
+MIGRATE_DATABASE_URL=<URL_DO_FINLY_MIGRATOR>
 DATABASE_POOL_MAX=3
 AUTH_SECRET=<AUTH_SECRET>
 AUTH_TRUST_HOST=true
@@ -178,7 +179,15 @@ DATABASE_URL='postgresql://finly_app:<DB_PASSWORD>@api.juliano340.com:5432/finly
 
 O deploy da Vercel usa `npm run vercel-build`, configurado em `vercel.json`.
 
-Em producao, o script exige `MIGRATE_DATABASE_URL` e executa `prisma migrate deploy` antes do `next build`. A aplicacao continua usando `DATABASE_URL` com o usuario restrito.
+Em producao, o script exige `MIGRATE_DATABASE_URL` e falha fechado quando ela estiver ausente ou vazia. Ele executa migration, smoke estrutural/de permissoes e somente entao `next build`. A aplicacao continua usando `DATABASE_URL` com o usuario restrito.
+
+Ordem interna de `npm run vercel-build` em Production:
+
+1. `npm run db:migrate:deploy` com `MIGRATE_DATABASE_URL` limitada ao subprocesso.
+2. Smoke de schema e permissoes com a mesma credencial de migracao.
+3. Build do Next.js.
+
+Falha de migration ou smoke interrompe o processo antes do build. O smoke exige a migration `20260809180000_add_monthly_plan`, tabela `MonthlyPlan`, FK para `User`, unique `(month, userId)` e separacao de privilegios: runtimes com DML, sem `CREATE`, sem ownership e sem associacao ao owner.
 
 Separacao recomendada:
 
@@ -217,11 +226,7 @@ Adicionar a URL privilegiada na Vercel somente como variavel de ambiente, sem co
 npx vercel env add MIGRATE_DATABASE_URL production
 ```
 
-Valor esperado:
-
-```txt
-postgresql://finly_migrator:<SENHA_FORTE>@api.juliano340.com:5432/finly_production?schema=public&sslmode=no-verify
-```
+O valor e uma URL PostgreSQL do role `finly_migrator`. Guarde-a somente como secret do ambiente; nao copie seu valor para docs, terminal compartilhado, logs ou commits.
 
 Se uma migration falhar no meio, como `20260620120000_add_recurrence_fields`, resolver o estado antes de redeployar:
 
@@ -423,11 +428,51 @@ Nao imprime valores sensiveis, apenas nomes e ambientes.
 
 ### Deploy manual
 
+O build local abaixo serve como pre-check. Ele nao substitui o gate de producao: o deployment Vercel ainda precisa executar `npm run vercel-build`, com migration e smoke antes do build remoto.
+
 ```bash
 npm run build
 npx vercel deploy --prod --yes
 npx vercel alias set https://<DEPLOYMENT_URL> finly-olive.vercel.app
 ```
+
+## Rollout seguro do Plano do Mes
+
+O rollout operacional deve respeitar a ordem completa abaixo:
+
+1. Confirmar backup recuperavel e registrar o status atual das migrations.
+2. Aplicar migration.
+3. Executar smoke estrutural e de permissoes.
+4. Executar build/deploy.
+5. Fazer smoke funcional autenticado no deployment final.
+
+No fluxo Vercel, etapas 2 a 4 sao coordenadas por `npm run vercel-build`. Para migration manual pela estacao, o script existente e:
+
+```bash
+npm run db:migrate:prod
+```
+
+Nao ha script de backup neste repositorio; use o procedimento operacional aprovado da VPS e confirme restauracao antes de continuar. Tambem nao ha rollback destrutivo automatico: se algo falhar, interrompa, preserve dados e resolva o estado da migration. Nunca apague `MonthlyPlan` como resposta automatica nem altere SQL ja aplicado.
+
+Validacao PostgreSQL efemera antes do rollout:
+
+```bash
+npm test -- src/__tests__/monthly-plan.postgres.test.ts
+```
+
+A suite usa Docker para subir PostgreSQL temporario, aplica migrations reais e valida estrutura/roles. Docker indisponivel faz a suite ser ignorada; portanto, confirme no resultado que ela executou.
+
+Smoke funcional apos deploy, com usuario autenticado:
+
+- abrir **Plano do Mes** e confirmar ausencia de erro 500;
+- editar meta, margem ou receita e confirmar persistencia/recalculo;
+- abrir o mes pelo card do dashboard;
+- confirmar navegacao limitada pela janela D-17.
+
+### Contratos D-16 e D-17
+
+- **D-16:** `Transaction` representa somente receita/despesa avulsa. Pagamentos internos de fatura e lancamento fixo usam `BankAccountMovement`; `ImportedTransaction` ja pertence a fatura e nao entra novamente. Nao existe deduplicacao fuzzy. Se uma `Transaction` manual duplicar semanticamente uma compra de cartao, ela permanece avulsa; proveniencia explicita e trabalho futuro fora do escopo.
+- **D-17:** consultas e mutacoes aceitam meses do inicio do ano anterior ao fim do proximo ano, calculados em relacao a `asOf` em `America/Sao_Paulo`. A API rejeita meses externos antes de materializar recorrencias.
 
 ### Logs da Vercel
 

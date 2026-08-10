@@ -1,24 +1,9 @@
 import { spawnSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
-const runNode = (args) => {
-  const result = spawnSync(process.execPath, args, { stdio: "inherit" });
-
-  if (result.error) {
-    throw result.error;
-  }
-
-  if (result.status !== 0) {
-    process.exit(result.status ?? 1);
-  }
-};
-
-const runNpm = (args, options = {}) => {
-  if (!process.env.npm_execpath) {
-    throw new Error("npm_execpath is required to run npm scripts.");
-  }
-
-  const result = spawnSync(process.execPath, [process.env.npm_execpath, ...args], {
-    env: { ...process.env, ...options.env },
+function runCommand(args, options = {}) {
+  const result = spawnSync(process.execPath, args, {
+    env: options.env,
     stdio: "inherit",
   });
 
@@ -27,14 +12,53 @@ const runNpm = (args, options = {}) => {
   }
 
   if (result.status !== 0) {
-    process.exit(result.status ?? 1);
+    throw new Error(`${options.label ?? "Command"} failed with exit code ${result.status ?? 1}.`);
   }
-};
+}
 
-if (process.env.VERCEL_ENV === "production" && process.env.MIGRATE_DATABASE_URL) {
-  runNpm(["run", "db:migrate:deploy"], {
-    env: { DATABASE_URL: process.env.MIGRATE_DATABASE_URL },
+export function runVercelBuild(env = process.env) {
+  let buildEnv = env;
+
+  if (env.VERCEL_ENV === "production") {
+    const migrateDatabaseUrl = env.MIGRATE_DATABASE_URL?.trim();
+    if (!migrateDatabaseUrl) {
+      throw new Error("MIGRATE_DATABASE_URL is required for production builds.");
+    }
+    if (!env.npm_execpath) {
+      throw new Error("npm_execpath is required to run production migrations.");
+    }
+
+    const privilegedEnv = {
+      ...env,
+      DATABASE_URL: migrateDatabaseUrl,
+    };
+    buildEnv = { ...env };
+    delete buildEnv.MIGRATE_DATABASE_URL;
+
+    runCommand([env.npm_execpath, "run", "db:migrate:deploy"], {
+      env: privilegedEnv,
+      label: "Production migration",
+    });
+    runCommand(["scripts/verify-production-schema.mjs"], {
+      env: privilegedEnv,
+      label: "Production schema smoke",
+    });
+  }
+
+  runCommand(["node_modules/next/dist/bin/next", "build"], {
+    env: buildEnv,
+    label: "Next build",
   });
 }
 
-runNode(["node_modules/next/dist/bin/next", "build"]);
+const isMainModule = process.argv[1]
+  && pathToFileURL(process.argv[1]).href === import.meta.url;
+
+if (isMainModule) {
+  try {
+    runVercelBuild();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : "Build pipeline failed.");
+    process.exitCode = 1;
+  }
+}
