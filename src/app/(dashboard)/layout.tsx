@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { Suspense, useState, useEffect, useRef } from "react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { signOut, useSession } from "next-auth/react"
 import { toast } from "sonner"
 import {
@@ -62,7 +62,16 @@ interface DueNotification extends RawDueNotification {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+    </Suspense>
+  )
+}
+
+function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const router = useRouter()
   const { data: session, status } = useSession()
   const [collapsed, setCollapsed] = useState(() => {
@@ -187,10 +196,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <nav className={`${mobileNavOpen ? "block" : "hidden"} flex-1 space-y-1 p-2 md:block`}>
           {navItems.map((item) => {
             const isActive = item.href === "/cards" ? pathname.startsWith("/cards") || pathname.startsWith("/invoices/") : pathname === item.href
+            const sharedMonth = searchParams.get("month")
+            const href = sharedMonth ? `${item.href}?month=${encodeURIComponent(sharedMonth)}` : item.href
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                href={href}
                 onClick={() => { if (window.innerWidth < 768) setMobileNavOpen(false) }}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
                   isActive

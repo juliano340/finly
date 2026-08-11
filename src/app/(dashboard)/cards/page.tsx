@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { Suspense, useEffect, useRef, useState } from "react"
 import { CreditCard, Loader2, Plus, Settings, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -331,7 +331,9 @@ export default function CardsPage() {
       )}
 
       {activeTab === "invoices" && (
-        <InvoicesTab />
+        <Suspense fallback={<div className="py-12 text-center text-sm text-muted-foreground">Carregando...</div>}>
+          <InvoicesTab />
+        </Suspense>
       )}
     </div>
   )

@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useRef, useState, type ReactNode } from "react"
-import { Calculator, Check, CheckCircle2, ChevronLeft, ChevronRight, Copy, Loader2, RotateCcw, Settings, Trash2 } from "lucide-react"
+import { Suspense, useEffect, useRef, useState, type ReactNode } from "react"
+import { Calculator, Check, CheckCircle2, Copy, Loader2, RotateCcw, Settings, Trash2 } from "lucide-react"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -12,6 +12,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { toast } from "sonner"
 import { cn, formatCurrency, formatDate } from "@/lib/utils"
 import { isAccountNegative, getAvailableBalance } from "@/lib/balance"
+import { MonthNavigator, changeMonth, getCurrentMonth } from "@/components/month-navigator"
+import { useMonthParam } from "@/hooks/use-month-param"
 
 interface CardItem { id: string; name: string; color: string }
 interface BankAccountItem { id: string; name: string; balance: number; overdraftLimit: number }
@@ -48,23 +50,6 @@ function InvoiceActionIcon({
   )
 }
 
-function currentMonth() {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
-}
-
-function previousMonth(month: string) {
-  const [y, m] = month.split("-").map(Number)
-  const d = new Date(y, m - 2, 1)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
-}
-
-function nextMonth(month: string) {
-  const [y, m] = month.split("-").map(Number)
-  const d = new Date(y, m, 1)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
-}
-
 function monthLabel(month: string) {
   const [y, m] = month.split("-").map(Number)
   const date = new Date(y, m - 1, 1)
@@ -82,10 +67,18 @@ const paymentMethods = [
 const methodLabels: Record<string, string> = { PIX: "Pix", TED: "TED", DEBIT: "Débito", CASH: "Dinheiro", BANK_SLIP: "Boleto" }
 
 export default function InvoicesPage() {
+  return (
+    <Suspense fallback={<div className="py-12 text-center text-sm text-muted-foreground">Carregando...</div>}>
+      <InvoicesPageContent />
+    </Suspense>
+  )
+}
+
+function InvoicesPageContent() {
   const [cards, setCards] = useState<CardItem[]>([])
   const [bankAccounts, setBankAccounts] = useState<BankAccountItem[]>([])
   const [invoices, setInvoices] = useState<Invoice[]>([])
-  const [month, setMonth] = useState(currentMonth)
+  const [month, setMonth] = useMonthParam({ defaultMonth: getCurrentMonth() })
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
   const [creating, setCreating] = useState(false)
   const [copiando, setCopiando] = useState(false)
@@ -105,7 +98,7 @@ export default function InvoicesPage() {
   const [prevInvoices, setPrevInvoices] = useState<Invoice[]>([])
   const [selectedCopyIds, setSelectedCopyIds] = useState<string[]>([])
   const [loadingPrev, setLoadingPrev] = useState(false)
-  const [copySourceMonth, setCopySourceMonth] = useState(() => previousMonth(month))
+  const [copySourceMonth, setCopySourceMonth] = useState(() => changeMonth(month, -1))
   const [availableMonths, setAvailableMonths] = useState<{ month: string; count: number }[]>([])
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [confirmBatchDelete, setConfirmBatchDelete] = useState(false)
@@ -338,17 +331,12 @@ export default function InvoicesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div><h1 className="text-2xl font-bold tracking-tight">Faturas</h1><p className="text-muted-foreground">Valor final lançado manualmente por cartão.</p></div>
-        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={() => openCopyDialog()} disabled={copiando}>
             <Copy className="mr-1.5 h-3.5 w-3.5" />
             Copiar
           </Button>
-          <div className="flex items-center gap-1 rounded-md border bg-background px-2 py-1">
-            <Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(previousMonth(month))}><ChevronLeft className="size-4" /></Button>
-            <span className="min-w-28 text-center text-sm font-medium capitalize">{monthLabel(month)}</span>
-            <Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(nextMonth(month))}><ChevronRight className="size-4" /></Button>
-          </div>
-          <Input className="w-32" type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
+          <MonthNavigator month={month} todayMonth={getCurrentMonth()} onMonthChange={setMonth} />
           <Button variant="outline" size="sm" onClick={() => { setSimulatorOpen(true); setSimInvoiceId(""); setSimAccountId(""); setSimAmount("") }}>
             <Calculator className="mr-1 h-4 w-4" /> Simular
           </Button>

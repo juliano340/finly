@@ -5,8 +5,16 @@ import MonthlyPlanPage from "../page"
 import type { MonthlyPlanDto } from "@/features/monthly-plan/monthly-plan.types"
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
-const searchParams = new URLSearchParams()
-vi.mock("next/navigation", () => ({ useSearchParams: () => searchParams }))
+const navigation = vi.hoisted(() => ({
+  searchParams: new URLSearchParams(),
+  router: { replace: vi.fn() },
+  pathname: "/monthly-plan",
+}))
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => navigation.searchParams,
+  useRouter: () => navigation.router,
+  usePathname: () => navigation.pathname,
+}))
 
 const plan: MonthlyPlanDto = {
   month: "2026-08",
@@ -28,7 +36,8 @@ const plan: MonthlyPlanDto = {
 
 describe("MonthlyPlanPage", () => {
   beforeEach(() => {
-    searchParams.delete("month")
+    navigation.searchParams.delete("month")
+    navigation.router.replace.mockClear()
     vi.useFakeTimers({ shouldAdvanceTime: true })
     vi.setSystemTime(new Date("2026-08-09T15:00:00Z"))
   })
@@ -55,7 +64,7 @@ describe("MonthlyPlanPage", () => {
   })
 
   it("abre diretamente o mês informado pelo card do dashboard", async () => {
-    searchParams.set("month", "2026-09")
+    navigation.searchParams.set("month", "2026-09")
     const fetchMock = vi.fn().mockResolvedValue(response({ ...plan, month: "2026-09" }))
     vi.stubGlobal("fetch", fetchMock)
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
-import { BarChart3, Calculator, Check, CheckCircle2, ChevronLeft, ChevronRight, Copy, FileText, Loader2, RotateCcw, Settings, Trash2 } from "lucide-react"
+import { BarChart3, Calculator, Check, CheckCircle2, Copy, FileText, Loader2, RotateCcw, Settings, Trash2 } from "lucide-react"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -14,6 +14,8 @@ import { toast } from "sonner"
 import { cn, formatCurrency, formatDate } from "@/lib/utils"
 import { isAccountNegative, getAvailableBalance } from "@/lib/balance"
 import { ImportPdfDialog } from "./import-pdf-dialog"
+import { MonthNavigator, changeMonth, getCurrentMonth } from "@/components/month-navigator"
+import { useMonthParam } from "@/hooks/use-month-param"
 
 interface CardItem { id: string; name: string; color: string }
 interface BankAccountItem { id: string; name: string; balance: number; overdraftLimit: number }
@@ -56,23 +58,6 @@ function InvoiceActionIcon({
   )
 }
 
-function currentMonth() {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
-}
-
-function previousMonth(month: string) {
-  const [y, m] = month.split("-").map(Number)
-  const d = new Date(y, m - 2, 1)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
-}
-
-function nextMonth(month: string) {
-  const [y, m] = month.split("-").map(Number)
-  const d = new Date(y, m, 1)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
-}
-
 function monthLabel(month: string) {
   const [y, m] = month.split("-").map(Number)
   const date = new Date(y, m - 1, 1)
@@ -94,7 +79,7 @@ export function InvoicesTab() {
   const [cards, setCards] = useState<CardItem[]>([])
   const [bankAccounts, setBankAccounts] = useState<BankAccountItem[]>([])
   const [invoices, setInvoices] = useState<Invoice[]>([])
-  const [month, setMonth] = useState(currentMonth)
+  const [month, setMonth] = useMonthParam({ defaultMonth: getCurrentMonth() })
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
   const [creating, setCreating] = useState(false)
   const [copiando, setCopiando] = useState(false)
@@ -114,7 +99,7 @@ export function InvoicesTab() {
   const [prevInvoices, setPrevInvoices] = useState<Invoice[]>([])
   const [selectedCopyIds, setSelectedCopyIds] = useState<string[]>([])
   const [loadingPrev, setLoadingPrev] = useState(false)
-  const [copySourceMonth, setCopySourceMonth] = useState(() => previousMonth(month))
+  const [copySourceMonth, setCopySourceMonth] = useState(() => changeMonth(month, -1))
   const [availableMonths, setAvailableMonths] = useState<{ month: string; count: number }[]>([])
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [confirmBatchDelete, setConfirmBatchDelete] = useState(false)
@@ -372,18 +357,7 @@ export function InvoicesTab() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div><h2 className="text-xl font-bold tracking-tight">Faturas</h2><p className="text-sm text-muted-foreground">Valor final lançado manualmente por cartão.</p></div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 rounded-md border bg-background px-2 py-1">
-            <Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(previousMonth(month))}><ChevronLeft className="size-4" /></Button>
-            <span className="min-w-28 text-center text-sm font-medium capitalize">{monthLabel(month)}</span>
-            <Button size="sm" variant="ghost" className="size-7 p-0" onClick={() => setMonth(nextMonth(month))}><ChevronRight className="size-4" /></Button>
-          </div>
-          <Button
-            size="sm"
-            variant={month === currentMonth() ? "default" : "ghost"}
-            onClick={() => setMonth(currentMonth())}
-          >
-            Hoje
-          </Button>
+          <MonthNavigator month={month} todayMonth={getCurrentMonth()} onMonthChange={setMonth} />
           <div className="h-5 w-px bg-border hidden sm:block" />
           <Button size="sm" variant="outline" onClick={() => openCopyDialog()} disabled={copiando}>
             <Copy className="mr-1.5 h-3.5 w-3.5" />

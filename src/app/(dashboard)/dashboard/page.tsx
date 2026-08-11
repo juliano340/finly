@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { Suspense, useEffect, useState, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import {
   ArrowDown,
@@ -25,6 +25,7 @@ import { MonthNavigator } from "@/components/month-navigator"
 import type { CardInvoiceEvolutionStats, DashboardStats, MonthlyEvolutionItem, MonthlyEvolutionStats } from "@/features/dashboard/dashboard.service"
 import type { MonthlyPlanDto } from "@/features/monthly-plan/monthly-plan.types"
 import { getBusinessMonthKey, getSupportedMonthWindow } from "@/features/monthly-plan/monthly-plan.schema"
+import { useMonthParam } from "@/hooks/use-month-param"
 
 type EvolutionMetric = keyof Pick<MonthlyEvolutionItem, "total" | "invoices" | "fixedCosts" | "incomeFixedCosts" | "looseExpenses">
 
@@ -37,9 +38,17 @@ const evolutionMetrics: { key: EvolutionMetric; label: string }[] = [
 ]
 
 export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div className="py-12 text-center text-sm text-muted-foreground">Carregando...</div>}>
+      <DashboardPageContent />
+    </Suspense>
+  )
+}
+
+function DashboardPageContent() {
   const { data: session } = useSession()
   const [{ min: minMonth, max: maxMonth }] = useState(() => getSupportedMonthWindow())
-  const [month, setMonth] = useState(() => getBusinessMonthKey(new Date()))
+  const [month, setMonth] = useMonthParam({ defaultMonth: getBusinessMonthKey(new Date()), minMonth, maxMonth })
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [closing, setClosing] = useState<{ summary: { totalToPay: number; totalSpent: number } } | null>(null)

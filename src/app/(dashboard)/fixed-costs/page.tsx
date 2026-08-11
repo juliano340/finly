@@ -1,7 +1,6 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState, Suspense, type ReactNode } from "react"
-import { useSearchParams } from "next/navigation"
 import { CalendarClock, CheckCircle2, Clock3, CreditCard, Loader2, RotateCcw, Settings, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -20,6 +19,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn, formatCurrency } from "@/lib/utils"
 import { ariaSort, sortButtonLabel } from "@/lib/accessible-sort"
 import { MonthNavigator, changeMonth, formatMonth, getCurrentMonth } from "@/components/month-navigator"
+import { useMonthParam } from "@/hooks/use-month-param"
 
 interface Category { id: string; name: string; type: string }
 interface CardItem { id: string; name: string; color: string }
@@ -96,23 +96,7 @@ function formatDueDate(dueDay: number | null, month: string) {
 }
 
 function FixedCostsPageInner() {
-  const searchParams = useSearchParams()
-  const urlMonth = searchParams.get("month")
-  const validUrlMonth = urlMonth && /^\d{4}-\d{2}$/.test(urlMonth) ? urlMonth : null
-
-  const [interactiveMonth, setInteractiveMonth] = useState<string | null>(null)
-
-  // Reset interactive month when URL param changes externally (e.g. notification click)
-  // Render-time state update — avoids useEffect + setState anti-pattern
-  const urlKey = urlMonth ?? ""
-  const [prevUrlKey, setPrevUrlKey] = useState(urlKey)
-  if (urlKey !== prevUrlKey) {
-    setInteractiveMonth(null)
-    setPrevUrlKey(urlKey)
-  }
-
-  const month = interactiveMonth ?? validUrlMonth ?? getCurrentMonth()
-  const setMonth = useCallback((m: string) => setInteractiveMonth(m), [])
+  const [month, setMonth] = useMonthParam({ defaultMonth: getCurrentMonth() })
 
   const [categories, setCategories] = useState<Category[]>([])
   const [cards, setCards] = useState<CardItem[]>([])

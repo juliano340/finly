@@ -1,7 +1,6 @@
 "use client"
 
 import { Suspense, useCallback, useEffect, useState } from "react"
-import { useSearchParams } from "next/navigation"
 import { Loader2, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -11,6 +10,7 @@ import type { MonthlyPlanDto, MonthlyPlanUpdateInput } from "@/features/monthly-
 import { MonthlyPlanForm } from "./_components/monthly-plan-form"
 import { MonthlyPlanSummary } from "./_components/monthly-plan-summary"
 import { MonthNavigator } from "@/components/month-navigator"
+import { useMonthParam } from "@/hooks/use-month-param"
 
 export default function MonthlyPlanPage() {
   return (
@@ -21,17 +21,8 @@ export default function MonthlyPlanPage() {
 }
 
 function MonthlyPlanPageContent() {
-  const searchParams = useSearchParams()
   const [{ min, max }] = useState(() => getSupportedMonthWindow())
-  const [month, setMonth] = useState(() => {
-    const requestedMonth = searchParams.get("month")
-    return requestedMonth
-      && /^\d{4}-(0[1-9]|1[0-2])$/.test(requestedMonth)
-      && requestedMonth >= min
-      && requestedMonth <= max
-      ? requestedMonth
-      : getBusinessMonthKey(new Date())
-  })
+  const [month, setMonth] = useMonthParam({ defaultMonth: getBusinessMonthKey(new Date()), minMonth: min, maxMonth: max })
   const [plan, setPlan] = useState<MonthlyPlanDto | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)

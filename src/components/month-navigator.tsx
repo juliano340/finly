@@ -32,6 +32,16 @@ export function formatMonth(month: string) {
   })
 }
 
+function formatMonthDistance(month: string, todayMonth: string) {
+  const [year, monthNumber] = month.split("-").map(Number)
+  const [todayYear, todayMonthNumber] = todayMonth.split("-").map(Number)
+  const distance = (year - todayYear) * 12 + monthNumber - todayMonthNumber
+  const absoluteDistance = Math.abs(distance)
+
+  if (absoluteDistance === 1) return distance < 0 ? "mês anterior" : "próximo mês"
+  return distance < 0 ? `${absoluteDistance} meses atrás` : `em ${absoluteDistance} meses`
+}
+
 export function MonthNavigator({
   month,
   onMonthChange,
@@ -71,6 +81,11 @@ export function MonthNavigator({
           <ChevronRight aria-hidden="true" className="size-4" />
         </Button>
       </div>
+      {month !== todayMonth && (
+        <span className="whitespace-nowrap rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+          {formatMonthDistance(month, todayMonth)}
+        </span>
+      )}
       <div className="w-14 shrink-0">
         <Button type="button" variant="ghost" size="sm" className="w-full" disabled={todayDisabled} onClick={() => onMonthChange(todayMonth)}>
           Hoje

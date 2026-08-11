@@ -1,12 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import Link from "next/link"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { MonthNavigator, changeMonth, getCurrentMonth } from "@/components/month-navigator"
+import { useMonthParam } from "@/hooks/use-month-param"
 
   interface ClosingData {
     summary: {
@@ -19,7 +20,15 @@ import { MonthNavigator, changeMonth, getCurrentMonth } from "@/components/month
 }
 
 export default function MonthlyClosingPage() {
-  const [month, setMonth] = useState(getCurrentMonth)
+  return (
+    <Suspense fallback={<div className="py-12 text-center text-sm text-muted-foreground">Carregando...</div>}>
+      <MonthlyClosingPageContent />
+    </Suspense>
+  )
+}
+
+function MonthlyClosingPageContent() {
+  const [month, setMonth] = useMonthParam({ defaultMonth: getCurrentMonth() })
   const [data, setData] = useState<ClosingData | null>(null)
   const [loading, setLoading] = useState(true)
 
