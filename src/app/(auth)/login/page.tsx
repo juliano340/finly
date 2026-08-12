@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { RedirectIfLogged } from "@/features/auth/redirect-if-logged";
 import { toast } from "sonner";
 
 function getInitialEmail(): string {
@@ -88,7 +89,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
+    <RedirectIfLogged>
+      <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
       {/* Left - Form */}
       <div className="relative flex items-center justify-center p-10">
         <ThemeToggle className="absolute right-4 top-4" />
@@ -235,6 +237,7 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
-    </div>
+      </div>
+    </RedirectIfLogged>
   );
 }
