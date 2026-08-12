@@ -1,6 +1,7 @@
 "use client"
 
 import { Suspense, useEffect, useRef, useState } from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { CreditCard, Loader2, Plus, Settings, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -9,6 +10,13 @@ import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { InvoicesTab } from "@/features/invoices/invoices-tab"
+import {
+  CARDS_TAB_STORAGE_KEY,
+  isCardsTab,
+  resolveCardsTab,
+  withCardsTab,
+  type CardsTab,
+} from "@/features/cards/cards-tab-state"
 
 interface CardItem {
   id: string
@@ -28,6 +36,9 @@ interface BankAccountItem {
 }
 
 export default function CardsPage() {
+  const pathname = usePathname()
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [cards, setCards] = useState<CardItem[]>([])
   const [bankAccounts, setBankAccounts] = useState<BankAccountItem[]>([])
   const [selectedCard, setSelectedCard] = useState<CardItem | null>(null)
@@ -35,14 +46,25 @@ export default function CardsPage() {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<"cards" | "invoices">("cards")
+  const [activeTab, setActiveTab] = useState<CardsTab>("cards")
+  const [tabReady, setTabReady] = useState(false)
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    if (params.get("tab") === "invoices")
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setActiveTab("invoices")
-  }, [])
+    const urlTab = searchParams.get("tab")
+    const nextTab = resolveCardsTab(urlTab, window.localStorage.getItem(CARDS_TAB_STORAGE_KEY))
+    const timer = window.setTimeout(() => {
+      setActiveTab(nextTab)
+      setTabReady(true)
+      if (isCardsTab(urlTab)) window.localStorage.setItem(CARDS_TAB_STORAGE_KEY, urlTab)
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [searchParams])
+
+  function changeTab(tab: CardsTab) {
+    setActiveTab(tab)
+    window.localStorage.setItem(CARDS_TAB_STORAGE_KEY, tab)
+    router.push(`${pathname}?${withCardsTab(new URLSearchParams(searchParams.toString()), tab)}`, { scroll: false })
+  }
   const inFlightUpdateRef = useRef(false)
   const editFormRef = useRef<HTMLFormElement>(null)
 
@@ -138,11 +160,15 @@ export default function CardsPage() {
       </div>
 
       <div className="flex gap-1 rounded-md border bg-background p-1 w-fit">
-        <button type="button" onClick={() => setActiveTab("cards")} className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${activeTab === "cards" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Cartões</button>
-        <button type="button" onClick={() => setActiveTab("invoices")} className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${activeTab === "invoices" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Faturas</button>
+        <button type="button" onClick={() => changeTab("cards")} className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${activeTab === "cards" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Cartões</button>
+        <button type="button" onClick={() => changeTab("invoices")} className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${activeTab === "invoices" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Faturas</button>
       </div>
 
-      {activeTab === "cards" && (
+      {!tabReady ? (
+        <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />Carregando...
+        </div>
+      ) : activeTab === "cards" && (
         <div className="space-y-6">
           <div className="flex items-center justify-end">
             <Button onClick={() => setCreating(true)}><Plus className="mr-2 h-4 w-4" />Novo cartão</Button>
@@ -330,7 +356,7 @@ export default function CardsPage() {
         </div>
       )}
 
-      {activeTab === "invoices" && (
+      {tabReady && activeTab === "invoices" && (
         <Suspense fallback={<div className="py-12 text-center text-sm text-muted-foreground">Carregando...</div>}>
           <InvoicesTab />
         </Suspense>
