@@ -6,6 +6,7 @@ import { computeRecurrenceDates, occurrenceDueDate, type RecurrenceConfig } from
 import { validateExpenseLimit } from "@/features/bank-accounts/bank-accounts.service"
 import { moneyToNumber, sumMoney, type MoneyValue } from "@/lib/money"
 import { composeMonthlyFinancialSources } from "@/features/monthly-plan/monthly-plan.sources"
+import { calculateInvoiceTotals } from "@/features/card-invoices/invoice-calculation"
 
 type FixedCostOccurrenceClient = Pick<PrismaClient, "fixedCost" | "fixedCostOccurrence">
 
@@ -23,6 +24,7 @@ export interface MonthlyClosingSummary {
   cardInvoicesPaidTotal: number
   fixedCostsTotal: number
   fixedCostsInsideCardTotal: number
+  cardForecastsWithoutInvoiceTotal: number
   fixedCostsOutsideCardTotal: number
   fixedCostsOutsideCardTotalAll: number
   fixedIncomeTotal: number
@@ -60,7 +62,7 @@ export async function getMonthlyClosing(
   const [invoices, occurrences, looseExpenses, looseIncome] = await Promise.all([
     db.cardInvoice.findMany({
       where: { userId, month },
-      include: { card: true },
+      include: { card: true, items: true },
       orderBy: { dueDate: "asc" },
     }),
     db.fixedCostOccurrence.findMany({
@@ -72,19 +74,28 @@ export async function getMonthlyClosing(
     getLooseIncomeTransactions(userId, month, db),
   ])
 
-  const cardInvoicesTotal = sum(invoices.filter((inv) => inv.status === "PENDING").map((inv) => inv.amount))
   const expenseOccurrences = occurrences.filter((item) => item.fixedCost.type === "EXPENSE")
   const incomeOccurrences = occurrences.filter((item) => item.fixedCost.type === "INCOME")
   const fixedCostsTotal = sum(expenseOccurrences.map((item) => item.amount))
   const fixedIncomeTotal = sum(incomeOccurrences.map((item) => item.amount))
   const insideCard = expenseOccurrences.filter((item) => item.fixedCost.paidInsideCard)
   const outsideCard = expenseOccurrences.filter((item) => !item.fixedCost.paidInsideCard)
+  const invoicesWithTotals = invoices.map((invoice) => {
+    const totals = calculateInvoiceTotals({
+      ...invoice,
+      fixedOccurrences: insideCard.filter((item) => item.fixedCost.cardId === invoice.cardId),
+    })
+    return { ...invoice, ...totals, amount: totals.effectiveTotal }
+  })
+  const cardInvoicesTotal = sum(invoicesWithTotals.filter((inv) => inv.status === "PENDING").map((inv) => inv.amount))
   const fixedCostsInsideCardTotal = sum(insideCard.map((item) => item.amount))
+  const invoiceCardIds = new Set(invoices.map((invoice) => invoice.cardId))
+  const cardForecastsWithoutInvoiceTotal = sum(insideCard.filter((item) => !item.fixedCost.cardId || !invoiceCardIds.has(item.fixedCost.cardId)).map((item) => item.amount))
   const fixedCostsOutsideCardTotal = sum(outsideCard.filter((item) => item.status === "PENDING").map((item) => item.amount))
   const fixedCostsOutsideCardTotalAll = sum(outsideCard.map((item) => item.amount))
-  const totalToPay = cardInvoicesTotal + fixedCostsOutsideCardTotal + looseExpenses
+  const totalToPay = cardInvoicesTotal + cardForecastsWithoutInvoiceTotal + fixedCostsOutsideCardTotal + looseExpenses
 
-  const allCardInvoices = sum(invoices.map((inv) => inv.amount))
+  const allCardInvoices = sum(invoicesWithTotals.map((inv) => inv.amount))
   const totalSpent = moneyToNumber(
     composeMonthlyFinancialSources({
       invoices,
@@ -114,13 +125,14 @@ export async function getMonthlyClosing(
 
   return {
     financialMonth,
-    invoices,
+    invoices: invoicesWithTotals,
     fixedCosts: occurrences,
     summary: {
       month,
       cardInvoicesTotal,
       fixedCostsTotal,
       fixedCostsInsideCardTotal,
+      cardForecastsWithoutInvoiceTotal,
       fixedCostsOutsideCardTotal,
       fixedCostsOutsideCardTotalAll,
       cardInvoicesPaidTotal: allCardInvoices - cardInvoicesTotal,
@@ -131,7 +143,7 @@ export async function getMonthlyClosing(
       totalToPay,
       totalSpent,
       projectedBalance: totalIncome - totalSpent,
-      estimatedInvoicesByCard: buildInvoiceEstimates(invoices, insideCard),
+      estimatedInvoicesByCard: buildInvoiceEstimates(invoicesWithTotals, insideCard),
       incomeItems,
     } satisfies MonthlyClosingSummary,
   }
@@ -150,33 +162,51 @@ export async function getMonthlyClosingSummary(
   const [invoices, occurrences, looseExpenses, income] = await Promise.all([
     db.cardInvoice.findMany({
       where: { userId, month },
-      select: { amount: true, status: true },
+      select: {
+        amount: true,
+        status: true,
+        cardId: true,
+        calculationMode: true,
+        enteredTotal: true,
+        items: { select: { amount: true, fixedCostOccurrenceId: true } },
+      },
     }),
     db.fixedCostOccurrence.findMany({
       where: { userId, month, deletedAt: null },
       select: {
+        id: true,
         amount: true,
         status: true,
-        fixedCost: { select: { type: true, paidInsideCard: true } },
+        fixedCost: { select: { type: true, paidInsideCard: true, cardId: true } },
       },
     }),
     aggregateTransactions(userId, month, "EXPENSE", db),
     aggregateTransactions(userId, month, "INCOME", db),
   ])
 
-  const cardInvoicesTotal = sum(invoices.filter((inv) => inv.status === "PENDING").map((inv) => inv.amount))
-  const allCardInvoices = sum(invoices.map((inv) => inv.amount))
   const expenseOccurrences = occurrences.filter((item) => item.fixedCost.type === "EXPENSE")
   const incomeOccurrences = occurrences.filter((item) => item.fixedCost.type === "INCOME")
   const insideCard = expenseOccurrences.filter((item) => item.fixedCost.paidInsideCard)
   const outsideCard = expenseOccurrences.filter((item) => !item.fixedCost.paidInsideCard)
+  const invoicesWithTotals = invoices.map((invoice) => {
+    const totals = calculateInvoiceTotals({
+      ...invoice,
+      items: invoice.items.map((item) => ({ ...item, postingStatus: "POSTED" as const })),
+      fixedOccurrences: insideCard.filter((item) => item.fixedCost.cardId === invoice.cardId),
+    })
+    return { ...invoice, amount: totals.effectiveTotal }
+  })
+  const cardInvoicesTotal = sum(invoicesWithTotals.filter((inv) => inv.status === "PENDING").map((inv) => inv.amount))
+  const allCardInvoices = sum(invoicesWithTotals.map((inv) => inv.amount))
   const fixedCostsTotal = sum(expenseOccurrences.map((item) => item.amount))
   const fixedIncomeTotal = sum(incomeOccurrences.map((item) => item.amount))
   const receivedIncomeTotal = sum(incomeOccurrences.filter((item) => item.status === "PAID").map((item) => item.amount)) + income
   const fixedCostsInsideCardTotal = sum(insideCard.map((item) => item.amount))
+  const invoiceCardIds = new Set(invoices.map((invoice) => invoice.cardId))
+  const cardForecastsWithoutInvoiceTotal = sum(insideCard.filter((item) => !item.fixedCost.cardId || !invoiceCardIds.has(item.fixedCost.cardId)).map((item) => item.amount))
   const fixedCostsOutsideCardTotal = sum(outsideCard.filter((item) => item.status === "PENDING").map((item) => item.amount))
   const fixedCostsOutsideCardTotalAll = sum(outsideCard.map((item) => item.amount))
-  const totalToPay = cardInvoicesTotal + fixedCostsOutsideCardTotal + looseExpenses
+  const totalToPay = cardInvoicesTotal + cardForecastsWithoutInvoiceTotal + fixedCostsOutsideCardTotal + looseExpenses
   const totalSpent = moneyToNumber(
     composeMonthlyFinancialSources({
       invoices,
@@ -192,6 +222,7 @@ export async function getMonthlyClosingSummary(
     cardInvoicesPaidTotal: allCardInvoices - cardInvoicesTotal,
     fixedCostsTotal,
     fixedCostsInsideCardTotal,
+    cardForecastsWithoutInvoiceTotal,
     fixedCostsOutsideCardTotal,
     fixedCostsOutsideCardTotalAll,
     fixedIncomeTotal,
@@ -568,6 +599,8 @@ async function aggregateTransactions(
     where: {
       userId,
       type,
+      invoiceItem: null,
+      OR: [{ bankAccountId: null }, { bankAccount: { type: { not: "BENEFIT" } } }],
       date: { gte: new Date(year, m - 1, 1), lt: new Date(year, m, 1) },
     },
     _sum: { amount: true },

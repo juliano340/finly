@@ -12,7 +12,14 @@ export const transactionSchema = z.object({
     .optional(),
   date: z.coerce.date(),
   categoryId: z.string().min(1, "Categoria é obrigatória"),
-  bankAccountId: z.string().optional(),
-})
+  bankAccountId: z.string().optional().nullable(),
+  invoiceId: z.string().optional().nullable(),
+}).refine(
+  (input) => !(input.bankAccountId && input.invoiceId),
+  { message: "Escolha uma conta bancária ou uma fatura, não as duas" },
+).refine(
+  (input) => !input.invoiceId || input.type === "EXPENSE",
+  { message: "Somente despesas podem ser lançadas em faturas" },
+)
 
 export type TransactionInput = z.infer<typeof transactionSchema>

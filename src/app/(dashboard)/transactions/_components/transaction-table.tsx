@@ -50,7 +50,7 @@ export function TransactionTable({
           <tr className="border-b bg-muted/50">
             <th className="px-4 py-3 text-left font-medium text-muted-foreground">Categoria</th>
             <th className="px-4 py-3 text-left font-medium text-muted-foreground">Descrição</th>
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground">Conta</th>
+            <th className="px-4 py-3 text-left font-medium text-muted-foreground">Destino</th>
             <th className="px-4 py-3 text-left font-medium text-muted-foreground">Data</th>
             <th className="px-4 py-3 text-right font-medium text-muted-foreground">Valor</th>
             <th className="px-4 py-3 text-center font-medium text-muted-foreground">Tipo</th>
@@ -107,6 +107,13 @@ export function TransactionTable({
                       <span className="inline-flex items-center gap-1.5">
                         <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: tx.bankAccount.color }} />
                         <span className="truncate max-w-[120px]">{tx.bankAccount.name}</span>
+                      </span>
+                    ) : tx.invoiceItem ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: tx.invoiceItem.invoice.card.color }} />
+                        <span className="truncate max-w-[160px]">
+                          {tx.invoiceItem.invoice.card.name} • {tx.invoiceItem.invoice.month}
+                        </span>
                       </span>
                     ) : (
                       "—"

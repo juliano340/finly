@@ -9,4 +9,8 @@ export type TransactionWithRelations = {
   userId: string
   category: { id: string; name: string; color: string; icon: string }
   bankAccount: { id: string; name: string; color: string; institution: string | null } | null
+  invoiceItem: {
+    invoiceId: string
+    invoice: { month: string; card: { id: string; name: string; color: string } }
+  } | null
 }

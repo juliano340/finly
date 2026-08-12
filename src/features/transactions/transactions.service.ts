@@ -4,10 +4,17 @@ import type { TransactionInput } from "./transactions.schema"
 import type { TransactionWithRelations } from "./transactions.types"
 import { validateExpenseLimit } from "@/features/bank-accounts/bank-accounts.service"
 import { moneyToNumber, type MoneyValue } from "@/lib/money"
+import { syncCalculatedInvoiceAmount } from "@/features/card-invoices/card-invoices.service"
 
 const includeRelations = {
   category: { select: { id: true, name: true, color: true, icon: true } },
   bankAccount: { select: { id: true, name: true, color: true, institution: true } },
+  invoiceItem: {
+    select: {
+      invoiceId: true,
+      invoice: { select: { month: true, card: { select: { id: true, name: true, color: true } } } },
+    },
+  },
 }
 
 export async function getTransactions(
@@ -23,6 +30,7 @@ export async function getTransactions(
   client?: PrismaClient
 ): Promise<{ transactions: TransactionWithRelations[]; total: number }> {
   const db = client ?? defaultPrisma
+
   const page = filters?.page ?? 1
   const limit = filters?.limit ?? 20
   const skip = (page - 1) * limit
@@ -65,6 +73,39 @@ export async function createTransaction(
   client?: PrismaClient
 ) {
   const db = client ?? defaultPrisma
+
+  if (input.invoiceId) {
+    if (input.type !== "EXPENSE") throw new Error("Somente despesas podem ser lançadas em faturas")
+    const invoice = await getEditableInvoice(input.invoiceId, userId, db)
+    if (!invoice) throw new Error("Fatura inválida ou fechada")
+
+    const transaction = await db.$transaction(async (tx) => {
+      const created = await tx.transaction.create({
+        data: {
+          amount: input.amount,
+          type: input.type,
+          description: input.description ?? null,
+          date: input.date,
+          categoryId: input.categoryId,
+          userId,
+        },
+      })
+      await tx.cardInvoiceItem.create({
+        data: {
+          invoiceId: invoice.id,
+          transactionId: created.id,
+          kind: "MANUAL",
+          postingStatus: "PROJECTED",
+          description: input.description ?? "Despesa avulsa",
+          amount: input.amount,
+          userId,
+        },
+      })
+      return tx.transaction.findUniqueOrThrow({ where: { id: created.id }, include: includeRelations })
+    })
+    await syncCalculatedInvoiceAmount(invoice.id, userId, db)
+    return normalizeTransaction(transaction)
+  }
 
   if (input.bankAccountId) {
     if (input.type === "EXPENSE") {
@@ -123,19 +164,28 @@ export async function updateTransaction(
   client?: PrismaClient
 ) {
   const db = client ?? defaultPrisma
-  const existing = await db.transaction.findUnique({ where: { id } })
+  const existing = await db.transaction.findUnique({ where: { id }, include: { invoiceItem: true } })
   if (!existing || existing.userId !== userId) return null
 
   const oldBankAccountId = existing.bankAccountId
   const newBankAccountId = input.bankAccountId
+  const oldInvoiceId = existing.invoiceItem?.invoiceId ?? null
+  const newInvoiceId = input.invoiceId
+  const invoiceChanged = newInvoiceId !== undefined && newInvoiceId !== oldInvoiceId
   const accountChanged = newBankAccountId !== undefined && newBankAccountId !== oldBankAccountId
   const amountChanged = input.amount !== undefined && input.amount !== moneyToNumber(existing.amount)
   const typeChanged = input.type !== undefined && input.type !== existing.type
 
-  if (accountChanged || amountChanged || typeChanged) {
+  if (accountChanged || invoiceChanged || amountChanged || typeChanged || input.description !== undefined) {
     const finalAmount = input.amount ?? moneyToNumber(existing.amount)
     const finalType = input.type ?? existing.type
-    const finalBankAccountId = newBankAccountId !== undefined ? newBankAccountId : oldBankAccountId
+    const finalBankAccountId = newInvoiceId ? null : (newBankAccountId !== undefined ? newBankAccountId : oldBankAccountId)
+    const finalInvoiceId = newBankAccountId ? null : (newInvoiceId !== undefined ? newInvoiceId : oldInvoiceId)
+
+    if (finalInvoiceId) {
+      if (finalType !== "EXPENSE") throw new Error("Somente despesas podem ser lançadas em faturas")
+      if (!await getEditableInvoice(finalInvoiceId, userId, db)) throw new Error("Fatura inválida ou fechada")
+    }
 
     if (finalType === "EXPENSE" && finalBankAccountId) {
       const oldAmount = moneyToNumber(existing.amount)
@@ -150,12 +200,14 @@ export async function updateTransaction(
       }
     }
 
-    return db.$transaction(async (tx) => {
+    const updatedTransaction = await db.$transaction(async (tx) => {
       if (oldBankAccountId) {
         await tx.bankAccountMovement.deleteMany({
           where: { transactionId: id },
         })
       }
+
+      await tx.cardInvoiceItem.deleteMany({ where: { transactionId: id } })
 
       if (finalBankAccountId) {
         await tx.bankAccountMovement.create({
@@ -171,6 +223,21 @@ export async function updateTransaction(
         })
       }
 
+
+      if (finalInvoiceId) {
+        await tx.cardInvoiceItem.create({
+          data: {
+            invoiceId: finalInvoiceId,
+            transactionId: id,
+            kind: "MANUAL",
+            postingStatus: "PROJECTED",
+            description: input.description ?? existing.description ?? "Despesa avulsa",
+            amount: finalAmount,
+            userId,
+          },
+        })
+      }
+
       const updated = await tx.transaction.update({
         where: { id },
         data: {
@@ -179,12 +246,16 @@ export async function updateTransaction(
           ...(input.description !== undefined && { description: input.description ?? null }),
           ...(input.date !== undefined && { date: input.date }),
           ...(input.categoryId !== undefined && { categoryId: input.categoryId }),
-          ...(input.bankAccountId !== undefined && { bankAccountId: input.bankAccountId || null }),
+          ...((input.bankAccountId !== undefined || input.invoiceId !== undefined) && { bankAccountId: finalBankAccountId || null }),
         },
         include: includeRelations,
       })
       return normalizeTransaction(updated)
     })
+    for (const invoiceId of new Set([oldInvoiceId, finalInvoiceId].filter(Boolean) as string[])) {
+      await syncCalculatedInvoiceAmount(invoiceId, userId, db)
+    }
+    return updatedTransaction
   }
 
   const updated = await db.transaction.update({
@@ -206,21 +277,29 @@ function normalizeTransaction<T extends { amount: MoneyValue }>(transaction: T) 
   return { ...transaction, amount: moneyToNumber(transaction.amount) }
 }
 
+function getEditableInvoice(invoiceId: string, userId: string, db: PrismaClient) {
+  return db.cardInvoice.findFirst({
+    where: { id: invoiceId, userId, lifecycleStatus: { in: ["ESTIMATED", "OPEN"] } },
+    select: { id: true },
+  })
+}
+
 export async function deleteTransaction(
   id: string,
   userId: string,
   client?: PrismaClient
 ) {
   const db = client ?? defaultPrisma
-  const tx = await db.transaction.findUnique({ where: { id } })
+  const tx = await db.transaction.findUnique({ where: { id }, include: { invoiceItem: true } })
   if (!tx || tx.userId !== userId) return false
 
-  return db.$transaction(async (prismaTx) => {
+  await db.$transaction(async (prismaTx) => {
     await prismaTx.bankAccountMovement.deleteMany({
       where: { transactionId: id },
     })
 
     await prismaTx.transaction.delete({ where: { id } })
-    return true
   })
+  if (tx.invoiceItem) await syncCalculatedInvoiceAmount(tx.invoiceItem.invoiceId, userId, db)
+  return true
 }

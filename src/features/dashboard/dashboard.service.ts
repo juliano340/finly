@@ -3,6 +3,7 @@ import type { PrismaClient } from "@/generated/prisma/client"
 import { ensureFinancialMonth } from "@/features/financial-months/financial-months.service"
 import { ensureFixedCostOccurrences, ensureFixedCostOccurrencesForMonths } from "@/features/monthly-closing/monthly-closing.service"
 import { moneyToNumber, sumMoney } from "@/lib/money"
+import { calculateInvoiceTotals } from "@/features/card-invoices/invoice-calculation"
 
 export interface DashboardStats {
   balance: number
@@ -79,18 +80,28 @@ export async function getDashboardStats(
         _sum: { amount: true },
       }),
       db.transaction.aggregate({
-        where: { userId, type: "EXPENSE", date: { gte: startDate, lt: endDate } },
+        where: {
+          userId,
+          type: "EXPENSE",
+          invoiceItem: null,
+          OR: [{ bankAccountId: null }, { bankAccount: { type: { not: "BENEFIT" } } }],
+          date: { gte: startDate, lt: endDate },
+        },
         _sum: { amount: true },
       }),
       db.transaction.groupBy({
         by: ["categoryId"],
-        where: { userId, type: "EXPENSE", date: { gte: startDate, lt: endDate } },
+        where: { userId, type: "EXPENSE", invoiceItem: null, date: { gte: startDate, lt: endDate } },
         _sum: { amount: true },
         orderBy: { _sum: { amount: "desc" } },
       }),
       db.transaction.groupBy({
         by: ["date", "type"],
-        where: { userId, date: { gte: startDate, lt: endDate } },
+        where: {
+          userId,
+          date: { gte: startDate, lt: endDate },
+          OR: [{ type: "INCOME" }, { invoiceItem: null }],
+        },
         _sum: { amount: true },
       }),
       db.transaction.findMany({
@@ -113,6 +124,7 @@ export async function getDashboardStats(
               name: true,
               type: true,
               paidInsideCard: true,
+              cardId: true,
               category: { select: { name: true, color: true } },
             },
           },
@@ -124,7 +136,11 @@ export async function getDashboardStats(
           id: true,
           amount: true,
           dueDate: true,
-          card: { select: { name: true, color: true } },
+          cardId: true,
+          calculationMode: true,
+          enteredTotal: true,
+          items: true,
+          card: { select: { id: true, name: true, color: true } },
         },
       }),
     ])
@@ -161,7 +177,22 @@ export async function getDashboardStats(
     })
   }
 
-  const invoiceTotal = sumMoney(invoices.map((invoice) => invoice.amount))
+  const invoiceCardIds = new Set(invoices.map((invoice) => invoice.cardId))
+  const invoicesWithTotals = invoices.map((invoice) => ({
+    ...invoice,
+    effectiveTotal: calculateInvoiceTotals({
+      ...invoice,
+      fixedOccurrences: fixedCostOccurrences.filter((occurrence) => occurrence.fixedCost.paidInsideCard && occurrence.fixedCost.cardId === invoice.cardId),
+    }).effectiveTotal,
+  }))
+  const cardForecastsWithoutInvoice = fixedCostOccurrences.filter((occurrence) =>
+    occurrence.fixedCost.type === "EXPENSE" && occurrence.fixedCost.paidInsideCard &&
+    (!occurrence.fixedCost.cardId || !invoiceCardIds.has(occurrence.fixedCost.cardId)),
+  )
+  const invoiceTotal = sumMoney([
+    ...invoicesWithTotals.map((invoice) => invoice.effectiveTotal),
+    ...cardForecastsWithoutInvoice.map((occurrence) => occurrence.amount),
+  ])
   if (invoiceTotal > 0) {
     categoryTotals.set("Faturas de cartão", { value: invoiceTotal, color: "#2563EB" })
   }
@@ -187,10 +218,15 @@ export async function getDashboardStats(
     if (occ.fixedCost.type === "INCOME") day.income = sumMoney([day.income, occ.amount])
     else day.expense = sumMoney([day.expense, occ.amount])
   }
-  for (const inv of invoices) {
+  for (const inv of invoicesWithTotals) {
     const dayKey = inv.dueDate.toISOString().slice(0, 10)
     if (!dailyMap.has(dayKey)) dailyMap.set(dayKey, { income: 0, expense: 0 })
-    dailyMap.get(dayKey)!.expense = sumMoney([dailyMap.get(dayKey)!.expense, inv.amount])
+    dailyMap.get(dayKey)!.expense = sumMoney([dailyMap.get(dayKey)!.expense, inv.effectiveTotal])
+  }
+  for (const occurrence of cardForecastsWithoutInvoice) {
+    const dayKey = (occurrence.dueDate ?? startDate).toISOString().slice(0, 10)
+    if (!dailyMap.has(dayKey)) dailyMap.set(dayKey, { income: 0, expense: 0 })
+    dailyMap.get(dayKey)!.expense = sumMoney([dailyMap.get(dayKey)!.expense, occurrence.amount])
   }
 
   const dailyTrendFormatted = Array.from(dailyMap.entries())
@@ -212,10 +248,10 @@ export async function getDashboardStats(
       categoryColor: occ.fixedCost.category.color,
       bankAccountName: null,
     }))
-  const invoiceItems = invoices.map((inv) => ({
+  const invoiceItems = invoicesWithTotals.map((inv) => ({
     id: `invoice-${inv.id}`,
     description: `Fatura ${inv.card.name}`,
-    amount: moneyToNumber(inv.amount),
+    amount: inv.effectiveTotal,
     type: "EXPENSE" as const,
     date: inv.dueDate,
     categoryName: "Fatura",
@@ -358,7 +394,13 @@ async function getLooseExpenseTotalsByMonth(userId: string, months: string[], db
   const startDate = monthStart(firstMonth)
   const endDate = nextMonthStart(lastMonth)
   const transactions = await db.transaction.findMany({
-    where: { userId, type: "EXPENSE", date: { gte: startDate, lt: endDate } },
+    where: {
+      userId,
+      type: "EXPENSE",
+      invoiceItem: null,
+      OR: [{ bankAccountId: null }, { bankAccount: { type: { not: "BENEFIT" } } }],
+      date: { gte: startDate, lt: endDate },
+    },
     select: { amount: true, date: true },
   })
   const totals = new Map<string, number>()

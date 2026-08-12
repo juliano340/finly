@@ -27,7 +27,7 @@ async function getValidBankAccount(
 ) {
   if (!bankAccountId) return null
   const account = await db.bankAccount.findUnique({ where: { id: bankAccountId } })
-  if (!account || account.userId !== userId) return false
+  if (!account || account.userId !== userId || account.type === "BENEFIT") return false
   return account
 }
 

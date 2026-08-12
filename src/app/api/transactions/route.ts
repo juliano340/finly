@@ -35,6 +35,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Dados inválidos" }, { status: 400 })
   }
 
-  const tx = await createTransaction(session.user.id, parsed.data)
-  return NextResponse.json(tx, { status: 201 })
+  try {
+    const tx = await createTransaction(session.user.id, parsed.data)
+    return NextResponse.json(tx, { status: 201 })
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Erro ao criar transação" },
+      { status: 400 },
+    )
+  }
 }

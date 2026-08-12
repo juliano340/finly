@@ -3,8 +3,17 @@ import { Prisma, type PrismaClient } from "@/generated/prisma/client"
 import { BUSINESS_TIME_ZONE } from "./monthly-plan.types"
 
 type SourceOccurrence = {
+  id?: string
   amount: Prisma.Decimal
-  fixedCost: { type: "INCOME" | "EXPENSE"; paidInsideCard: boolean }
+  fixedCost: { type: "INCOME" | "EXPENSE"; paidInsideCard: boolean; cardId?: string | null }
+}
+
+type SourceInvoice = {
+  amount: Prisma.Decimal
+  cardId?: string | null
+  calculationMode?: "CALCULATED" | "ENTERED_TOTAL"
+  enteredTotal?: Prisma.Decimal | null
+  items?: { amount: Prisma.Decimal; fixedCostOccurrenceId: string | null }[]
 }
 
 export interface MonthlyFinancialSources {
@@ -14,7 +23,7 @@ export interface MonthlyFinancialSources {
 }
 
 export function composeMonthlyFinancialSources(input: {
-  invoices: { amount: Prisma.Decimal }[]
+  invoices: SourceInvoice[]
   occurrences: SourceOccurrence[]
   variableSpent: Prisma.Decimal
 }): MonthlyFinancialSources {
@@ -30,11 +39,42 @@ export function composeMonthlyFinancialSources(input: {
     )
     .map((item) => item.amount)
 
+  const fixedInsideByCard = new Map<string, SourceOccurrence[]>()
+  for (const occurrence of input.occurrences) {
+    if (occurrence.fixedCost.type !== "EXPENSE" || !occurrence.fixedCost.paidInsideCard) continue
+    const cardId = occurrence.fixedCost.cardId ?? "__no_card__"
+    const group = fixedInsideByCard.get(cardId) ?? []
+    group.push(occurrence)
+    fixedInsideByCard.set(cardId, group)
+  }
+
+  const coveredCards = new Set<string>()
+  const invoiceTotals = input.invoices.map((invoice) => {
+    const cardId = invoice.cardId ?? "__no_card__"
+    coveredCards.add(cardId)
+    if ((invoice.calculationMode ?? "ENTERED_TOTAL") === "ENTERED_TOTAL") {
+      return invoice.enteredTotal ?? invoice.amount
+    }
+    const linkedIds = new Set(
+      (invoice.items ?? []).flatMap((item) => item.fixedCostOccurrenceId ? [item.fixedCostOccurrenceId] : []),
+    )
+    return sumDecimals([
+      ...(invoice.items ?? []).map((item) => item.amount),
+      ...(fixedInsideByCard.get(cardId) ?? [])
+        .filter((occurrence) => !occurrence.id || !linkedIds.has(occurrence.id))
+        .map((occurrence) => occurrence.amount),
+    ])
+  })
+  const fixedWithoutInvoice = Array.from(fixedInsideByCard.entries())
+    .filter(([cardId]) => !coveredCards.has(cardId))
+    .flatMap(([, occurrences]) => occurrences.map((occurrence) => occurrence.amount))
+
   return {
     suggestedIncome,
     committedExpenses: sumDecimals([
-      ...input.invoices.map((invoice) => invoice.amount),
+      ...invoiceTotals,
       ...outsideCardExpenses,
+      ...fixedWithoutInvoice,
     ]),
     variableSpent: input.variableSpent,
   }
@@ -50,19 +90,28 @@ export async function loadMonthlyFinancialSources(
   const [invoices, occurrences, variableExpenses] = await Promise.all([
     db.cardInvoice.findMany({
       where: { userId, month },
-      select: { amount: true },
+      select: {
+        amount: true,
+        cardId: true,
+        calculationMode: true,
+        enteredTotal: true,
+        items: { select: { amount: true, fixedCostOccurrenceId: true } },
+      },
     }),
     db.fixedCostOccurrence.findMany({
       where: { userId, month, deletedAt: null },
       select: {
+        id: true,
         amount: true,
-        fixedCost: { select: { type: true, paidInsideCard: true } },
+        fixedCost: { select: { type: true, paidInsideCard: true, cardId: true } },
       },
     }),
     db.transaction.aggregate({
       where: {
         userId,
         type: "EXPENSE",
+        invoiceItem: null,
+        OR: [{ bankAccountId: null }, { bankAccount: { type: { not: "BENEFIT" } } }],
         date: { gte: transactionWindow.start, lt: transactionWindow.end },
       },
       _sum: { amount: true },

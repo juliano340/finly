@@ -25,6 +25,14 @@ interface BankAccountOption {
   id: string
   name: string
   institution: string | null
+  type: "CHECKING" | "SAVINGS" | "DIGITAL" | "CASH" | "INVESTMENT" | "BENEFIT"
+}
+
+interface InvoiceOption {
+  id: string
+  month: string
+  calculationMode: "CALCULATED" | "ENTERED_TOTAL"
+  card: { id: string; name: string }
 }
 
 interface TransactionFormProps {
@@ -33,6 +41,8 @@ interface TransactionFormProps {
   onSubmit: (input: TransactionInput) => Promise<void>
   categories: CategoryWithCount[]
   bankAccounts?: BankAccountOption[]
+  invoices?: InvoiceOption[]
+  activeMonth?: string | null
   initial?: Partial<TransactionInput>
   title: string
   onDelete?: () => void
@@ -44,6 +54,8 @@ export function TransactionForm({
   onSubmit,
   categories,
   bankAccounts = [],
+  invoices = [],
+  activeMonth,
   initial,
   title,
   onDelete,
@@ -52,7 +64,14 @@ export function TransactionForm({
   const [type, setType] = useState<"INCOME" | "EXPENSE">(initial?.type ?? "EXPENSE")
   const [description, setDescription] = useState(initial?.description ?? "")
   const [categoryId, setCategoryId] = useState(initial?.categoryId ?? "")
+  const [destinationType, setDestinationType] = useState<"NONE" | "ACCOUNT" | "CARD">(
+    initial?.invoiceId ? "CARD" : initial?.bankAccountId ? "ACCOUNT" : "NONE",
+  )
   const [bankAccountId, setBankAccountId] = useState(initial?.bankAccountId ?? "")
+  const [invoiceId, setInvoiceId] = useState(initial?.invoiceId ?? "")
+  const [cardId, setCardId] = useState(
+    invoices.find((invoice) => invoice.id === initial?.invoiceId)?.card.id ?? "",
+  )
   const [date, setDate] = useState(
     initial?.date ? new Date(initial.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0]
   )
@@ -61,6 +80,28 @@ export function TransactionForm({
   const inFlightRef = useRef(false)
 
   const filteredCategories = categories.filter((c) => c.type === type)
+  const availableCards = Array.from(
+    new Map(invoices.map((invoice) => [invoice.card.id, invoice.card])).values(),
+  )
+  const selectedInvoice = invoices.find((invoice) => invoice.id === invoiceId)
+  const effectiveCardId = cardId || selectedInvoice?.card.id || ""
+  const cardInvoices = invoices.filter((invoice) => invoice.card.id === effectiveCardId)
+
+  function changeDestinationType(value: "NONE" | "ACCOUNT" | "CARD") {
+    setDestinationType(value)
+    if (value !== "ACCOUNT") setBankAccountId("")
+    if (value !== "CARD") {
+      setCardId("")
+      setInvoiceId("")
+    }
+  }
+
+  function selectCard(value: string) {
+    setCardId(value)
+    const matchingInvoices = invoices.filter((invoice) => invoice.card.id === value)
+    const preferredInvoice = matchingInvoices.find((invoice) => invoice.month === activeMonth) ?? matchingInvoices[0]
+    setInvoiceId(preferredInvoice?.id ?? "")
+  }
 
   async function handleSubmit() {
     if (inFlightRef.current) return
@@ -76,6 +117,16 @@ export function TransactionForm({
       inFlightRef.current = false
       return
     }
+    if (destinationType === "ACCOUNT" && !bankAccountId) {
+      setError("Selecione uma conta bancária")
+      inFlightRef.current = false
+      return
+    }
+    if (destinationType === "CARD" && !invoiceId) {
+      setError("Selecione o cartão e a fatura")
+      inFlightRef.current = false
+      return
+    }
     setError("")
     setLoading(true)
     try {
@@ -85,7 +136,8 @@ export function TransactionForm({
         description: description.trim() || undefined,
         categoryId,
         date: new Date(date + "T12:00:00"),
-        bankAccountId: bankAccountId || undefined,
+        bankAccountId: destinationType === "ACCOUNT" ? bankAccountId : null,
+        invoiceId: destinationType === "CARD" ? invoiceId : null,
       })
       onOpenChange(false)
     } catch (err) {
@@ -126,7 +178,12 @@ export function TransactionForm({
             </div>
             <div className="space-y-1">
               <Label>Tipo</Label>
-              <Select value={type} onValueChange={(v) => { setType((v ?? "EXPENSE") as typeof type); setCategoryId("") }}>
+              <Select value={type} onValueChange={(v) => {
+                const nextType = (v ?? "EXPENSE") as typeof type
+                setType(nextType)
+                setCategoryId("")
+                if (nextType === "INCOME" && destinationType === "CARD") changeDestinationType("NONE")
+              }}>
                 <SelectTrigger>
                   <SelectValue>
                     {type === "INCOME" ? "Receita" : "Despesa"}
@@ -166,25 +223,88 @@ export function TransactionForm({
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>Conta bancária (opcional)</Label>
-              <Select value={bankAccountId || null} onValueChange={(v) => setBankAccountId(v ?? "")}>
+              <Label>Destino (opcional)</Label>
+              <Select value={destinationType} onValueChange={(value) => changeDestinationType((value ?? "NONE") as typeof destinationType)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Sem vinculação">
-                    {bankAccountId
-                      ? bankAccounts.find((a) => a.id === bankAccountId)?.name ?? "Selecione..."
-                      : "Sem vinculação"}
+                  <SelectValue>
+                    {destinationType === "ACCOUNT"
+                      ? "Conta bancária"
+                      : destinationType === "CARD" ? "Cartão de crédito" : "Sem vinculação"}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sem vinculação</SelectItem>
-                  {bankAccounts.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a.name}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="NONE">Sem vinculação</SelectItem>
+                  <SelectItem value="ACCOUNT">Conta bancária</SelectItem>
+                  {type === "EXPENSE" && <SelectItem value="CARD">Cartão de crédito</SelectItem>}
                 </SelectContent>
               </Select>
             </div>
+
+            {destinationType === "ACCOUNT" && (
+              <div className="space-y-1">
+                <Label>Conta bancária</Label>
+                <Select value={bankAccountId || null} onValueChange={(value) => setBankAccountId(value ?? "")}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione uma conta">
+                      {bankAccountId ? bankAccounts.find((account) => account.id === bankAccountId)?.name : "Selecione uma conta"}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                  {bankAccounts.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name}{a.type === "BENEFIT" ? " • Benefício" : a.institution ? ` • ${a.institution}` : ""}
+                    </SelectItem>
+                  ))}
+                  </SelectContent>
+                </Select>
+                {bankAccounts.length === 0 && <p className="text-xs text-muted-foreground">Nenhuma conta bancária cadastrada.</p>}
+              </div>
+            )}
+
+            {destinationType === "CARD" && (
+              <div className="space-y-4 rounded-lg border bg-muted/20 p-3">
+                <div className="space-y-1">
+                  <Label>Cartão</Label>
+                  <Select value={effectiveCardId || null} onValueChange={(value) => selectCard(value ?? "")}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um cartão">
+                        {effectiveCardId ? availableCards.find((card) => card.id === effectiveCardId)?.name : "Selecione um cartão"}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableCards.map((card) => <SelectItem key={card.id} value={card.id}>{card.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  {availableCards.length === 0 && <p className="text-xs text-muted-foreground">Nenhuma fatura aberta ou estimada disponível.</p>}
+                </div>
+
+                {effectiveCardId && (
+                  <div className="space-y-1">
+                    <Label>Fatura</Label>
+                    <Select value={invoiceId || null} onValueChange={(value) => setInvoiceId(value ?? "")}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a fatura">
+                          {selectedInvoice ? `Fatura de ${formatMonth(selectedInvoice.month)}` : "Selecione a fatura"}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {cardInvoices.map((invoice) => (
+                          <SelectItem key={invoice.id} value={invoice.id}>
+                            {formatMonth(invoice.month)}{invoice.month === activeMonth ? " • mês selecionado" : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {selectedInvoice?.calculationMode === "ENTERED_TOTAL" && (
+                  <p className="text-xs text-muted-foreground">
+                    O lançamento aparecerá como previsto, mas não altera o total informado da fatura.
+                  </p>
+                )}
+              </div>
+            )}
             <div className="space-y-1">
               <Label>Data</Label>
               <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
@@ -217,4 +337,9 @@ export function TransactionForm({
       </SheetContent>
     </Sheet>
   )
+}
+
+function formatMonth(month: string) {
+  const [year, monthNumber] = month.split("-")
+  return `${monthNumber}/${year}`
 }

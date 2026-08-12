@@ -3,16 +3,23 @@ import { z } from "zod"
 export const bankAccountSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório").max(80),
   institution: z.string().max(80).optional().nullable(),
-  type: z.enum(["CHECKING", "SAVINGS", "DIGITAL", "CASH", "INVESTMENT"]).default("CHECKING"),
+  type: z.enum(["CHECKING", "SAVINGS", "DIGITAL", "CASH", "INVESTMENT", "BENEFIT"]).default("CHECKING"),
   color: z.string().default("#22C55E"),
   initialBalance: z.coerce.number().default(0),
   overdraftLimit: z.coerce.number().default(0),
+  benefitDailyRate: z.coerce.number().positive().optional().nullable(),
   active: z.coerce.boolean().default(true),
 })
 
 export const bankAccountMovementSchema = z.object({
   amount: z.coerce.number().positive("Valor deve ser maior que zero"),
   type: z.enum(["INCOME", "EXPENSE"]),
+  description: z.string().max(160).optional().nullable(),
+  date: z.coerce.date().default(() => new Date()),
+})
+
+export const benefitRechargeSchema = z.object({
+  amount: z.coerce.number().positive("Valor deve ser maior que zero"),
   description: z.string().max(160).optional().nullable(),
   date: z.coerce.date().default(() => new Date()),
 })
@@ -37,5 +44,6 @@ export const bankAccountTransferSchema = z.object({
 
 export type BankAccountInput = z.infer<typeof bankAccountSchema>
 export type BankAccountMovementInput = z.infer<typeof bankAccountMovementSchema>
+export type BenefitRechargeInput = z.infer<typeof benefitRechargeSchema>
 export type BankAccountAdjustmentInput = z.infer<typeof bankAccountAdjustmentSchema>
 export type BankAccountTransferInput = z.infer<typeof bankAccountTransferSchema>

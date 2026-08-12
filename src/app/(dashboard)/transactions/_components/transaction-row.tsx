@@ -57,6 +57,12 @@ export function TransactionRow({ transaction, onEdit, onDelete }: TransactionRow
                 <span className="truncate">{transaction.bankAccount.name}</span>
               </span>
             )}
+            {transaction.invoiceItem && (
+              <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-muted px-2 py-1">
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: transaction.invoiceItem.invoice.card.color }} />
+                <span className="truncate">{transaction.invoiceItem.invoice.card.name} • {transaction.invoiceItem.invoice.month}</span>
+              </span>
+            )}
           </div>
         </div>
 

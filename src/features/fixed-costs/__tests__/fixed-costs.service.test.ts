@@ -44,7 +44,7 @@ describe("fixed-costs.service - update amount propagation", () => {
     await prisma.user.delete({ where: { id: userId } })
   })
 
-  it("atualiza amount de todas ocorrências PENDING (todos os meses) quando defaultAmount muda", async () => {
+  it("atualiza ocorrências pendentes atuais/futuras sem reescrever histórico", async () => {
     const name = uniqueName()
     const created = await createFixedCost(userId, {
       name,
@@ -84,12 +84,13 @@ describe("fixed-costs.service - update amount propagation", () => {
     expect(updated).not.toBeNull()
     expect(updated?.defaultAmount).toBe(250)
 
-    // Verify ALL PENDING occurrences were updated
+    // Preserva histórico e atualiza somente mês atual/futuro ainda aberto.
     const occs = await prisma.fixedCostOccurrence.findMany({
       where: { fixedCostId: created.id, userId },
     })
     expect(occs).toHaveLength(2)
-    expect(occs.every(o => o.amount.toNumber() === 250)).toBe(true)
+    expect(occs.find((occurrence) => occurrence.month === prevMonth)?.amount.toNumber()).toBe(100)
+    expect(occs.find((occurrence) => occurrence.month === month)?.amount.toNumber()).toBe(250)
   })
 
   it("NÃO altera ocorrências PAID (já foram pagas com o valor antigo)", async () => {

@@ -15,20 +15,22 @@ export interface ImportResult {
     fixedCosts: number
     cardInvoices: number
     fixedCostOccurrences: number
+    cardInvoiceItems: number
   }
 }
 
 export async function exportData(userId: string, client: PrismaClient = defaultPrisma): Promise<BackupData> {
   const categories = await client.category.findMany({ where: { userId }, select: { id: true, name: true, icon: true, color: true, type: true } })
   const financialMonths = await client.financialMonth.findMany({ where: { userId }, select: { id: true, month: true, status: true } })
-  const bankAccounts = await client.bankAccount.findMany({ where: { userId }, select: { id: true, name: true, institution: true, type: true, color: true, initialBalance: true, overdraftLimit: true, active: true } })
+  const bankAccounts = await client.bankAccount.findMany({ where: { userId }, select: { id: true, name: true, institution: true, type: true, color: true, initialBalance: true, overdraftLimit: true, benefitDailyRate: true, active: true } })
   const cards = await client.card.findMany({ where: { userId }, select: { id: true, name: true, brand: true, color: true, closingDay: true, dueDay: true, bankAccountId: true } })
   const transactions = await client.transaction.findMany({ where: { userId }, select: { id: true, amount: true, type: true, description: true, date: true, categoryId: true } })
   const budgets = await client.budget.findMany({ where: { userId }, select: { id: true, amount: true, month: true, categoryId: true } })
   const bankAccountMovements = await client.bankAccountMovement.findMany({ where: { userId }, select: { id: true, bankAccountId: true, amount: true, type: true, description: true, date: true } })
   const fixedCosts = await client.fixedCost.findMany({ where: { userId }, select: { id: true, name: true, type: true, defaultAmount: true, categoryId: true, paymentMethod: true, dueDay: true, paidInsideCard: true, cardId: true, bankAccountId: true, active: true, startDate: true, frequency: true, customInterval: true, customUnit: true, endType: true, endDate: true, endAfterCount: true } })
-  const cardInvoices = await client.cardInvoice.findMany({ where: { userId }, select: { id: true, cardId: true, financialMonthId: true, month: true, dueDate: true, amount: true, status: true, paidAt: true, paymentMethod: true, paymentBankAccountId: true, bankAccountMovementId: true } })
+  const cardInvoices = await client.cardInvoice.findMany({ where: { userId }, select: { id: true, cardId: true, financialMonthId: true, month: true, dueDate: true, amount: true, status: true, calculationMode: true, lifecycleStatus: true, enteredTotal: true, closedAt: true, paidAt: true, paymentMethod: true, paymentBankAccountId: true, bankAccountMovementId: true } })
   const fixedCostOccurrences = await client.fixedCostOccurrence.findMany({ where: { userId }, select: { id: true, fixedCostId: true, financialMonthId: true, month: true, dueDate: true, amount: true, status: true, paidAt: true } })
+  const cardInvoiceItems = await client.cardInvoiceItem.findMany({ where: { userId }, select: { id: true, invoiceId: true, kind: true, postingStatus: true, description: true, amount: true, fixedCostOccurrenceId: true, transactionId: true, installmentGroupId: true, installmentNumber: true, installmentCount: true } })
 
   return {
     version: 1,
@@ -40,14 +42,16 @@ export async function exportData(userId: string, client: PrismaClient = defaultP
         ...item,
         initialBalance: moneyToNumber(item.initialBalance),
         overdraftLimit: moneyToNumber(item.overdraftLimit),
+        benefitDailyRate: item.benefitDailyRate === null ? null : moneyToNumber(item.benefitDailyRate),
       })),
       cards,
       transactions: transactions.map((item) => ({ ...item, amount: moneyToNumber(item.amount) })),
       budgets: budgets.map((item) => ({ ...item, amount: moneyToNumber(item.amount) })),
       bankAccountMovements: bankAccountMovements.map((item) => ({ ...item, amount: moneyToNumber(item.amount) })),
       fixedCosts: fixedCosts.map((item) => ({ ...item, defaultAmount: moneyToNumber(item.defaultAmount) })),
-      cardInvoices: cardInvoices.map((item) => ({ ...item, amount: moneyToNumber(item.amount) })),
+      cardInvoices: cardInvoices.map((item) => ({ ...item, amount: moneyToNumber(item.amount), enteredTotal: item.enteredTotal === null ? null : moneyToNumber(item.enteredTotal) })),
       fixedCostOccurrences: fixedCostOccurrences.map((item) => ({ ...item, amount: moneyToNumber(item.amount) })),
+      cardInvoiceItems: cardInvoiceItems.map((item) => ({ ...item, amount: moneyToNumber(item.amount) })),
     },
   }
 }
@@ -96,11 +100,12 @@ async function insertAll(
     card: new Map<string, string>(),
     fixedCost: new Map<string, string>(),
     bankAccountMovement: new Map<string, string>(),
+    transaction: new Map<string, string>(),
   }
   const counts = {
     categories: 0, financialMonths: 0, bankAccounts: 0, cards: 0,
     transactions: 0, budgets: 0, bankAccountMovements: 0, fixedCosts: 0,
-    cardInvoices: 0, fixedCostOccurrences: 0,
+    cardInvoices: 0, fixedCostOccurrences: 0, cardInvoiceItems: 0,
   }
 
   // L0: Category, FinancialMonth, BankAccount
@@ -134,7 +139,7 @@ async function insertAll(
       if (existing) { idMaps.bankAccount.set(item.id, existing.id); continue }
     }
     const created = await db.bankAccount.create({
-      data: { name: item.name, institution: item.institution, type: item.type, color: item.color, initialBalance: item.initialBalance, overdraftLimit: item.overdraftLimit, active: item.active, userId },
+      data: { name: item.name, institution: item.institution, type: item.type, color: item.color, initialBalance: item.initialBalance, overdraftLimit: item.overdraftLimit, benefitDailyRate: item.benefitDailyRate, active: item.active, userId },
     })
     idMaps.bankAccount.set(item.id, created.id)
     counts.bankAccounts++
@@ -157,9 +162,10 @@ async function insertAll(
   for (const item of data.data.transactions) {
     const categoryId = idMaps.category.get(item.categoryId)
     if (!categoryId) continue
-    await db.transaction.create({
+    const created = await db.transaction.create({
       data: { amount: item.amount, type: item.type, description: item.description, date: item.date, categoryId, userId },
     })
+    idMaps.transaction.set(item.id, created.id)
     counts.transactions++
   }
 
@@ -214,7 +220,7 @@ async function insertAll(
       if (existing) { cardInvoiceMap.set(item.id, existing.id); continue }
     }
     const created = await db.cardInvoice.create({
-      data: { cardId, financialMonthId, month: item.month, dueDate: item.dueDate, amount: item.amount, status: item.status, paidAt: item.paidAt, paymentMethod: item.paymentMethod, userId },
+      data: { cardId, financialMonthId, month: item.month, dueDate: item.dueDate, amount: item.amount, status: item.status, calculationMode: item.calculationMode, lifecycleStatus: item.status === "PAID" ? "PAID" : item.lifecycleStatus, enteredTotal: item.enteredTotal ?? item.amount, closedAt: item.closedAt, paidAt: item.paidAt, paymentMethod: item.paymentMethod, userId },
     })
     cardInvoiceMap.set(item.id, created.id)
     counts.cardInvoices++
@@ -235,6 +241,7 @@ async function insertAll(
   }
 
   // L3: FixedCostOccurrence
+  const fixedCostOccurrenceMap = new Map<string, string>()
   for (const item of data.data.fixedCostOccurrences) {
     const fixedCostId = idMaps.fixedCost.get(item.fixedCostId)
     if (!fixedCostId) continue
@@ -242,12 +249,24 @@ async function insertAll(
     if (!financialMonthId) continue
     if (mode === "merge") {
       const existing = await db.fixedCostOccurrence.findFirst({ where: { fixedCostId, month: item.month, userId } })
-      if (existing) continue
+      if (existing) { fixedCostOccurrenceMap.set(item.id, existing.id); continue }
     }
-    await db.fixedCostOccurrence.create({
+    const created = await db.fixedCostOccurrence.create({
       data: { fixedCostId, financialMonthId, month: item.month, dueDate: item.dueDate, amount: item.amount, status: item.status, paidAt: item.paidAt, userId },
     })
+    fixedCostOccurrenceMap.set(item.id, created.id)
     counts.fixedCostOccurrences++
+  }
+
+  for (const item of data.data.cardInvoiceItems ?? []) {
+    const invoiceId = cardInvoiceMap.get(item.invoiceId)
+    if (!invoiceId) continue
+    const fixedCostOccurrenceId = item.fixedCostOccurrenceId ? fixedCostOccurrenceMap.get(item.fixedCostOccurrenceId) ?? null : null
+    const transactionId = item.transactionId ? idMaps.transaction.get(item.transactionId) ?? null : null
+    await db.cardInvoiceItem.create({
+      data: { invoiceId, kind: item.kind, postingStatus: item.postingStatus, description: item.description, amount: item.amount, fixedCostOccurrenceId, transactionId, installmentGroupId: item.installmentGroupId, installmentNumber: item.installmentNumber, installmentCount: item.installmentCount, userId },
+    })
+    counts.cardInvoiceItems++
   }
 
   return { imported: counts }

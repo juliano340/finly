@@ -114,7 +114,7 @@ function InvoicesPageContent() {
     ]).then(async ([cardsRes, invoicesRes, accountsRes]) => {
       if (cardsRes.ok) setCards(await cardsRes.json())
       if (invoicesRes.ok) setInvoices(await invoicesRes.json())
-      if (accountsRes.ok) setBankAccounts(await accountsRes.json())
+      if (accountsRes.ok) setBankAccounts((await accountsRes.json()).filter((account: { type: string }) => account.type !== "BENEFIT"))
     })
   }
 

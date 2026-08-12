@@ -19,7 +19,8 @@ import { useMonthParam } from "@/hooks/use-month-param"
 
 interface CardItem { id: string; name: string; color: string }
 interface BankAccountItem { id: string; name: string; balance: number; overdraftLimit: number }
-interface Invoice { id: string; month: string; dueDate: string; amount: number; status: "PENDING" | "PAID"; card: CardItem; paymentMethod?: string | null; paymentBankAccountId?: string | null; importSessionId?: string | null }
+interface InvoiceItem { id: string; description: string; amount: number; kind: string; postingStatus: "PROJECTED" | "POSTED"; fixedCostOccurrenceId?: string | null }
+interface Invoice { id: string; month: string; dueDate: string; amount: number; effectiveTotal: number; enteredTotal: number; calculatedTotal: number; projectedFixedTotal: number; difference: number; calculationMode: "CALCULATED" | "ENTERED_TOTAL"; lifecycleStatus: "ESTIMATED" | "OPEN" | "CLOSED" | "PAID"; status: "PENDING" | "PAID"; items: InvoiceItem[]; fixedOccurrences: { id: string; amount: number; fixedCost: { name: string } }[]; card: CardItem; paymentMethod?: string | null; paymentBankAccountId?: string | null; importSessionId?: string | null }
 type InvoiceSortField = "card" | "dueDate" | "amount" | "status"
 
 function SortIcon({ field, activeField, direction }: { field: InvoiceSortField; activeField: InvoiceSortField; direction: "asc" | "desc" }) {
@@ -74,6 +75,8 @@ const paymentMethods = [
 
 const methodLabels: Record<string, string> = { PIX: "Pix", TED: "TED", DEBIT: "Débito", CASH: "Dinheiro", BANK_SLIP: "Boleto" }
 
+const lifecycleLabels = { ESTIMATED: "Estimada", OPEN: "Aberta", CLOSED: "Fechada", PAID: "Paga" } as const
+
 export function InvoicesTab() {
   const router = useRouter()
   const [cards, setCards] = useState<CardItem[]>([])
@@ -82,6 +85,7 @@ export function InvoicesTab() {
   const [month, setMonth] = useMonthParam({ defaultMonth: getCurrentMonth() })
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
   const [creating, setCreating] = useState(false)
+  const [createMode, setCreateMode] = useState<"CALCULATED" | "ENTERED_TOTAL">("ENTERED_TOTAL")
   const [copiando, setCopiando] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [payingInvoice, setPayingInvoice] = useState<Invoice | null>(null)
@@ -119,8 +123,12 @@ export function InvoicesTab() {
       fetch("/api/bank-accounts"),
     ]).then(async ([cardsRes, invoicesRes, accountsRes]) => {
       if (cardsRes.ok) setCards(await cardsRes.json())
-      if (invoicesRes.ok) setInvoices(await invoicesRes.json())
-      if (accountsRes.ok) setBankAccounts(await accountsRes.json())
+      if (invoicesRes.ok) {
+        const invoiceData: Invoice[] = await invoicesRes.json()
+        setInvoices(invoiceData)
+        setSelectedInvoice((current) => current ? invoiceData.find((item) => item.id === current.id) ?? null : null)
+      }
+      if (accountsRes.ok) setBankAccounts((await accountsRes.json()).filter((account: { type: string }) => account.type !== "BENEFIT"))
     })
   }
 
@@ -183,7 +191,16 @@ export function InvoicesTab() {
     const res = await fetch("/api/invoices", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cardId: formData.get("cardId"), month, dueDate: formData.get("dueDate"), amount: formData.get("amount"), status: formData.get("status") }),
+      body: JSON.stringify({
+        cardId: formData.get("cardId"),
+        month,
+        dueDate: formData.get("dueDate"),
+        calculationMode: formData.get("calculationMode"),
+        enteredTotal: formData.get("calculationMode") === "ENTERED_TOTAL" ? formData.get("amount") : null,
+        amount: formData.get("calculationMode") === "ENTERED_TOTAL" ? formData.get("amount") : 0,
+        lifecycleStatus: formData.get("lifecycleStatus"),
+        status: "PENDING",
+      }),
     })
     if (res.ok) {
       const created = await res.json()
@@ -200,10 +217,20 @@ export function InvoicesTab() {
     inFlightUpdateRef.current = true
     setUpdatingId(invoiceId)
     try {
+      const nextMode = String(formData.get("calculationMode"))
+      const current = invoices.find((invoice) => invoice.id === invoiceId)
+      if (current && current.calculationMode !== nextMode && !window.confirm("Trocar o modo altera o total considerado, mas preserva itens e valor informado. Continuar?")) return
       const res = await fetch(`/api/invoices/${invoiceId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cardId: formData.get("cardId"), dueDate: formData.get("dueDate"), amount: formData.get("amount"), status: formData.get("status") }),
+        body: JSON.stringify({
+          cardId: formData.get("cardId"),
+          dueDate: formData.get("dueDate"),
+          calculationMode: nextMode,
+          enteredTotal: formData.get("amount"),
+          amount: formData.get("amount"),
+          lifecycleStatus: formData.get("lifecycleStatus"),
+        }),
       })
       if (res.ok) {
         toast.success("Fatura atualizada!")
@@ -216,6 +243,29 @@ export function InvoicesTab() {
       setUpdatingId(null)
       inFlightUpdateRef.current = false
     }
+  }
+
+  const handleAddItem = async (formData: FormData) => {
+    if (!selectedInvoice) return
+    const res = await fetch(`/api/invoices/${selectedInvoice.id}/items`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        description: formData.get("description"),
+        amount: formData.get("amount"),
+        kind: formData.get("fixedCostOccurrenceId") ? "FIXED_COST" : formData.get("kind"),
+        postingStatus: formData.get("postingStatus"),
+        fixedCostOccurrenceId: formData.get("fixedCostOccurrenceId") || null,
+      }),
+    })
+    if (res.ok) { toast.success("Lançamento adicionado."); await fetchData() }
+    else toast.error("Não foi possível adicionar o lançamento.")
+  }
+
+  const handleDeleteItem = async (itemId: string) => {
+    if (!selectedInvoice) return
+    const res = await fetch(`/api/invoices/${selectedInvoice.id}/items/${itemId}`, { method: "DELETE" })
+    if (res.ok) await fetchData()
   }
 
   const handleDelete = async () => {
@@ -332,16 +382,16 @@ export function InvoicesTab() {
   }
 
   const currentMethod = paymentMethods.find((m) => m.value === payMethod)
-  const totalAll = invoices.reduce((s, i) => s + i.amount, 0)
-  const totalPaid = invoices.filter((i) => i.status === "PAID").reduce((s, i) => s + i.amount, 0)
-  const totalPending = invoices.filter((i) => i.status === "PENDING").reduce((s, i) => s + i.amount, 0)
+  const totalAll = invoices.reduce((s, i) => s + i.effectiveTotal, 0)
+  const totalPaid = invoices.filter((i) => i.status === "PAID").reduce((s, i) => s + i.effectiveTotal, 0)
+  const totalPending = invoices.filter((i) => i.status === "PENDING").reduce((s, i) => s + i.effectiveTotal, 0)
 
   const sortedInvoices = [...invoices].sort((a, b) => {
     const dir = sortDir === "asc" ? 1 : -1
     switch (sortField) {
       case "card": return dir * a.card.name.localeCompare(b.card.name)
       case "dueDate": return dir * (new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
-      case "amount": return dir * (a.amount - b.amount)
+      case "amount": return dir * (a.effectiveTotal - b.effectiveTotal)
       case "status": return dir * (a.status === b.status ? 0 : a.status === "PAID" ? -1 : 1)
       default: return 0
     }
@@ -447,14 +497,14 @@ export function InvoicesTab() {
                   </button>
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">{formatDate(invoice.dueDate)}</td>
-                <td className="px-4 py-3 text-right font-medium">{formatCurrency(invoice.amount)}</td>
+                <td className="px-4 py-3 text-right font-medium">{formatCurrency(invoice.effectiveTotal)}</td>
                 <td className="px-4 py-3 text-center">
                   {invoice.status === "PAID" ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600">
                       Pago{invoice.paymentMethod ? ` · ${methodLabels[invoice.paymentMethod] ?? invoice.paymentMethod}` : ""}
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-600">Pendente</span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-600">{lifecycleLabels[invoice.lifecycleStatus]}</span>
                   )}
                 </td>
                 <td className="px-4 py-3">
@@ -514,13 +564,13 @@ export function InvoicesTab() {
                       <span className="font-medium truncate">{invoice.card.name}</span>
                       {invoice.importSessionId && <BarChart3 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
                     </div>
-                    <strong className="shrink-0">{formatCurrency(invoice.amount)}</strong>
+                    <strong className="shrink-0">{formatCurrency(invoice.effectiveTotal)}</strong>
                   </div>
                   <p className="text-xs text-muted-foreground truncate">
                     Vence {formatDate(invoice.dueDate)} ·{" "}
                     {invoice.status === "PAID"
                       ? `Pago${invoice.paymentMethod ? ` via ${methodLabels[invoice.paymentMethod] ?? invoice.paymentMethod}` : ""}`
-                      : "Pendente"}
+                      : lifecycleLabels[invoice.lifecycleStatus]}
                   </p>
                 </div>
               </button>
@@ -572,7 +622,7 @@ export function InvoicesTab() {
                 <div className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white" style={{ backgroundColor: payingInvoice.card.color }}>{payingInvoice.card.name.charAt(0)}</div>
                 <div>
                   <p className="font-medium">{payingInvoice.card.name}</p>
-                  <p className="text-lg font-bold">{formatCurrency(payingInvoice.amount)}</p>
+                  <p className="text-lg font-bold">{formatCurrency(payingInvoice.effectiveTotal)}</p>
                 </div>
               </div>
 
@@ -609,7 +659,7 @@ export function InvoicesTab() {
                 if (!currentMethod?.needsAccount || !payAccountId) return null
                 const acc = bankAccounts.find((a) => a.id === payAccountId)
                 if (!acc) return null
-                const after = acc.balance - payingInvoice.amount
+                const after = acc.balance - payingInvoice.effectiveTotal
                 const available = getAvailableBalance(acc.balance, acc.overdraftLimit)
                 return (
                   <div className="space-y-1 rounded-lg bg-muted p-3 text-sm">
@@ -664,12 +714,12 @@ export function InvoicesTab() {
                 onChange={(e) => {
                   setSimInvoiceId(e.target.value)
                   const inv = invoices.find((i) => i.id === e.target.value)
-                  if (inv) setSimAmount(String(inv.amount))
+                  if (inv) setSimAmount(String(inv.effectiveTotal))
                 }}
               >
                 <option value="">Selecione uma fatura</option>
                 {invoices.map((inv) => (
-                  <option key={inv.id} value={inv.id}>{inv.card.name} — {formatCurrency(inv.amount)}{inv.status === "PAID" ? " (paga)" : ""}</option>
+                  <option key={inv.id} value={inv.id}>{inv.card.name} — {formatCurrency(inv.effectiveTotal)}{inv.status === "PAID" ? " (paga)" : ""}</option>
                 ))}
               </select>
             </div>
@@ -748,14 +798,23 @@ export function InvoicesTab() {
                     <Input name="dueDate" type="date" required />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-sm font-medium">Valor</label>
-                    <Input name="amount" type="number" min="0" step="0.01" placeholder="0,00" required />
+                    <label className="text-sm font-medium">Como calcular</label>
+                    <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="calculationMode" value={createMode} onChange={(event) => setCreateMode(event.target.value as typeof createMode)}>
+                      <option value="ENTERED_TOTAL">Informar valor total da fatura</option>
+                      <option value="CALCULATED">Calcular pelos lançamentos</option>
+                    </select>
+                    <p className="text-xs text-muted-foreground">{createMode === "ENTERED_TOTAL" ? "O valor já inclui gastos fixos pagos neste cartão." : "Soma lançamentos, parcelas e gastos fixos previstos."}</p>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-sm font-medium">Status</label>
-                    <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="status" defaultValue="PENDING">
-                      <option value="PENDING">Pendente</option>
-                      <option value="PAID">Pago</option>
+                    <label className="text-sm font-medium">Valor total {createMode === "CALCULATED" && "(opcional, preservado para conferência)"}</label>
+                    <Input name="amount" type="number" min="0" step="0.01" placeholder="0,00" required={createMode === "ENTERED_TOTAL"} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Etapa da fatura</label>
+                    <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="lifecycleStatus" defaultValue="OPEN">
+                      <option value="ESTIMATED">Estimada</option>
+                      <option value="OPEN">Aberta</option>
+                      <option value="CLOSED">Fechada</option>
                     </select>
                   </div>
                 </div>
@@ -771,7 +830,7 @@ export function InvoicesTab() {
                 <div className="mt-4 space-y-4">
                   <div className="rounded-lg bg-muted p-4">
                     <p className="text-xs text-muted-foreground">Valor</p>
-                    <p className="text-2xl font-bold">{formatCurrency(selectedInvoice.amount)}</p>
+                    <p className="text-2xl font-bold">{formatCurrency(selectedInvoice.effectiveTotal)}</p>
                   </div>
                   <form ref={editFormRef} className="space-y-4">
                     <div className="space-y-1">
@@ -785,14 +844,24 @@ export function InvoicesTab() {
                       <Input name="dueDate" type="date" defaultValue={selectedInvoice.dueDate.slice(0, 10)} required />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-sm font-medium">Valor</label>
-                      <Input name="amount" type="number" min="0" step="0.01" defaultValue={selectedInvoice.amount} required />
+                      <label className="text-sm font-medium">Como calcular</label>
+                      <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="calculationMode" defaultValue={selectedInvoice.calculationMode}>
+                        <option value="ENTERED_TOTAL">Informar valor total da fatura</option>
+                        <option value="CALCULATED">Calcular pelos lançamentos</option>
+                      </select>
+                      <p className="text-xs text-muted-foreground">Itens e valor informado são preservados ao trocar.</p>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-sm font-medium">Status</label>
-                      <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="status" defaultValue={selectedInvoice.status}>
-                        <option value="PENDING">Pendente</option>
-                        <option value="PAID">Pago</option>
+                      <label className="text-sm font-medium">Valor total informado</label>
+                      <Input name="amount" type="number" min="0" step="0.01" defaultValue={selectedInvoice.enteredTotal} required />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium">Etapa da fatura</label>
+                      <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="lifecycleStatus" defaultValue={selectedInvoice.lifecycleStatus} disabled={selectedInvoice.lifecycleStatus === "PAID"}>
+                        <option value="ESTIMATED">Estimada</option>
+                        <option value="OPEN">Aberta</option>
+                        <option value="CLOSED">Fechada</option>
+                        <option value="PAID">Paga</option>
                       </select>
                     </div>
                     <div className="flex gap-2">
@@ -802,6 +871,36 @@ export function InvoicesTab() {
                       <Button type="button" variant="outline" onClick={() => setDeleteTarget(selectedInvoice.id)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </form>
+
+                  {selectedInvoice.calculationMode === "CALCULATED" && (
+                    <div className="space-y-3 border-t pt-4">
+                      <div>
+                        <p className="text-sm font-semibold">Composição calculada</p>
+                        <p className="text-xs text-muted-foreground">Fixos previstos: {formatCurrency(selectedInvoice.projectedFixedTotal)} · Itens: {formatCurrency(selectedInvoice.calculatedTotal - selectedInvoice.projectedFixedTotal)}</p>
+                      </div>
+                      {selectedInvoice.items.map((item) => (
+                        <div key={item.id} className="flex items-center justify-between gap-3 rounded-md border p-2 text-sm">
+                          <div><p className="font-medium">{item.description}</p><p className="text-xs text-muted-foreground">{item.postingStatus === "POSTED" ? "Lançado" : "Previsto"}</p></div>
+                          <div className="flex items-center gap-2"><span>{formatCurrency(item.amount)}</span><Button type="button" size="icon-sm" variant="ghost" aria-label={`Excluir ${item.description}`} onClick={() => handleDeleteItem(item.id)}><Trash2 className="h-3.5 w-3.5" /></Button></div>
+                        </div>
+                      ))}
+                      <form action={handleAddItem} className="grid gap-2 rounded-md bg-muted/50 p-3">
+                        <Input name="description" placeholder="Descrição do lançamento" required />
+                        <Input name="amount" type="number" min="0.01" step="0.01" placeholder="Valor" required />
+                        <select className="rounded-md border bg-background px-2 py-2 text-sm" name="fixedCostOccurrenceId" defaultValue="">
+                          <option value="">Não vincular a gasto fixo</option>
+                          {selectedInvoice.fixedOccurrences
+                            .filter((occurrence) => !selectedInvoice.items.some((item) => item.fixedCostOccurrenceId === occurrence.id))
+                            .map((occurrence) => <option key={occurrence.id} value={occurrence.id}>Substituir previsão: {occurrence.fixedCost.name} ({formatCurrency(occurrence.amount)})</option>)}
+                        </select>
+                        <div className="grid grid-cols-2 gap-2">
+                          <select className="rounded-md border bg-background px-2 py-2 text-sm" name="kind" defaultValue="MANUAL"><option value="MANUAL">Avulso</option><option value="INSTALLMENT">Parcela</option><option value="FORECAST">Outro previsto</option></select>
+                          <select className="rounded-md border bg-background px-2 py-2 text-sm" name="postingStatus" defaultValue="POSTED"><option value="POSTED">Lançado</option><option value="PROJECTED">Previsto</option></select>
+                        </div>
+                        <Button type="submit" size="sm">Adicionar lançamento</Button>
+                      </form>
+                    </div>
+                  )}
 
                   <div className="border-t pt-4">
                     <p className="text-xs text-muted-foreground mb-2">Importação de fatura</p>
@@ -897,7 +996,7 @@ export function InvoicesTab() {
                           <p className="text-sm font-medium">{inv.card.name}</p>
                           <p className="text-xs text-muted-foreground">Vence {formatDate(inv.dueDate)}</p>
                         </div>
-                        <span className="text-sm font-medium">{formatCurrency(inv.amount)}</span>
+                        <span className="text-sm font-medium">{formatCurrency(inv.effectiveTotal)}</span>
                       </button>
                     ))}
                   </div>

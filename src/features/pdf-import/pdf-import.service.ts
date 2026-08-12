@@ -60,7 +60,8 @@ export async function uploadAndParsePdf(
       where: { id: cardInvoiceId },
       data: {
         importSessionId: session.id,
-        ...(parsed.invoiceTotal !== null && { amount: parsed.invoiceTotal }),
+        calculationMode: "ENTERED_TOTAL",
+        ...(parsed.invoiceTotal !== null && { amount: parsed.invoiceTotal, enteredTotal: parsed.invoiceTotal }),
         ...(parsed.dueDate !== null && { dueDate: parsed.dueDate }),
       },
     })
@@ -123,6 +124,8 @@ export async function importPdfStandalone(
       data: {
         dueDate: parsed.dueDate,
         amount: parsed.invoiceTotal,
+        enteredTotal: parsed.invoiceTotal,
+        calculationMode: "ENTERED_TOTAL",
         importSessionId: null,
       },
     })
@@ -134,6 +137,8 @@ export async function importPdfStandalone(
         month,
         dueDate: parsed.dueDate,
         amount: parsed.invoiceTotal,
+        enteredTotal: parsed.invoiceTotal,
+        calculationMode: "ENTERED_TOTAL",
         status: "PENDING",
         userId,
       },

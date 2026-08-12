@@ -11,7 +11,7 @@ import { useMonthParam } from "@/hooks/use-month-param"
 
   interface ClosingData {
     summary: {
-    cardInvoicesTotal: number; cardInvoicesPaidTotal: number; fixedCostsTotal: number; fixedCostsInsideCardTotal: number; fixedCostsOutsideCardTotal: number; fixedCostsOutsideCardTotalAll: number; fixedIncomeTotal: number; looseExpensesTotal: number; incomeTotal: number; receivedIncomeTotal: number; totalToPay: number; totalSpent: number; projectedBalance: number
+    cardInvoicesTotal: number; cardInvoicesPaidTotal: number; fixedCostsTotal: number; fixedCostsInsideCardTotal: number; cardForecastsWithoutInvoiceTotal: number; fixedCostsOutsideCardTotal: number; fixedCostsOutsideCardTotalAll: number; fixedIncomeTotal: number; looseExpensesTotal: number; incomeTotal: number; receivedIncomeTotal: number; totalToPay: number; totalSpent: number; projectedBalance: number
     estimatedInvoicesByCard: { cardId: string; cardName: string; estimatedAmount: number; invoiceAmount: number; difference: number }[]
     incomeItems: { name: string; amount: number; type: "FIXED" | "LOOSE"; status: "PENDING" | "PAID" }[]
   }
@@ -59,6 +59,7 @@ function MonthlyClosingPageContent() {
 
   const pendingFormula = [
     { label: "Faturas pendentes", value: summary?.cardInvoicesTotal ?? 0 },
+    ...(summary?.cardForecastsWithoutInvoiceTotal ? [{ label: "Fixos no cartão sem fatura", value: summary.cardForecastsWithoutInvoiceTotal }] : []),
     { label: "Fixos fora pendentes", value: summary?.fixedCostsOutsideCardTotal ?? 0 },
     { label: "Avulsas", value: summary?.looseExpensesTotal ?? 0 },
   ]
@@ -70,6 +71,7 @@ function MonthlyClosingPageContent() {
   ]
   const totalFormula = [
     { label: "Faturas", value: (summary?.cardInvoicesTotal ?? 0) + (summary?.cardInvoicesPaidTotal ?? 0) },
+    ...(summary?.cardForecastsWithoutInvoiceTotal ? [{ label: "Fixos no cartão sem fatura", value: summary.cardForecastsWithoutInvoiceTotal }] : []),
     { label: "Fixos fora", value: summary?.fixedCostsOutsideCardTotalAll ?? 0 },
     { label: "Avulsas", value: summary?.looseExpensesTotal ?? 0 },
   ]
@@ -190,11 +192,13 @@ function ExpenseComposition({ items, pendingItems, loading }: { items: DetailIte
     Faturas: "Faturas pendentes",
     "Fixos fora": "Fixos fora pendentes",
     Avulsas: "Avulsas",
+    "Fixos no cartão sem fatura": "Fixos no cartão sem fatura",
   }
   const links: Record<string, string> = {
     Faturas: "/invoices",
     "Fixos fora": "/fixed-costs",
     Avulsas: "/transactions",
+    "Fixos no cartão sem fatura": "/fixed-costs",
   }
 
   return (
@@ -223,7 +227,7 @@ function ExpenseComposition({ items, pendingItems, loading }: { items: DetailIte
             })}
           </div>
         </div>
-        <p className="mt-3 text-xs text-muted-foreground">Custos fixos dentro do cartão já estão incluídos na fatura e não são somados novamente.</p>
+        <p className="mt-3 text-xs text-muted-foreground">No modo valor total, a fatura já inclui os fixos. No modo calculado, eles compõem a previsão. Sem fatura, aparecem separadamente como previsão do cartão.</p>
       </CardContent>
     </Card>
   )

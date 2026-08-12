@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest"
 import { getTestClient } from "@/__tests__/prisma"
 import { registerUser } from "@/features/auth/auth.service"
-import { adjustBankAccountBalance, createBankAccount, createBankAccountMovement, getBankAccounts, transferBetweenBankAccounts } from "../bank-accounts.service"
+import { adjustBankAccountBalance, createBankAccount, createBankAccountMovement, getBankAccounts, getBankAccountsTotal, rechargeBenefitAccount, transferBetweenBankAccounts } from "../bank-accounts.service"
 
 const prisma = getTestClient()
 
@@ -53,6 +53,48 @@ describe("bank-accounts.service", () => {
 
     const accounts = await getBankAccounts(userId, prisma)
     expect(accounts.find((item) => item.id === account.id)?.balance).toBe(850)
+  })
+
+  it("mantém benefício separado do saldo bancário e registra recarga", async () => {
+    const bankTotalBefore = await getBankAccountsTotal(userId, prisma)
+    const transactionsBefore = await prisma.transaction.count({ where: { userId } })
+    const benefit = await createBankAccount(
+      userId,
+      {
+        name: `Vale alimentação ${Date.now()}`,
+        institution: "Empresa",
+        type: "BENEFIT",
+        color: "#16A34A",
+        initialBalance: 50,
+        overdraftLimit: 500,
+        benefitDailyRate: 22,
+        active: true,
+      },
+      prisma,
+    )
+
+    expect(Number(benefit.overdraftLimit)).toBe(0)
+    expect(Number(benefit.benefitDailyRate)).toBe(22)
+    await expect(rechargeBenefitAccount(
+      benefit.id,
+      userId,
+      { amount: 484, description: "Agosto", date: new Date("2026-08-01T12:00:00") },
+      prisma,
+    )).resolves.toMatchObject({ type: "INCOME" })
+
+    const accounts = await getBankAccounts(userId, prisma)
+    expect(accounts.find((account) => account.id === benefit.id)?.balance).toBe(534)
+    await expect(getBankAccountsTotal(userId, prisma)).resolves.toBe(bankTotalBefore)
+    await expect(prisma.transaction.count({ where: { userId } })).resolves.toBe(transactionsBefore)
+
+    const regularAccount = accounts.find((account) => account.type !== "BENEFIT")!
+    await expect(transferBetweenBankAccounts(userId, {
+      fromAccountId: regularAccount.id,
+      toAccountId: benefit.id,
+      amount: 10,
+      method: "PIX",
+      date: new Date("2026-08-02T12:00:00"),
+    }, prisma)).resolves.toEqual({ error: "Contas de benefício não permitem transferências" })
   })
 
   it("transfere valor entre duas contas do usuário", async () => {

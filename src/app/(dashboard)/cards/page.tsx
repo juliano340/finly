@@ -53,7 +53,7 @@ export default function CardsPage() {
         fetch("/api/bank-accounts/options"),
       ])
       if (cardsRes.ok) setCards(await cardsRes.json())
-      if (accountsRes.ok) setBankAccounts(await accountsRes.json())
+      if (accountsRes.ok) setBankAccounts((await accountsRes.json()).filter((account: { type: string }) => account.type !== "BENEFIT"))
     } finally {
       setLoading(false)
     }

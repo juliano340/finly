@@ -36,6 +36,7 @@ export async function POST(
       where: { id },
       data: {
         status: "PENDING",
+        lifecycleStatus: "OPEN",
         paidAt: null,
         paymentMethod: null,
         paymentBankAccountId: null,

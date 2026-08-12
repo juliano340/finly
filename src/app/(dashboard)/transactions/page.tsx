@@ -26,6 +26,15 @@ interface BankAccountOption {
   id: string
   name: string
   institution: string | null
+  type: "CHECKING" | "SAVINGS" | "DIGITAL" | "CASH" | "INVESTMENT" | "BENEFIT"
+}
+
+interface InvoiceOption {
+  id: string
+  month: string
+  calculationMode: "CALCULATED" | "ENTERED_TOTAL"
+  lifecycleStatus: "ESTIMATED" | "OPEN" | "CLOSED" | "PAID"
+  card: { id: string; name: string }
 }
 
 export default function TransactionsPage() {
@@ -47,11 +56,16 @@ export default function TransactionsPage() {
 
   const { categories } = useCategories()
   const [bankAccounts, setBankAccounts] = useState<BankAccountOption[]>([])
+  const [invoices, setInvoices] = useState<InvoiceOption[]>([])
 
   useEffect(() => {
     fetch("/api/bank-accounts/options")
       .then((res) => res.json())
       .then((data) => setBankAccounts(data))
+      .catch(() => {})
+    fetch("/api/invoices")
+      .then((res) => res.json())
+      .then((data: InvoiceOption[]) => setInvoices(data.filter((invoice) => ["ESTIMATED", "OPEN"].includes(invoice.lifecycleStatus))))
       .catch(() => {})
   }, [])
 
@@ -274,6 +288,8 @@ export default function TransactionsPage() {
         onSubmit={editing ? handleUpdate : handleCreate}
         categories={categories}
         bankAccounts={bankAccounts}
+        invoices={invoices}
+        activeMonth={searchParams.get("month")}
         initial={
           editing
             ? {
@@ -282,6 +298,7 @@ export default function TransactionsPage() {
                 description: editing.description ?? undefined,
                 categoryId: editing.categoryId,
                 bankAccountId: editing.bankAccountId ?? undefined,
+                invoiceId: editing.invoiceItem?.invoiceId ?? undefined,
                 date: editing.date,
               }
             : undefined

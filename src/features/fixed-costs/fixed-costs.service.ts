@@ -144,8 +144,16 @@ export async function updateFixedCost(
     include: { category: true, card: true, bankAccount: true },
   }).then(async (updated) => {
     if (input.defaultAmount !== undefined) {
+      const now = new Date()
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
       await db.fixedCostOccurrence.updateMany({
-        where: { fixedCostId: id, userId, status: "PENDING" },
+        where: {
+          fixedCostId: id,
+          userId,
+          status: "PENDING",
+          month: { gte: currentMonth },
+          financialMonth: { status: "OPEN" },
+        },
         data: { amount: input.defaultAmount },
       })
     }

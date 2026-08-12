@@ -4,6 +4,8 @@ import { getTestClient } from "@/__tests__/prisma"
 import { registerUser } from "@/features/auth/auth.service"
 import { createCategory } from "@/features/categories/categories.service"
 import { createBankAccount } from "@/features/bank-accounts/bank-accounts.service"
+import { createCard } from "@/features/cards/cards.service"
+import { createCardInvoice } from "@/features/card-invoices/card-invoices.service"
 import {
   getTransactions,
   createTransaction,
@@ -559,6 +561,46 @@ describe("Transactions Service", () => {
       )
 
       expect(updated?.amount).toBe(150)
+    })
+  })
+
+  describe("Card invoice integration", () => {
+    it("lança despesa prevista na fatura sem criar movimento bancário", async () => {
+      const card = await createCard(userAId, { name: "Cartão previsto", color: "#6366F1" }, testPrisma)
+      const invoice = await createCardInvoice(userAId, {
+        cardId: card.id,
+        month: "2026-09",
+        dueDate: new Date("2026-09-10T12:00:00"),
+        calculationMode: "CALCULATED",
+      }, testPrisma)
+
+      const transaction = await createTransaction(userAId, {
+        amount: 75,
+        type: "EXPENSE",
+        description: "Compra prevista",
+        categoryId: catExpenseId,
+        date: new Date("2026-08-20T12:00:00"),
+        invoiceId: invoice!.id,
+      }, testPrisma)
+
+      expect(transaction.bankAccountId).toBeNull()
+      expect(transaction.invoiceItem?.invoiceId).toBe(invoice!.id)
+      await expect(testPrisma.bankAccountMovement.findFirst({ where: { transactionId: transaction.id } })).resolves.toBeNull()
+      await expect(testPrisma.cardInvoiceItem.findUnique({ where: { transactionId: transaction.id } })).resolves.toMatchObject({
+        postingStatus: "PROJECTED",
+      })
+      expect(Number((await testPrisma.cardInvoice.findUniqueOrThrow({ where: { id: invoice!.id } })).amount)).toBe(75)
+    })
+
+    it("impede lançar receita em fatura", async () => {
+      const invoice = await testPrisma.cardInvoice.findFirstOrThrow({ where: { userId: userAId, month: "2026-09" } })
+      await expect(createTransaction(userAId, {
+        amount: 100,
+        type: "INCOME",
+        categoryId: catIncomeId,
+        date: new Date("2026-08-20T12:00:00"),
+        invoiceId: invoice.id,
+      }, testPrisma)).rejects.toThrow("Somente despesas")
     })
   })
 })

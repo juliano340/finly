@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { markCardInvoiceFixedCostsPaid } from "@/features/monthly-closing/monthly-closing.service"
 import { validateExpenseLimit } from "@/features/bank-accounts/bank-accounts.service"
-import { moneyToNumber } from "@/lib/money"
+import { calculateInvoiceTotals } from "@/features/card-invoices/invoice-calculation"
 
 export async function POST(
   request: Request,
@@ -24,7 +24,7 @@ export async function POST(
       return NextResponse.json({ error: "Método de pagamento é obrigatório" }, { status: 400 })
     }
 
-    const invoice = await prisma.cardInvoice.findUnique({ where: { id } })
+    const invoice = await prisma.cardInvoice.findUnique({ where: { id }, include: { items: true } })
     if (!invoice || invoice.userId !== userId) {
       return NextResponse.json({ error: "Fatura não encontrada" }, { status: 404 })
     }
@@ -32,15 +32,20 @@ export async function POST(
       return NextResponse.json({ error: "Fatura já está paga" }, { status: 400 })
     }
 
+    const fixedOccurrences = await prisma.fixedCostOccurrence.findMany({
+      where: { userId, month: invoice.month, deletedAt: null, fixedCost: { type: "EXPENSE", paidInsideCard: true, cardId: invoice.cardId } },
+      select: { id: true, amount: true },
+    })
+    const paymentAmount = calculateInvoiceTotals({ ...invoice, fixedOccurrences }).effectiveTotal
     const realBankAccountId = bankAccountId && typeof bankAccountId === "string" && bankAccountId.trim() !== "" ? bankAccountId.trim() : null
 
     if (realBankAccountId) {
       const account = await prisma.bankAccount.findUnique({ where: { id: realBankAccountId } })
-      if (!account || account.userId !== userId) {
+      if (!account || account.userId !== userId || account.type === "BENEFIT") {
         return NextResponse.json({ error: "Conta não encontrada" }, { status: 400 })
       }
 
-      const check = await validateExpenseLimit(realBankAccountId, userId, moneyToNumber(invoice.amount), prisma)
+      const check = await validateExpenseLimit(realBankAccountId, userId, paymentAmount, prisma)
       if (!check.allowed) {
         return NextResponse.json({ error: check.reason }, { status: 400 })
       }
@@ -53,6 +58,8 @@ export async function POST(
         where: { id, userId, status: "PENDING" },
         data: {
           status: "PAID",
+          lifecycleStatus: "PAID",
+          amount: paymentAmount,
           paidAt,
           paymentMethod,
           paymentBankAccountId: realBankAccountId,
@@ -66,7 +73,7 @@ export async function POST(
         const movement = await tx.bankAccountMovement.create({
           data: {
             bankAccountId: realBankAccountId,
-            amount: invoice.amount,
+            amount: paymentAmount,
             type: "EXPENSE",
             description: `PAGAMENTO_FATURA:${id}`,
             date: paidAt,
