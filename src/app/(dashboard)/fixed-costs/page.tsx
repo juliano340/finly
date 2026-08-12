@@ -20,6 +20,10 @@ import { cn, formatCurrency } from "@/lib/utils"
 import { ariaSort, sortButtonLabel } from "@/lib/accessible-sort"
 import { MonthNavigator, changeMonth, formatMonth, getCurrentMonth } from "@/components/month-navigator"
 import { useMonthParam } from "@/hooks/use-month-param"
+import { useTableSelection } from "@/components/data-table/use-table-selection"
+import { DataTableContainer } from "@/components/data-table/data-table-container"
+import { DataTableToolbar } from "@/components/data-table/data-table-toolbar"
+import { SummaryCards } from "@/components/data-table/summary-cards"
 
 interface Category { id: string; name: string; type: string }
 interface CardItem { id: string; name: string; color: string }
@@ -124,9 +128,6 @@ function FixedCostsPageInner() {
   const [loading, setLoading] = useState(true)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [creatingLoading, setCreatingLoading] = useState(false)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [confirmBatchDelete, setConfirmBatchDelete] = useState(false)
-  const [batchDeleting, setBatchDeleting] = useState(false)
   const [sortField, setSortField] = useState<OccurrenceSortField>("dueDate")
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
 
@@ -135,23 +136,8 @@ function FixedCostsPageInner() {
   const editFormRef = useRef<HTMLFormElement>(null)
   const createFormRef = useRef<HTMLFormElement>(null)
 
-  function toggleSelect(id: string) {
-    setSelectedIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
-
-  function selectAll() {
-    const all = filteredOccurrences.map((o) => o.id)
-    const allSelected = all.every((id) => selectedIds.has(id))
-    if (allSelected) setSelectedIds(new Set())
-    else setSelectedIds(new Set(all))
-  }
-
-  function clearSelection() { setSelectedIds(new Set()) }
+  const filteredOccurrences = occurrences.filter((o) => o.fixedCost.type === activeTab)
+  const { selectedIds, toggleSelect, selectAll, clearSelection, allSelected, totalSelected, confirmBatchDelete, setConfirmBatchDelete, batchDeleting, setBatchDeleting } = useTableSelection(filteredOccurrences, (o) => o.amount)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -382,7 +368,6 @@ function FixedCostsPageInner() {
   }
 
   const selectedTemplate = selectedOccurrence?.fixedCost ?? null
-  const filteredOccurrences = occurrences.filter((o) => o.fixedCost.type === activeTab)
   const totalPending = filteredOccurrences.filter((o) => o.status === "PENDING").reduce((s, o) => s + o.amount, 0)
   const totalPaid = filteredOccurrences.filter((o) => o.status === "PAID").reduce((s, o) => s + o.amount, 0)
   const totalAll = totalPending + totalPaid
@@ -446,28 +431,17 @@ function FixedCostsPageInner() {
         <button type="button" onClick={() => { setActiveTab("INCOME"); clearSelection() }} className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${activeTab === "INCOME" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Receitas</button>
       </div>
 
-      <div className="hidden gap-4 md:grid md:grid-cols-3">
-        <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-xs text-muted-foreground">Total do mês</p><p className="text-2xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(totalAll)}</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-xs text-muted-foreground">{activeTab === "INCOME" ? "Recebido" : "Pago"}</p><p className="text-2xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(totalPaid)}</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-xs text-muted-foreground">{activeTab === "INCOME" ? "A receber" : "A pagar"}</p><p className="text-2xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(totalPending)}</p></CardContent></Card>
-      </div>
-
-      <Card className="border-0 shadow-sm md:hidden">
-        <CardContent className="grid grid-cols-3 gap-2 p-3">
-          <div className="min-w-0">
-            <p className="truncate text-[11px] font-medium text-muted-foreground">Total</p>
-            <p className="truncate text-sm font-bold tabular-nums">{loading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : formatCurrency(totalAll)}</p>
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-[11px] font-medium text-muted-foreground">{activeTab === "INCOME" ? "Recebido" : "Pago"}</p>
-            <p className="truncate text-sm font-bold tabular-nums">{loading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : formatCurrency(totalPaid)}</p>
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-[11px] font-medium text-muted-foreground">{activeTab === "INCOME" ? "A receber" : "A pagar"}</p>
-            <p className="truncate text-sm font-bold tabular-nums">{loading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : formatCurrency(totalPending)}</p>
-          </div>
-        </CardContent>
-      </Card>
+      <SummaryCards
+        total={totalAll}
+        paid={totalPaid}
+        pending={totalPending}
+        loading={loading}
+        labels={{
+          total: "Total do mês",
+          paid: activeTab === "INCOME" ? "Recebido" : "Pago",
+          pending: activeTab === "INCOME" ? "A receber" : "A pagar",
+        }}
+      />
 
       {!loading && totalPending === 0 && totalAll > 0 && (
         <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900 dark:bg-emerald-950/30">
@@ -478,30 +452,28 @@ function FixedCostsPageInner() {
         </div>
       )}
 
-      {selectedIds.size > 0 && (
-        <div className="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2">
-          <span className="text-sm font-medium">{selectedIds.size} selecionado{selectedIds.size !== 1 ? "s" : ""}</span>
-          <Button size="sm" variant="destructive" className="gap-2" onClick={() => setConfirmBatchDelete(true)}>
-            <Trash2 className="h-4 w-4" /> Excluir selecionados
-          </Button>
-          <Button size="sm" variant="outline" onClick={clearSelection}>Limpar</Button>
-        </div>
-      )}
-
-      <div className="hidden overflow-hidden rounded-lg border md:block">
-        <table className="w-full text-sm">
+      <DataTableContainer>
+        <DataTableToolbar
+          selectedCount={selectedIds.size}
+          totalSelected={totalSelected}
+          itemLabel="lançamento"
+          onConfirmDelete={() => setConfirmBatchDelete(true)}
+          onClearSelection={clearSelection}
+          defaultContent={<span className="text-sm text-muted-foreground">{filteredOccurrences.length} lançamento{filteredOccurrences.length !== 1 ? "s" : ""}</span>}
+        />
+        <table className="w-full text-sm" style={{ tableLayout: "fixed" }}>
           <thead>
             <tr className="border-b bg-muted/50">
               <th className="w-10 px-3 py-3 text-center">
-                <input type="checkbox" className="h-4 w-4" checked={filteredOccurrences.length > 0 && filteredOccurrences.every((o) => selectedIds.has(o.id))} onChange={selectAll} />
+                <input type="checkbox" className="h-4 w-4" checked={allSelected} onChange={selectAll} />
               </th>
-              <th aria-sort={sortField === "name" ? ariaSort(sortDir) : undefined} className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" aria-label={sortButtonLabel("Nome", sortField === "name", sortDir)} className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("name")}>Nome<SortIcon field="name" activeField={sortField} direction={sortDir} /></button></th>
-              <th aria-sort={sortField === "category" ? ariaSort(sortDir) : undefined} className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" aria-label={sortButtonLabel("Categoria", sortField === "category", sortDir)} className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("category")}>Categoria<SortIcon field="category" activeField={sortField} direction={sortDir} /></button></th>
-              <th aria-sort={sortField === "source" ? ariaSort(sortDir) : undefined} className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" aria-label={sortButtonLabel("Origem", sortField === "source", sortDir)} className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("source")}>Origem<SortIcon field="source" activeField={sortField} direction={sortDir} /></button></th>
-              <th aria-sort={sortField === "dueDate" ? ariaSort(sortDir) : undefined} className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" aria-label={sortButtonLabel("Vencimento", sortField === "dueDate", sortDir)} className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("dueDate")}>Vencimento<SortIcon field="dueDate" activeField={sortField} direction={sortDir} /></button></th>
+              <th aria-sort={sortField === "name" ? ariaSort(sortDir) : undefined} className="w-[20%] px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" aria-label={sortButtonLabel("Nome", sortField === "name", sortDir)} className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("name")}>Nome<SortIcon field="name" activeField={sortField} direction={sortDir} /></button></th>
+              <th aria-sort={sortField === "category" ? ariaSort(sortDir) : undefined} className="w-[15%] px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" aria-label={sortButtonLabel("Categoria", sortField === "category", sortDir)} className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("category")}>Categoria<SortIcon field="category" activeField={sortField} direction={sortDir} /></button></th>
+              <th aria-sort={sortField === "source" ? ariaSort(sortDir) : undefined} className="w-[20%] px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" aria-label={sortButtonLabel("Origem", sortField === "source", sortDir)} className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("source")}>Origem<SortIcon field="source" activeField={sortField} direction={sortDir} /></button></th>
+              <th aria-sort={sortField === "dueDate" ? ariaSort(sortDir) : undefined} className="w-[15%] px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" aria-label={sortButtonLabel("Vencimento", sortField === "dueDate", sortDir)} className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("dueDate")}>Vencimento<SortIcon field="dueDate" activeField={sortField} direction={sortDir} /></button></th>
               <th aria-sort={sortField === "amount" ? ariaSort(sortDir) : undefined} className="w-[140px] px-4 py-3 text-right font-medium text-muted-foreground"><button type="button" aria-label={sortButtonLabel("Valor do mês", sortField === "amount", sortDir)} className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("amount")}>Valor do mês<SortIcon field="amount" activeField={sortField} direction={sortDir} /></button></th>
               <th aria-sort={sortField === "status" ? ariaSort(sortDir) : undefined} className="w-[160px] px-4 py-3 text-center font-medium text-muted-foreground"><button type="button" aria-label={sortButtonLabel("Status", sortField === "status", sortDir)} className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("status")}>Status<SortIcon field="status" activeField={sortField} direction={sortDir} /></button></th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Ações</th>
+              <th className="w-[80px] px-4 py-3 text-right font-medium text-muted-foreground">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -598,7 +570,14 @@ function FixedCostsPageInner() {
                 <td className="px-4 py-3" />
                 <td className="px-4 py-3" />
                 <td className="px-4 py-3" />
-                <td className="w-[140px] px-4 py-3 text-right">{formatCurrency(totalAll)}</td>
+                <td className="w-[140px] px-4 py-3 text-right">
+                  {formatCurrency(totalAll)}
+                  {selectedIds.size > 0 && (
+                    <span className="ml-2 text-xs font-normal text-muted-foreground">
+                      (selec: {formatCurrency(totalSelected)})
+                    </span>
+                  )}
+                </td>
                 <td className="w-[160px] px-4 py-3 text-center">
                   <span className="whitespace-nowrap text-xs text-muted-foreground">{filteredOccurrences.filter((o) => o.status === "PAID").length} pago{filteredOccurrences.filter((o) => o.status === "PAID").length !== 1 ? "s" : ""} · {filteredOccurrences.filter((o) => o.status === "PENDING").length} pendente{filteredOccurrences.filter((o) => o.status === "PENDING").length !== 1 ? "s" : ""}</span>
                 </td>
@@ -607,7 +586,7 @@ function FixedCostsPageInner() {
             )}
           </tbody>
         </table>
-      </div>
+      </DataTableContainer>
 
       <div className="space-y-2 md:hidden">
         {filteredOccurrences.length === 0 ? (
@@ -1039,9 +1018,9 @@ function FixedCostsPageInner() {
       <ConfirmDialog
         open={confirmBatchDelete}
         onOpenChange={setConfirmBatchDelete}
-        title="Excluir ocorrências selecionadas"
+        title={`Excluir ocorrência${selectedIds.size !== 1 ? "s" : ""} selecionada${selectedIds.size !== 1 ? "s" : ""}`}
         description={`Tem certeza? ${selectedIds.size} ocorrência${selectedIds.size !== 1 ? "s" : ""} será${selectedIds.size !== 1 ? "ão" : "á"} excluída${selectedIds.size !== 1 ? "s" : ""}.`}
-        confirmText={batchDeleting ? "Excluindo..." : "Excluir"}
+        confirmText={batchDeleting ? "Excluindo..." : `Excluir${selectedIds.size !== 1 ? "" : ""}`}
         loading={batchDeleting}
         onConfirm={handleBatchDelete}
       />

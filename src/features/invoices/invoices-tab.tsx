@@ -16,6 +16,10 @@ import { isAccountNegative, getAvailableBalance } from "@/lib/balance"
 import { ImportPdfDialog } from "./import-pdf-dialog"
 import { MonthNavigator, changeMonth, getCurrentMonth } from "@/components/month-navigator"
 import { useMonthParam } from "@/hooks/use-month-param"
+import { useTableSelection } from "@/components/data-table/use-table-selection"
+import { DataTableContainer } from "@/components/data-table/data-table-container"
+import { DataTableToolbar } from "@/components/data-table/data-table-toolbar"
+import { SummaryCards } from "@/components/data-table/summary-cards"
 
 interface CardItem { id: string; name: string; color: string }
 interface BankAccountItem { id: string; name: string; balance: number; overdraftLimit: number }
@@ -105,9 +109,7 @@ export function InvoicesTab() {
   const [loadingPrev, setLoadingPrev] = useState(false)
   const [copySourceMonth, setCopySourceMonth] = useState(() => changeMonth(month, -1))
   const [availableMonths, setAvailableMonths] = useState<{ month: string; count: number }[]>([])
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [confirmBatchDelete, setConfirmBatchDelete] = useState(false)
-  const [batchDeleting, setBatchDeleting] = useState(false)
+  const tableSelection = useTableSelection(invoices, (i) => i.effectiveTotal)
   const [sortField, setSortField] = useState<InvoiceSortField>("dueDate")
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
   const [importDialogOpen, setImportDialogOpen] = useState(false)
@@ -344,23 +346,7 @@ export function InvoicesTab() {
     setSelectedCopyIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])
   }
 
-  function toggleSelect(id: string) {
-    setSelectedIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
-
-  function selectAll() {
-    const all = invoices.map((i) => i.id)
-    const allSelected = all.every((id) => selectedIds.has(id))
-    if (allSelected) setSelectedIds(new Set())
-    else setSelectedIds(new Set(all))
-  }
-
-  function clearSelection() { setSelectedIds(new Set()) }
+  const { selectedIds, toggleSelect, selectAll, clearSelection, allSelected, totalSelected, confirmBatchDelete, setConfirmBatchDelete, batchDeleting, setBatchDeleting } = tableSelection
 
   const handleBatchDelete = async () => {
     setBatchDeleting(true)
@@ -424,52 +410,29 @@ export function InvoicesTab() {
         </div>
       </div>
 
-      {selectedIds.size > 0 && (
-        <div className="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2">
-          <span className="text-sm font-medium">{selectedIds.size} selecionada{selectedIds.size !== 1 ? "s" : ""}</span>
-          <Button size="sm" variant="destructive" className="gap-2" onClick={() => setConfirmBatchDelete(true)}>
-            <Trash2 className="h-4 w-4" /> Excluir selecionadas
-          </Button>
-          <Button size="sm" variant="outline" onClick={clearSelection}>Limpar</Button>
-        </div>
-      )}
+      <SummaryCards total={totalAll} paid={totalPaid} pending={totalPending} loading={loading} labels={{ total: "Total do mês", paid: "Pago", pending: "A pagar" }} />
 
-      <div className="hidden gap-4 md:grid md:grid-cols-3">
-        <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-xs text-muted-foreground">Total do mês</p><p className="text-2xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(totalAll)}</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-xs text-muted-foreground">Pago</p><p className="text-2xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(totalPaid)}</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-xs text-muted-foreground">A pagar</p><p className="text-2xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(totalPending)}</p></CardContent></Card>
-      </div>
-
-      <Card className="border-0 shadow-sm md:hidden">
-        <CardContent className="grid grid-cols-3 gap-2 p-3">
-          <div className="min-w-0">
-            <p className="truncate text-[11px] font-medium text-muted-foreground">Total</p>
-            <p className="truncate text-sm font-bold tabular-nums">{loading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : formatCurrency(totalAll)}</p>
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-[11px] font-medium text-muted-foreground">Pago</p>
-            <p className="truncate text-sm font-bold tabular-nums">{loading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : formatCurrency(totalPaid)}</p>
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-[11px] font-medium text-muted-foreground">A pagar</p>
-            <p className="truncate text-sm font-bold tabular-nums">{loading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : formatCurrency(totalPending)}</p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="hidden overflow-hidden rounded-lg border md:block">
-        <table className="w-full text-sm">
+      <DataTableContainer>
+        <DataTableToolbar
+          selectedCount={selectedIds.size}
+          totalSelected={totalSelected}
+          itemLabel="fatura"
+          onConfirmDelete={() => setConfirmBatchDelete(true)}
+          onClearSelection={clearSelection}
+          defaultContent={<span className="text-sm text-muted-foreground">{invoices.length} fatura{invoices.length !== 1 ? "s" : ""}</span>}
+        />
+        <table className="w-full text-sm" style={{ tableLayout: "fixed" }}>
           <thead>
             <tr className="border-b bg-muted/50">
               <th className="w-10 px-3 py-3">
                 <div className="flex items-center justify-center">
-                  <input type="checkbox" className="h-4 w-4" checked={invoices.length > 0 && invoices.every((i) => selectedIds.has(i.id))} onChange={selectAll} />
+                  <input type="checkbox" className="h-4 w-4" checked={allSelected} onChange={selectAll} />
                 </div>
               </th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("card")}>Cartão<SortIcon field="card" activeField={sortField} direction={sortDir} /></button></th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("dueDate")}>Vencimento<SortIcon field="dueDate" activeField={sortField} direction={sortDir} /></button></th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("amount")}>Valor<SortIcon field="amount" activeField={sortField} direction={sortDir} /></button></th>
-              <th className="px-4 py-3 text-center font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("status")}>Status<SortIcon field="status" activeField={sortField} direction={sortDir} /></button></th>
+              <th className="w-[30%] px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("card")}>Cartão<SortIcon field="card" activeField={sortField} direction={sortDir} /></button></th>
+              <th className="w-[20%] px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("dueDate")}>Vencimento<SortIcon field="dueDate" activeField={sortField} direction={sortDir} /></button></th>
+              <th className="w-[15%] px-4 py-3 text-right font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("amount")}>Valor<SortIcon field="amount" activeField={sortField} direction={sortDir} /></button></th>
+              <th className="w-[15%] px-4 py-3 text-center font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("status")}>Status<SortIcon field="status" activeField={sortField} direction={sortDir} /></button></th>
               <th className="w-[112px] px-4 py-3 text-center font-medium text-muted-foreground">Ações</th>
             </tr>
           </thead>
@@ -537,7 +500,14 @@ export function InvoicesTab() {
                 <td className="w-10 px-3 py-3" />
                 <td className="px-4 py-3">Total</td>
                 <td className="px-4 py-3" />
-                <td className="px-4 py-3 text-right">{formatCurrency(totalAll)}</td>
+                <td className="px-4 py-3 text-right">
+                  {formatCurrency(totalAll)}
+                  {selectedIds.size > 0 && (
+                    <span className="ml-2 text-xs font-normal text-muted-foreground">
+                      (selec: {formatCurrency(totalSelected)})
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-center">
                   <span className="text-xs text-muted-foreground">{invoices.filter((i) => i.status === "PAID").length} pago{invoices.filter((i) => i.status === "PAID").length !== 1 ? "s" : ""} · {invoices.filter((i) => i.status === "PENDING").length} pendente{invoices.filter((i) => i.status === "PENDING").length !== 1 ? "s" : ""}</span>
                 </td>
@@ -546,7 +516,7 @@ export function InvoicesTab() {
             )}
           </tbody>
         </table>
-      </div>
+      </DataTableContainer>
 
       <div className="space-y-2 md:hidden">
         {invoices.length === 0 ? (
