@@ -38,6 +38,7 @@ describe("MonthlyPlanPage", () => {
   beforeEach(() => {
     navigation.searchParams.delete("month")
     navigation.router.replace.mockClear()
+    window.localStorage.clear()
     vi.useFakeTimers({ shouldAdvanceTime: true })
     vi.setSystemTime(new Date("2026-08-09T15:00:00Z"))
   })
