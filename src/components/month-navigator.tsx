@@ -59,6 +59,16 @@ export function MonthNavigator({
 
   return (
     <div className="flex items-center gap-2" aria-label="Navegação entre meses">
+      {month !== todayMonth && (
+        <span className="whitespace-nowrap rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+          {formatMonthDistance(month, todayMonth)}
+        </span>
+      )}
+      <div className="w-14 shrink-0">
+        <Button type="button" variant="ghost" size="sm" className="w-full" disabled={todayDisabled} onClick={() => onMonthChange(todayMonth)}>
+          Hoje
+        </Button>
+      </div>
       <div className="flex h-10 items-center gap-1 rounded-lg border bg-background p-1">
         <Button type="button" variant="ghost" size="icon" className="size-8" aria-label="Mês anterior" disabled={previousDisabled} onClick={() => onMonthChange(previous)}>
           <ChevronLeft aria-hidden="true" className="size-4" />
@@ -79,16 +89,6 @@ export function MonthNavigator({
         )}
         <Button type="button" variant="ghost" size="icon" className="size-8" aria-label="Próximo mês" disabled={nextDisabled} onClick={() => onMonthChange(next)}>
           <ChevronRight aria-hidden="true" className="size-4" />
-        </Button>
-      </div>
-      {month !== todayMonth && (
-        <span className="whitespace-nowrap rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-          {formatMonthDistance(month, todayMonth)}
-        </span>
-      )}
-      <div className="w-14 shrink-0">
-        <Button type="button" variant="ghost" size="sm" className="w-full" disabled={todayDisabled} onClick={() => onMonthChange(todayMonth)}>
-          Hoje
         </Button>
       </div>
     </div>

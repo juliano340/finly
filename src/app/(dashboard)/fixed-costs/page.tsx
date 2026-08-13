@@ -133,13 +133,14 @@ function FixedCostsPageInner() {
 
   const inFlightUpdateRef = useRef(false)
   const inFlightCreateRef = useRef(false)
+  const fetchRequestIdRef = useRef(0)
   const editFormRef = useRef<HTMLFormElement>(null)
   const createFormRef = useRef<HTMLFormElement>(null)
 
   const filteredOccurrences = occurrences.filter((o) => o.fixedCost.type === activeTab)
   const { selectedIds, toggleSelect, selectAll, clearSelection, allSelected, totalSelected, confirmBatchDelete, setConfirmBatchDelete, batchDeleting, setBatchDeleting } = useTableSelection(filteredOccurrences, (o) => o.amount, { storageKey: `fixed-costs:selection:${month}:${activeTab}` })
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (requestId = ++fetchRequestIdRef.current) => {
     setLoading(true)
     setOccurrences([])
     const [catRes, cardRes, accountRes, occRes] = await Promise.all([
@@ -148,16 +149,27 @@ function FixedCostsPageInner() {
       fetch("/api/bank-accounts"),
       fetch(`/api/fixed-costs/occurrences?month=${month}`),
     ])
-    if (catRes.ok) setCategories(await catRes.json())
-    if (cardRes.ok) setCards(await cardRes.json())
-    if (accountRes.ok) setBankAccounts(await accountRes.json())
-    if (occRes.ok) setOccurrences(await occRes.json())
+    const [categoryData, cardData, accountData, occurrenceData] = await Promise.all([
+      catRes.ok ? catRes.json() : null,
+      cardRes.ok ? cardRes.json() : null,
+      accountRes.ok ? accountRes.json() : null,
+      occRes.ok ? occRes.json() : null,
+    ])
+    if (requestId !== fetchRequestIdRef.current) return
+    if (categoryData) setCategories(categoryData)
+    if (cardData) setCards(cardData)
+    if (accountData) setBankAccounts(accountData)
+    if (occurrenceData) setOccurrences(occurrenceData)
     setLoading(false)
   }, [month])
 
   useEffect(() => {
-    const timer = window.setTimeout(() => { void fetchData() }, 0)
-    return () => window.clearTimeout(timer)
+    const requestId = ++fetchRequestIdRef.current
+    const timer = window.setTimeout(() => { void fetchData(requestId) }, 0)
+    return () => {
+      window.clearTimeout(timer)
+      fetchRequestIdRef.current += 1
+    }
   }, [fetchData])
 
   const handlePay = async (fixedCostId: string) => {
