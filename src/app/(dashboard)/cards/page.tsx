@@ -188,7 +188,15 @@ export default function CardsPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground"><span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</span></td></tr>
+              Array.from({ length: 5 }).map((_, rowIndex) => (
+                <tr key={`skeleton-${rowIndex}`} className="border-b" aria-hidden="true">
+                  {Array.from({ length: 6 }).map((_, columnIndex) => (
+                    <td key={columnIndex} className="px-4 py-3">
+                      <div className="h-4 w-full animate-pulse rounded bg-muted" />
+                    </td>
+                  ))}
+                </tr>
+              ))
             ) : cards.length === 0 ? (
               <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Nenhum cartão cadastrado.</td></tr>
             ) : cards.map((card) => (
@@ -223,7 +231,19 @@ export default function CardsPage() {
 
       <div className="space-y-2 md:hidden">
         {loading ? (
-          <Card className="border-0 shadow-sm"><CardContent className="flex items-center justify-center gap-2 p-8 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</CardContent></Card>
+          Array.from({ length: 3 }).map((_, index) => (
+            <div key={`mobile-skeleton-${index}`} className="rounded-lg border bg-card p-4" aria-hidden="true">
+              <div className="flex items-center gap-3">
+                <div className="size-9 shrink-0 animate-pulse rounded-lg bg-muted" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-2/5 animate-pulse rounded bg-muted" />
+                  <div className="h-3 w-4/5 animate-pulse rounded bg-muted" />
+                  <div className="h-3 w-3/5 animate-pulse rounded bg-muted" />
+                </div>
+                <div className="size-8 shrink-0 animate-pulse rounded bg-muted" />
+              </div>
+            </div>
+          ))
         ) : cards.length === 0 ? (
           <Card className="border-0 shadow-sm"><CardContent className="p-8 text-center text-sm text-muted-foreground">Nenhum cartão cadastrado.</CardContent></Card>
         ) : cards.map((card) => (

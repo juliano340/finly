@@ -437,9 +437,19 @@ export function InvoicesTab() {
             </tr>
           </thead>
           <tbody>
-            {invoices.length === 0 ? (
+            {loading ? (
+              Array.from({ length: 5 }).map((_, rowIndex) => (
+                <tr key={`skeleton-${rowIndex}`} className="border-b" aria-hidden="true">
+                  {Array.from({ length: 6 }).map((_, columnIndex) => (
+                    <td key={columnIndex} className="px-4 py-3">
+                      <div className="h-4 w-full animate-pulse rounded bg-muted" />
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : invoices.length === 0 ? (
               <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                {loading ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Atualizando...</span> : "Nenhuma fatura neste mês."}
+                Nenhuma fatura neste mês.
               </td></tr>
             ) : sortedInvoices.map((invoice) => (
               <tr key={invoice.id} className="border-b transition-colors hover:bg-muted/50">
@@ -519,9 +529,26 @@ export function InvoicesTab() {
       </DataTableContainer>
 
       <div className="space-y-2 md:hidden">
-        {invoices.length === 0 ? (
+        {loading ? (
+          Array.from({ length: 3 }).map((_, index) => (
+            <div key={`mobile-skeleton-${index}`} className="rounded-lg border bg-card p-4" aria-hidden="true">
+              <div className="flex items-center gap-3">
+                <div className="size-9 shrink-0 animate-pulse rounded-full bg-muted" />
+                <div className="flex-1 space-y-2">
+                  <div className="flex justify-between gap-4">
+                    <div className="h-4 w-2/5 animate-pulse rounded bg-muted" />
+                    <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+                  </div>
+                  <div className="h-3 w-4/5 animate-pulse rounded bg-muted" />
+                  <div className="h-6 w-20 animate-pulse rounded-full bg-muted" />
+                </div>
+                <div className="size-8 shrink-0 animate-pulse rounded bg-muted" />
+              </div>
+            </div>
+          ))
+        ) : invoices.length === 0 ? (
           <Card className="border-0 shadow-sm"><CardContent className="p-8 text-center text-sm text-muted-foreground">
-            {loading ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Atualizando...</span> : "Nenhuma fatura neste mês."}
+            Nenhuma fatura neste mês.
           </CardContent></Card>
         ) : invoices.map((invoice) => (
           <div key={invoice.id} className="rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50">

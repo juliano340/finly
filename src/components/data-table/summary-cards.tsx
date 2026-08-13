@@ -1,4 +1,3 @@
-import { Loader2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { formatCurrency } from "@/lib/utils"
 
@@ -17,30 +16,30 @@ export function SummaryCards({ total, paid, pending, loading, labels }: SummaryC
     pending: labels?.pending ?? "A pagar",
   }
 
-  const spinner = <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-  const spinnerSm = <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+  const skeleton = <span className="mt-1 block h-7 w-28 animate-pulse rounded bg-muted" aria-hidden="true" />
+  const skeletonSm = <span className="mt-1 block h-5 w-20 max-w-full animate-pulse rounded bg-muted" aria-hidden="true" />
 
   return (
     <>
       <div className="hidden gap-4 md:grid md:grid-cols-3">
-        <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-xs text-muted-foreground">{l.total}</p><p className="text-2xl font-bold">{loading ? spinner : formatCurrency(total)}</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-xs text-muted-foreground">{l.paid}</p><p className="text-2xl font-bold">{loading ? spinner : formatCurrency(paid)}</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-xs text-muted-foreground">{l.pending}</p><p className="text-2xl font-bold">{loading ? spinner : formatCurrency(pending)}</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-xs text-muted-foreground">{l.total}</p><div className="text-2xl font-bold">{loading ? skeleton : formatCurrency(total)}</div></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-xs text-muted-foreground">{l.paid}</p><div className="text-2xl font-bold">{loading ? skeleton : formatCurrency(paid)}</div></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-4"><p className="text-xs text-muted-foreground">{l.pending}</p><div className="text-2xl font-bold">{loading ? skeleton : formatCurrency(pending)}</div></CardContent></Card>
       </div>
 
       <Card className="border-0 shadow-sm md:hidden">
         <CardContent className="grid grid-cols-3 gap-2 p-3">
           <div className="min-w-0">
             <p className="truncate text-[11px] font-medium text-muted-foreground">{l.total}</p>
-            <p className="truncate text-sm font-bold tabular-nums">{loading ? spinnerSm : formatCurrency(total)}</p>
+            <div className="truncate text-sm font-bold tabular-nums">{loading ? skeletonSm : formatCurrency(total)}</div>
           </div>
           <div className="min-w-0">
             <p className="truncate text-[11px] font-medium text-muted-foreground">{l.paid}</p>
-            <p className="truncate text-sm font-bold tabular-nums">{loading ? spinnerSm : formatCurrency(paid)}</p>
+            <div className="truncate text-sm font-bold tabular-nums">{loading ? skeletonSm : formatCurrency(paid)}</div>
           </div>
           <div className="min-w-0">
             <p className="truncate text-[11px] font-medium text-muted-foreground">{l.pending}</p>
-            <p className="truncate text-sm font-bold tabular-nums">{loading ? spinnerSm : formatCurrency(pending)}</p>
+            <div className="truncate text-sm font-bold tabular-nums">{loading ? skeletonSm : formatCurrency(pending)}</div>
           </div>
         </CardContent>
       </Card>

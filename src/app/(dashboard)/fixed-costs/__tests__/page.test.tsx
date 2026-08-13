@@ -31,6 +31,26 @@ describe("FixedCostsPage", () => {
     vi.useRealTimers()
   })
 
+  it("exibe skeleton da tabela enquanto os lançamentos estão carregando", async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url === "/api/categories" || url === "/api/cards" || url === "/api/bank-accounts") {
+        return Promise.resolve(response([]))
+      }
+      if (url === "/api/fixed-costs/occurrences?month=2026-08") {
+        return new Promise<Response>(() => undefined)
+      }
+      throw new Error(`Unexpected request: ${url}`)
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { container } = render(<FixedCostsPage />)
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/fixed-costs/occurrences?month=2026-08"))
+    expect(container.querySelectorAll("tbody tr[aria-hidden='true']")).toHaveLength(5)
+    expect(screen.queryByText("Carregando...")).not.toBeInTheDocument()
+  })
+
   it("ignora resposta atrasada depois que o usuário volta ao mês atual", async () => {
     let resolvePreviousMonth!: (response: Response) => void
     const previousMonthResponse = new Promise<Response>((resolve) => {

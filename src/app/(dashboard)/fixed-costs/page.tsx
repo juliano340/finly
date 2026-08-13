@@ -489,9 +489,19 @@ function FixedCostsPageInner() {
             </tr>
           </thead>
           <tbody>
-            {filteredOccurrences.length === 0 ? (
+            {loading ? (
+              Array.from({ length: 5 }).map((_, rowIndex) => (
+                <tr key={`skeleton-${rowIndex}`} className="border-b" aria-hidden="true">
+                  {Array.from({ length: 8 }).map((_, columnIndex) => (
+                    <td key={columnIndex} className="px-4 py-3">
+                      <div className="h-4 w-full animate-pulse rounded bg-muted" />
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : filteredOccurrences.length === 0 ? (
               <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
-                {loading ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</span> : "Nenhum lançamento fixo neste mês."}
+                Nenhum lançamento fixo neste mês.
               </td></tr>
             ) : sortedOccurrences.map((occ) => {
               const isLoading = payingId === occ.fixedCostId || unpayingId === occ.fixedCostId
@@ -601,9 +611,25 @@ function FixedCostsPageInner() {
       </DataTableContainer>
 
       <div className="space-y-2 md:hidden">
-        {filteredOccurrences.length === 0 ? (
+        {loading ? (
+          Array.from({ length: 3 }).map((_, index) => (
+            <div key={`mobile-skeleton-${index}`} className="rounded-lg border bg-card p-3" aria-hidden="true">
+              <div className="flex items-start gap-3">
+                <div className="size-9 shrink-0 animate-pulse rounded-lg bg-muted" />
+                <div className="flex-1 space-y-2">
+                  <div className="flex justify-between gap-4">
+                    <div className="h-4 w-2/5 animate-pulse rounded bg-muted" />
+                    <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+                  </div>
+                  <div className="h-3 w-3/5 animate-pulse rounded bg-muted" />
+                  <div className="h-6 w-20 animate-pulse rounded-full bg-muted" />
+                </div>
+              </div>
+            </div>
+          ))
+        ) : filteredOccurrences.length === 0 ? (
           <Card className="border-0 shadow-sm"><CardContent className="p-8 text-center text-sm text-muted-foreground">
-            {loading ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</span> : "Nenhum lançamento fixo neste mês."}
+            Nenhum lançamento fixo neste mês.
           </CardContent></Card>
         ) : filteredOccurrences.map((occ) => {
           const isLoading = payingId === occ.fixedCostId || unpayingId === occ.fixedCostId
