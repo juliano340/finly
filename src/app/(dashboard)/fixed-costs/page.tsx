@@ -137,7 +137,7 @@ function FixedCostsPageInner() {
   const createFormRef = useRef<HTMLFormElement>(null)
 
   const filteredOccurrences = occurrences.filter((o) => o.fixedCost.type === activeTab)
-  const { selectedIds, toggleSelect, selectAll, clearSelection, allSelected, totalSelected, confirmBatchDelete, setConfirmBatchDelete, batchDeleting, setBatchDeleting } = useTableSelection(filteredOccurrences, (o) => o.amount)
+  const { selectedIds, toggleSelect, selectAll, clearSelection, allSelected, totalSelected, confirmBatchDelete, setConfirmBatchDelete, batchDeleting, setBatchDeleting } = useTableSelection(filteredOccurrences, (o) => o.amount, { storageKey: `fixed-costs:selection:${month}:${activeTab}` })
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -427,8 +427,8 @@ function FixedCostsPageInner() {
       </div>
 
       <div className="flex gap-1 rounded-md border bg-background p-1 w-fit">
-        <button type="button" onClick={() => { setActiveTab("EXPENSE"); clearSelection() }} className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${activeTab === "EXPENSE" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Despesas</button>
-        <button type="button" onClick={() => { setActiveTab("INCOME"); clearSelection() }} className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${activeTab === "INCOME" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Receitas</button>
+        <button type="button" onClick={() => setActiveTab("EXPENSE")} className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${activeTab === "EXPENSE" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Despesas</button>
+        <button type="button" onClick={() => setActiveTab("INCOME")} className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${activeTab === "INCOME" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Receitas</button>
       </div>
 
       <SummaryCards
