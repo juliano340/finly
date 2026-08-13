@@ -165,7 +165,12 @@ export async function copyCardInvoices(
   if (sourceInvoices.length === 0) return []
 
   const financialMonth = await ensureFinancialMonth(userId, toMonth, db)
-  await db.cardInvoice.deleteMany({ where: { userId, month: toMonth } })
+  if (invoiceIds?.length) {
+    const sourceCardIds = sourceInvoices.map((invoice) => invoice.cardId)
+    await db.cardInvoice.deleteMany({ where: { userId, month: toMonth, cardId: { in: sourceCardIds } } })
+  } else {
+    await db.cardInvoice.deleteMany({ where: { userId, month: toMonth } })
+  }
 
   const created = []
   for (const invoice of sourceInvoices) {
