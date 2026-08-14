@@ -111,6 +111,32 @@ describe("Backup Service", () => {
 
       await deleteAllUserData(userId)
     })
+
+    it("does not restore a soft-deleted occurrence from a replace backup", async () => {
+      const cat = await testPrisma.category.create({ data: { name: `Deleted occurrence ${suffix}`, type: "EXPENSE", userId } })
+      const fm = await testPrisma.financialMonth.create({ data: { month: `${suffix}-02`, userId } })
+      const fixedCost = await testPrisma.fixedCost.create({
+        data: { name: `Deleted FC ${suffix}`, defaultAmount: 100, categoryId: cat.id, paymentMethod: "PIX", userId },
+      })
+      const active = await testPrisma.fixedCostOccurrence.create({
+        data: { fixedCostId: fixedCost.id, financialMonthId: fm.id, month: `${suffix}-02`, amount: 100, userId },
+      })
+      await testPrisma.fixedCostOccurrence.create({
+        data: { fixedCostId: fixedCost.id, financialMonthId: fm.id, month: `${suffix}-02`, amount: 100, deletedAt: new Date(), userId },
+      })
+
+      const backup = await exportData(userId, testPrisma)
+      expect(backup.data.fixedCostOccurrences.map((occurrence) => occurrence.id)).toEqual([active.id])
+
+      const result = await importData(userId, backup, "replace", testPrisma)
+      expect(result.imported.fixedCostOccurrences).toBe(1)
+
+      const restored = await testPrisma.fixedCostOccurrence.findMany({ where: { userId } })
+      expect(restored).toHaveLength(1)
+      expect(restored[0].deletedAt).toBeNull()
+
+      await deleteAllUserData(userId)
+    })
   })
 
   describe("importData replace", () => {
