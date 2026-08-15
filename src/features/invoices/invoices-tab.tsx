@@ -1,35 +1,114 @@
-"use client"
+"use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react"
-import { useRouter } from "next/navigation"
-import { BarChart3, Calculator, Check, CheckCircle2, Copy, FileText, Loader2, RotateCcw, Settings, Trash2 } from "lucide-react"
-import { Button, buttonVariants } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { ConfirmDialog } from "@/components/ui/confirm-dialog"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { toast } from "sonner"
-import { cn, formatCurrency, formatDate } from "@/lib/utils"
-import { isAccountNegative, getAvailableBalance } from "@/lib/balance"
-import { ImportPdfDialog } from "./import-pdf-dialog"
-import { MonthNavigator, changeMonth, getCurrentMonth } from "@/components/month-navigator"
-import { useMonthParam } from "@/hooks/use-month-param"
-import { useTableSelection } from "@/components/data-table/use-table-selection"
-import { DataTableContainer } from "@/components/data-table/data-table-container"
-import { DataTableToolbar } from "@/components/data-table/data-table-toolbar"
-import { SummaryCards } from "@/components/data-table/summary-cards"
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import {
+  BarChart3,
+  Calculator,
+  Check,
+  CheckCircle2,
+  Copy,
+  FileText,
+  Loader2,
+  RotateCcw,
+  Settings,
+  Trash2,
+} from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { toast } from "sonner";
+import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { isAccountNegative, getAvailableBalance } from "@/lib/balance";
+import { ImportPdfDialog } from "./import-pdf-dialog";
+import {
+  MonthNavigator,
+  changeMonth,
+  getCurrentMonth,
+} from "@/components/month-navigator";
+import { useMonthParam } from "@/hooks/use-month-param";
+import { useTableSelection } from "@/components/data-table/use-table-selection";
+import { DataTableContainer } from "@/components/data-table/data-table-container";
+import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
+import { SummaryCards } from "@/components/data-table/summary-cards";
 
-interface CardItem { id: string; name: string; color: string }
-interface BankAccountItem { id: string; name: string; balance: number; overdraftLimit: number }
-interface InvoiceItem { id: string; description: string; amount: number; kind: string; postingStatus: "PROJECTED" | "POSTED"; fixedCostOccurrenceId?: string | null }
-interface Invoice { id: string; month: string; dueDate: string; amount: number; effectiveTotal: number; enteredTotal: number; calculatedTotal: number; projectedFixedTotal: number; difference: number; calculationMode: "CALCULATED" | "ENTERED_TOTAL"; lifecycleStatus: "ESTIMATED" | "OPEN" | "CLOSED" | "PAID"; status: "PENDING" | "PAID"; items: InvoiceItem[]; fixedOccurrences: { id: string; amount: number; fixedCost: { name: string } }[]; card: CardItem; paymentMethod?: string | null; paymentBankAccountId?: string | null; importSessionId?: string | null }
-type InvoiceSortField = "card" | "dueDate" | "amount" | "status"
+interface CardItem {
+  id: string;
+  name: string;
+  color: string;
+}
+interface BankAccountItem {
+  id: string;
+  name: string;
+  balance: number;
+  overdraftLimit: number;
+}
+interface InvoiceItem {
+  id: string;
+  description: string;
+  amount: number;
+  kind: string;
+  postingStatus: "PROJECTED" | "POSTED";
+  fixedCostOccurrenceId?: string | null;
+}
+interface Invoice {
+  id: string;
+  month: string;
+  dueDate: string;
+  amount: number;
+  effectiveTotal: number;
+  enteredTotal: number;
+  calculatedTotal: number;
+  projectedFixedTotal: number;
+  difference: number;
+  calculationMode: "CALCULATED" | "ENTERED_TOTAL";
+  lifecycleStatus: "ESTIMATED" | "OPEN" | "CLOSED" | "PAID";
+  status: "PENDING" | "PAID";
+  items: InvoiceItem[];
+  fixedOccurrences: {
+    id: string;
+    amount: number;
+    fixedCost: { name: string };
+  }[];
+  card: CardItem;
+  paymentMethod?: string | null;
+  paymentBankAccountId?: string | null;
+  importSessionId?: string | null;
+}
+type InvoiceSortField = "card" | "dueDate" | "amount" | "status";
 
-function SortIcon({ field, activeField, direction }: { field: InvoiceSortField; activeField: InvoiceSortField; direction: "asc" | "desc" }) {
-  if (activeField !== field) return <span className="ml-1 text-muted-foreground/40">&#8693;</span>
-  return <span className="ml-1">{direction === "asc" ? "\u25B2" : "\u25BC"}</span>
+function SortIcon({
+  field,
+  activeField,
+  direction,
+}: {
+  field: InvoiceSortField;
+  activeField: InvoiceSortField;
+  direction: "asc" | "desc";
+}) {
+  if (activeField !== field)
+    return <span className="ml-1 text-muted-foreground/40">&#8693;</span>;
+  return (
+    <span className="ml-1">{direction === "asc" ? "\u25B2" : "\u25BC"}</span>
+  );
 }
 
 function InvoiceActionIcon({
@@ -38,10 +117,10 @@ function InvoiceActionIcon({
   tone = "muted",
   onClick,
 }: {
-  label: string
-  icon: ReactNode
-  tone?: "muted" | "success"
-  onClick: () => void
+  label: string;
+  icon: ReactNode;
+  tone?: "muted" | "success";
+  onClick: () => void;
 }) {
   return (
     <Tooltip>
@@ -52,21 +131,23 @@ function InvoiceActionIcon({
         className={cn(
           buttonVariants({ variant: "ghost", size: "icon-sm" }),
           "cursor-pointer rounded-full border transition-colors",
-          tone === "muted" && "border-border bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground",
-          tone === "success" && "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 hover:text-emerald-700"
+          tone === "muted" &&
+            "border-border bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground",
+          tone === "success" &&
+            "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 hover:text-emerald-700",
         )}
       >
         {icon}
       </TooltipTrigger>
       <TooltipContent>{label}</TooltipContent>
     </Tooltip>
-  )
+  );
 }
 
 function monthLabel(month: string) {
-  const [y, m] = month.split("-").map(Number)
-  const date = new Date(y, m - 1, 1)
-  return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
+  const [y, m] = month.split("-").map(Number);
+  const date = new Date(y, m - 1, 1);
+  return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 }
 
 const paymentMethods = [
@@ -75,48 +156,65 @@ const paymentMethods = [
   { value: "DEBIT", label: "Débito em conta", needsAccount: true },
   { value: "CASH", label: "Dinheiro", needsAccount: false },
   { value: "BANK_SLIP", label: "Boleto", needsAccount: false },
-]
+];
 
-const methodLabels: Record<string, string> = { PIX: "Pix", TED: "TED", DEBIT: "Débito", CASH: "Dinheiro", BANK_SLIP: "Boleto" }
+const methodLabels: Record<string, string> = {
+  PIX: "Pix",
+  TED: "TED",
+  DEBIT: "Débito",
+  CASH: "Dinheiro",
+  BANK_SLIP: "Boleto",
+};
 
-const lifecycleLabels = { ESTIMATED: "Estimada", OPEN: "Aberta", CLOSED: "Fechada", PAID: "Paga" } as const
+const lifecycleLabels = {
+  ESTIMATED: "Estimada",
+  OPEN: "Aberta",
+  CLOSED: "Fechada",
+  PAID: "Paga",
+} as const;
 
 export function InvoicesTab() {
-  const router = useRouter()
-  const [cards, setCards] = useState<CardItem[]>([])
-  const [bankAccounts, setBankAccounts] = useState<BankAccountItem[]>([])
-  const [invoices, setInvoices] = useState<Invoice[]>([])
-  const [month, setMonth] = useMonthParam({ defaultMonth: getCurrentMonth() })
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
-  const [creating, setCreating] = useState(false)
-  const [createMode, setCreateMode] = useState<"CALCULATED" | "ENTERED_TOTAL">("ENTERED_TOTAL")
-  const [copiando, setCopiando] = useState(false)
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
-  const [payingInvoice, setPayingInvoice] = useState<Invoice | null>(null)
-  const [payMethod, setPayMethod] = useState("PIX")
-  const [payAccountId, setPayAccountId] = useState("")
-  const [paying, setPaying] = useState(false)
-  const [payError, setPayError] = useState("")
-  const [simulatorOpen, setSimulatorOpen] = useState(false)
-  const [simInvoiceId, setSimInvoiceId] = useState("")
-  const [simAccountId, setSimAccountId] = useState("")
-  const [simAmount, setSimAmount] = useState("")
-  const [loading, setLoading] = useState(true)
-  const [updatingId, setUpdatingId] = useState<string | null>(null)
-  const [copyDialogOpen, setCopyDialogOpen] = useState(false)
-  const [prevInvoices, setPrevInvoices] = useState<Invoice[]>([])
-  const [selectedCopyIds, setSelectedCopyIds] = useState<string[]>([])
-  const [loadingPrev, setLoadingPrev] = useState(false)
-  const [copySourceMonth, setCopySourceMonth] = useState(() => changeMonth(month, -1))
-  const [availableMonths, setAvailableMonths] = useState<{ month: string; count: number }[]>([])
-  const tableSelection = useTableSelection(invoices, (i) => i.effectiveTotal)
-  const [sortField, setSortField] = useState<InvoiceSortField>("dueDate")
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
-  const [importDialogOpen, setImportDialogOpen] = useState(false)
-  const [importInvoiceId, setImportInvoiceId] = useState<string | null>(null)
-  const [importStandaloneOpen, setImportStandaloneOpen] = useState(false)
-  const inFlightUpdateRef = useRef(false)
-  const editFormRef = useRef<HTMLFormElement>(null)
+  const router = useRouter();
+  const [cards, setCards] = useState<CardItem[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<BankAccountItem[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [month, setMonth] = useMonthParam({ defaultMonth: getCurrentMonth() });
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [createMode, setCreateMode] = useState<"CALCULATED" | "ENTERED_TOTAL">(
+    "ENTERED_TOTAL",
+  );
+  const [copiando, setCopiando] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [payingInvoice, setPayingInvoice] = useState<Invoice | null>(null);
+  const [payMethod, setPayMethod] = useState("PIX");
+  const [payAccountId, setPayAccountId] = useState("");
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState("");
+  const [simulatorOpen, setSimulatorOpen] = useState(false);
+  const [simInvoiceId, setSimInvoiceId] = useState("");
+  const [simAccountId, setSimAccountId] = useState("");
+  const [simAmount, setSimAmount] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
+  const [prevInvoices, setPrevInvoices] = useState<Invoice[]>([]);
+  const [selectedCopyIds, setSelectedCopyIds] = useState<string[]>([]);
+  const [loadingPrev, setLoadingPrev] = useState(false);
+  const [copySourceMonth, setCopySourceMonth] = useState(() =>
+    changeMonth(month, -1),
+  );
+  const [availableMonths, setAvailableMonths] = useState<
+    { month: string; count: number }[]
+  >([]);
+  const tableSelection = useTableSelection(invoices, (i) => i.effectiveTotal);
+  const [sortField, setSortField] = useState<InvoiceSortField>("dueDate");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importInvoiceId, setImportInvoiceId] = useState<string | null>(null);
+  const [importStandaloneOpen, setImportStandaloneOpen] = useState(false);
+  const inFlightUpdateRef = useRef(false);
+  const editFormRef = useRef<HTMLFormElement>(null);
 
   function fetchData() {
     return Promise.all([
@@ -124,47 +222,58 @@ export function InvoicesTab() {
       fetch(`/api/invoices?month=${month}`),
       fetch("/api/bank-accounts"),
     ]).then(async ([cardsRes, invoicesRes, accountsRes]) => {
-      if (cardsRes.ok) setCards(await cardsRes.json())
+      if (cardsRes.ok) setCards(await cardsRes.json());
       if (invoicesRes.ok) {
-        const invoiceData: Invoice[] = await invoicesRes.json()
-        setInvoices(invoiceData)
-        setSelectedInvoice((current) => current ? invoiceData.find((item) => item.id === current.id) ?? null : null)
+        const invoiceData: Invoice[] = await invoicesRes.json();
+        setInvoices(invoiceData);
+        setSelectedInvoice((current) =>
+          current
+            ? (invoiceData.find((item) => item.id === current.id) ?? null)
+            : null,
+        );
       }
-      if (accountsRes.ok) setBankAccounts((await accountsRes.json()).filter((account: { type: string }) => account.type !== "BENEFIT"))
-    })
+      if (accountsRes.ok)
+        setBankAccounts(
+          (await accountsRes.json()).filter(
+            (account: { type: string }) => account.type !== "BENEFIT",
+          ),
+        );
+    });
   }
 
-  const loadedRef = useRef(false)
+  const loadedRef = useRef(false);
 
   useEffect(() => {
-    let cancelled = false
-    if (loadedRef.current) setLoading(true)
+    let cancelled = false;
+    if (loadedRef.current) setLoading(true);
     fetchData().then(() => {
       if (!cancelled) {
-        loadedRef.current = true
-        setLoading(false)
+        loadedRef.current = true;
+        setLoading(false);
       }
-    })
-    return () => { cancelled = true }
+    });
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month])
+  }, [month]);
 
   const openPayDialog = (invoice: Invoice) => {
-    setPayingInvoice(invoice)
-    setPayMethod("PIX")
-    setPayAccountId("")
-    setPayError("")
-  }
+    setPayingInvoice(invoice);
+    setPayMethod("PIX");
+    setPayAccountId("");
+    setPayError("");
+  };
 
   const handlePay = async () => {
-    if (!payingInvoice) return
-    const method = paymentMethods.find((m) => m.value === payMethod)
+    if (!payingInvoice) return;
+    const method = paymentMethods.find((m) => m.value === payMethod);
     if (method?.needsAccount && !payAccountId) {
-      setPayError("Selecione uma conta")
-      return
+      setPayError("Selecione uma conta");
+      return;
     }
-    setPaying(true)
-    setPayError("")
+    setPaying(true);
+    setPayError("");
     const res = await fetch(`/api/invoices/${payingInvoice.id}/pay`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -172,22 +281,24 @@ export function InvoicesTab() {
         paymentMethod: payMethod,
         bankAccountId: method?.needsAccount ? payAccountId : null,
       }),
-    })
-    setPaying(false)
+    });
+    setPaying(false);
     if (res.ok) {
-      toast.success("Fatura paga com sucesso!")
-      setPayingInvoice(null)
-      fetchData()
+      toast.success("Fatura paga com sucesso!");
+      setPayingInvoice(null);
+      fetchData();
     } else {
-      const err = await res.json()
-      setPayError(err.error ?? "Erro ao pagar")
+      const err = await res.json();
+      setPayError(err.error ?? "Erro ao pagar");
     }
-  }
+  };
 
   const handleUnpay = async (invoiceId: string) => {
-    const res = await fetch(`/api/invoices/${invoiceId}/unpay`, { method: "POST" })
-    if (res.ok) fetchData()
-  }
+    const res = await fetch(`/api/invoices/${invoiceId}/unpay`, {
+      method: "POST",
+    });
+    if (res.ok) fetchData();
+  };
 
   const handleCreate = async (formData: FormData) => {
     const res = await fetch("/api/invoices", {
@@ -198,30 +309,43 @@ export function InvoicesTab() {
         month,
         dueDate: formData.get("dueDate"),
         calculationMode: formData.get("calculationMode"),
-        enteredTotal: formData.get("calculationMode") === "ENTERED_TOTAL" ? formData.get("amount") : null,
-        amount: formData.get("calculationMode") === "ENTERED_TOTAL" ? formData.get("amount") : 0,
+        enteredTotal:
+          formData.get("calculationMode") === "ENTERED_TOTAL"
+            ? formData.get("amount")
+            : null,
+        amount:
+          formData.get("calculationMode") === "ENTERED_TOTAL"
+            ? formData.get("amount")
+            : 0,
         lifecycleStatus: formData.get("lifecycleStatus"),
         status: "PENDING",
       }),
-    })
+    });
     if (res.ok) {
-      const created = await res.json()
-      toast.success("Fatura criada!")
-      setCreating(false)
-      setInvoices((prev) => [...prev, created])
+      const created = await res.json();
+      toast.success("Fatura criada!");
+      setCreating(false);
+      setInvoices((prev) => [...prev, created]);
     } else {
-      toast.error("Erro ao criar fatura")
+      toast.error("Erro ao criar fatura");
     }
-  }
+  };
 
   const handleUpdate = async (invoiceId: string, formData: FormData) => {
-    if (inFlightUpdateRef.current) return
-    inFlightUpdateRef.current = true
-    setUpdatingId(invoiceId)
+    if (inFlightUpdateRef.current) return;
+    inFlightUpdateRef.current = true;
+    setUpdatingId(invoiceId);
     try {
-      const nextMode = String(formData.get("calculationMode"))
-      const current = invoices.find((invoice) => invoice.id === invoiceId)
-      if (current && current.calculationMode !== nextMode && !window.confirm("Trocar o modo altera o total considerado, mas preserva itens e valor informado. Continuar?")) return
+      const nextMode = String(formData.get("calculationMode"));
+      const current = invoices.find((invoice) => invoice.id === invoiceId);
+      if (
+        current &&
+        current.calculationMode !== nextMode &&
+        !window.confirm(
+          "Trocar o modo altera o total considerado, mas preserva itens e valor informado. Continuar?",
+        )
+      )
+        return;
       const res = await fetch(`/api/invoices/${invoiceId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -233,184 +357,269 @@ export function InvoicesTab() {
           amount: formData.get("amount"),
           lifecycleStatus: formData.get("lifecycleStatus"),
         }),
-      })
+      });
       if (res.ok) {
-        toast.success("Fatura atualizada!")
-        setSelectedInvoice(null)
-        fetchData()
+        toast.success("Fatura atualizada!");
+        setSelectedInvoice(null);
+        fetchData();
       } else {
-        toast.error("Erro ao atualizar fatura")
+        toast.error("Erro ao atualizar fatura");
       }
     } finally {
-      setUpdatingId(null)
-      inFlightUpdateRef.current = false
+      setUpdatingId(null);
+      inFlightUpdateRef.current = false;
     }
-  }
+  };
 
   const handleAddItem = async (formData: FormData) => {
-    if (!selectedInvoice) return
+    if (!selectedInvoice) return;
     const res = await fetch(`/api/invoices/${selectedInvoice.id}/items`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         description: formData.get("description"),
         amount: formData.get("amount"),
-        kind: formData.get("fixedCostOccurrenceId") ? "FIXED_COST" : formData.get("kind"),
+        kind: formData.get("fixedCostOccurrenceId")
+          ? "FIXED_COST"
+          : formData.get("kind"),
         postingStatus: formData.get("postingStatus"),
         fixedCostOccurrenceId: formData.get("fixedCostOccurrenceId") || null,
       }),
-    })
-    if (res.ok) { toast.success("Lançamento adicionado."); await fetchData() }
-    else toast.error("Não foi possível adicionar o lançamento.")
-  }
+    });
+    if (res.ok) {
+      toast.success("Lançamento adicionado.");
+      await fetchData();
+    } else toast.error("Não foi possível adicionar o lançamento.");
+  };
 
   const handleDeleteItem = async (itemId: string) => {
-    if (!selectedInvoice) return
-    const res = await fetch(`/api/invoices/${selectedInvoice.id}/items/${itemId}`, { method: "DELETE" })
-    if (res.ok) await fetchData()
-  }
+    if (!selectedInvoice) return;
+    const res = await fetch(
+      `/api/invoices/${selectedInvoice.id}/items/${itemId}`,
+      { method: "DELETE" },
+    );
+    if (res.ok) await fetchData();
+  };
 
   const handleDelete = async () => {
-    if (!deleteTarget) return
-    const res = await fetch(`/api/invoices/${deleteTarget}`, { method: "DELETE" })
-    setDeleteTarget(null)
-    setSelectedInvoice(null)
+    if (!deleteTarget) return;
+    const res = await fetch(`/api/invoices/${deleteTarget}`, {
+      method: "DELETE",
+    });
+    setDeleteTarget(null);
+    setSelectedInvoice(null);
     if (res.ok) {
-      toast.success("Fatura excluída.")
+      toast.success("Fatura excluída.");
     } else {
-      toast.error("Não foi possível excluir a fatura.")
+      toast.error("Não foi possível excluir a fatura.");
     }
-    fetchData()
-  }
+    fetchData();
+  };
 
   const handleCopyFromPrevious = async (invoiceIds?: string[]) => {
-    setCopiando(true)
+    setCopiando(true);
     await fetch("/api/invoices/copy", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fromMonth: copySourceMonth, toMonth: month, invoiceIds }),
-    })
-    setCopiando(false)
-    setCopyDialogOpen(false)
-    setSelectedCopyIds([])
-    fetchData()
-  }
+      body: JSON.stringify({
+        fromMonth: copySourceMonth,
+        toMonth: month,
+        invoiceIds,
+      }),
+    });
+    setCopiando(false);
+    setCopyDialogOpen(false);
+    setSelectedCopyIds([]);
+    fetchData();
+  };
 
   const openCopyDialog = async (sourceMonth?: string) => {
-    const src = sourceMonth ?? copySourceMonth
-    setCopySourceMonth(src)
-    setLoadingPrev(true)
+    const src = sourceMonth ?? copySourceMonth;
+    setCopySourceMonth(src);
+    setLoadingPrev(true);
     const [monthsRes, invoicesRes] = await Promise.all([
       fetch("/api/invoices/months"),
       fetch(`/api/invoices?month=${src}`),
-    ])
+    ]);
     if (monthsRes.ok) {
-      const allMonths = (await monthsRes.json()) as { month: string; count: number }[]
-      const months = allMonths.filter((m) => m.month < month)
-      setAvailableMonths(months)
-      if (months.length > 0 && !months.some((m: { month: string }) => m.month === src)) {
-        setCopySourceMonth(months[0].month)
-        const fallbackRes = await fetch(`/api/invoices?month=${months[0].month}`)
+      const allMonths = (await monthsRes.json()) as {
+        month: string;
+        count: number;
+      }[];
+      const months = allMonths.filter((m) => m.month < month);
+      setAvailableMonths(months);
+      if (
+        months.length > 0 &&
+        !months.some((m: { month: string }) => m.month === src)
+      ) {
+        setCopySourceMonth(months[0].month);
+        const fallbackRes = await fetch(
+          `/api/invoices?month=${months[0].month}`,
+        );
         if (fallbackRes.ok) {
-          const data = await fallbackRes.json()
-          setPrevInvoices(data)
-          setSelectedCopyIds(data.map((i: Invoice) => i.id))
+          const data = await fallbackRes.json();
+          setPrevInvoices(data);
+          setSelectedCopyIds(data.map((i: Invoice) => i.id));
         }
-        setLoadingPrev(false)
-        setCopyDialogOpen(true)
-        return
+        setLoadingPrev(false);
+        setCopyDialogOpen(true);
+        return;
       }
     }
     if (invoicesRes.ok) {
-      const data = await invoicesRes.json()
-      setPrevInvoices(data)
-      setSelectedCopyIds(data.map((i: Invoice) => i.id))
+      const data = await invoicesRes.json();
+      setPrevInvoices(data);
+      setSelectedCopyIds(data.map((i: Invoice) => i.id));
     }
-    setLoadingPrev(false)
-    setCopyDialogOpen(true)
-  }
+    setLoadingPrev(false);
+    setCopyDialogOpen(true);
+  };
 
   const fetchPrevMonthInvoices = async (src: string) => {
-    setCopySourceMonth(src)
-    setLoadingPrev(true)
-    const res = await fetch(`/api/invoices?month=${src}`)
+    setCopySourceMonth(src);
+    setLoadingPrev(true);
+    const res = await fetch(`/api/invoices?month=${src}`);
     if (res.ok) {
-      const data = await res.json()
-      setPrevInvoices(data)
-      setSelectedCopyIds(data.map((i: Invoice) => i.id))
+      const data = await res.json();
+      setPrevInvoices(data);
+      setSelectedCopyIds(data.map((i: Invoice) => i.id));
     }
-    setLoadingPrev(false)
-  }
+    setLoadingPrev(false);
+  };
 
   const toggleCopyId = (id: string) => {
-    setSelectedCopyIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])
-  }
+    setSelectedCopyIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  };
 
-  const { selectedIds, toggleSelect, selectAll, clearSelection, allSelected, totalSelected, confirmBatchDelete, setConfirmBatchDelete, batchDeleting, setBatchDeleting } = tableSelection
+  const {
+    selectedIds,
+    toggleSelect,
+    selectAll,
+    clearSelection,
+    allSelected,
+    totalSelected,
+    confirmBatchDelete,
+    setConfirmBatchDelete,
+    batchDeleting,
+    setBatchDeleting,
+  } = tableSelection;
 
   const handleBatchDelete = async () => {
-    setBatchDeleting(true)
-    const ids = Array.from(selectedIds)
+    setBatchDeleting(true);
+    const ids = Array.from(selectedIds);
     const res = await fetch("/api/invoices/batch-delete", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ids }),
-    })
-    setBatchDeleting(false)
-    setConfirmBatchDelete(false)
+    });
+    setBatchDeleting(false);
+    setConfirmBatchDelete(false);
     if (res.ok) {
-      toast.success(`${ids.length} fatura${ids.length !== 1 ? "s" : ""} excluída${ids.length !== 1 ? "s" : ""}.`)
-      clearSelection()
+      toast.success(
+        `${ids.length} fatura${ids.length !== 1 ? "s" : ""} excluída${ids.length !== 1 ? "s" : ""}.`,
+      );
+      clearSelection();
     } else {
-      toast.error("Não foi possível excluir as faturas.")
+      toast.error("Não foi possível excluir as faturas.");
     }
-    fetchData()
-  }
+    fetchData();
+  };
 
-  const currentMethod = paymentMethods.find((m) => m.value === payMethod)
-  const totalAll = invoices.reduce((s, i) => s + i.effectiveTotal, 0)
-  const totalPaid = invoices.filter((i) => i.status === "PAID").reduce((s, i) => s + i.effectiveTotal, 0)
-  const totalPending = invoices.filter((i) => i.status === "PENDING").reduce((s, i) => s + i.effectiveTotal, 0)
+  const currentMethod = paymentMethods.find((m) => m.value === payMethod);
+  const totalAll = invoices.reduce((s, i) => s + i.effectiveTotal, 0);
+  const totalPaid = invoices
+    .filter((i) => i.status === "PAID")
+    .reduce((s, i) => s + i.effectiveTotal, 0);
+  const totalPending = invoices
+    .filter((i) => i.status === "PENDING")
+    .reduce((s, i) => s + i.effectiveTotal, 0);
 
   const sortedInvoices = [...invoices].sort((a, b) => {
-    const dir = sortDir === "asc" ? 1 : -1
+    const dir = sortDir === "asc" ? 1 : -1;
     switch (sortField) {
-      case "card": return dir * a.card.name.localeCompare(b.card.name)
-      case "dueDate": return dir * (new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
-      case "amount": return dir * (a.effectiveTotal - b.effectiveTotal)
-      case "status": return dir * (a.status === b.status ? 0 : a.status === "PAID" ? -1 : 1)
-      default: return 0
+      case "card":
+        return dir * a.card.name.localeCompare(b.card.name);
+      case "dueDate":
+        return (
+          dir * (new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+        );
+      case "amount":
+        return dir * (a.effectiveTotal - b.effectiveTotal);
+      case "status":
+        return dir * (a.status === b.status ? 0 : a.status === "PAID" ? -1 : 1);
+      default:
+        return 0;
     }
-  })
+  });
 
   function toggleSort(field: typeof sortField) {
-    if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"))
-    else { setSortField(field); setSortDir("asc") }
+    if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortField(field);
+      setSortDir("asc");
+    }
   }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div><h2 className="text-xl font-bold tracking-tight">Faturas</h2><p className="text-sm text-muted-foreground">Valor final lançado manualmente por cartão.</p></div>
+        <div>
+          <h2 className="text-xl font-bold tracking-tight">Faturas</h2>
+          <p className="text-sm text-muted-foreground">
+            Valor final lançado manualmente por cartão.
+          </p>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
-          <MonthNavigator month={month} todayMonth={getCurrentMonth()} onMonthChange={setMonth} />
+          <MonthNavigator
+            month={month}
+            todayMonth={getCurrentMonth()}
+            onMonthChange={setMonth}
+          />
           <div className="h-5 w-px bg-border hidden sm:block" />
-          <Button size="sm" variant="outline" onClick={() => openCopyDialog()} disabled={copiando}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => openCopyDialog()}
+            disabled={copiando}
+          >
             <Copy className="mr-1.5 h-3.5 w-3.5" />
             Copiar
           </Button>
-          <Button variant="outline" size="sm" onClick={() => { setSimulatorOpen(true); setSimInvoiceId(""); setSimAccountId(""); setSimAmount("") }}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setSimulatorOpen(true);
+              setSimInvoiceId("");
+              setSimAccountId("");
+              setSimAmount("");
+            }}
+          >
             <Calculator className="mr-1 h-4 w-4" /> Simular
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setImportStandaloneOpen(true)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setImportStandaloneOpen(true)}
+          >
             <FileText className="mr-1.5 h-3.5 w-3.5" />
             Importar PDF
           </Button>
-          <Button size="sm" onClick={() => setCreating(true)}>Nova fatura</Button>
+          <Button size="sm" onClick={() => setCreating(true)}>
+            Nova fatura
+          </Button>
         </div>
       </div>
 
-      <SummaryCards total={totalAll} paid={totalPaid} pending={totalPending} loading={loading} labels={{ total: "Total do mês", paid: "Pago", pending: "A pagar" }} />
+      <SummaryCards
+        total={totalAll}
+        paid={totalPaid}
+        pending={totalPending}
+        loading={loading}
+        labels={{ total: "Total do mês", paid: "Pago", pending: "A pagar" }}
+      />
 
       <DataTableContainer>
         <DataTableToolbar
@@ -419,27 +628,94 @@ export function InvoicesTab() {
           itemLabel="fatura"
           onConfirmDelete={() => setConfirmBatchDelete(true)}
           onClearSelection={clearSelection}
-          defaultContent={<span className="text-sm text-muted-foreground">{invoices.length} fatura{invoices.length !== 1 ? "s" : ""}</span>}
+          defaultContent={
+            <span className="text-sm text-muted-foreground">
+              {invoices.length} fatura{invoices.length !== 1 ? "s" : ""}
+            </span>
+          }
         />
         <table className="w-full text-sm" style={{ tableLayout: "fixed" }}>
           <thead>
             <tr className="border-b bg-muted/50">
               <th className="w-10 px-3 py-3">
                 <div className="flex items-center justify-center">
-                  <input type="checkbox" className="h-4 w-4" checked={allSelected} onChange={selectAll} />
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4"
+                    checked={allSelected}
+                    onChange={selectAll}
+                  />
                 </div>
               </th>
-              <th className="w-[30%] px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("card")}>Cartão<SortIcon field="card" activeField={sortField} direction={sortDir} /></button></th>
-              <th className="w-[20%] px-4 py-3 text-left font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("dueDate")}>Vencimento<SortIcon field="dueDate" activeField={sortField} direction={sortDir} /></button></th>
-              <th className="w-[15%] px-4 py-3 text-right font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("amount")}>Valor<SortIcon field="amount" activeField={sortField} direction={sortDir} /></button></th>
-              <th className="w-[15%] px-4 py-3 text-center font-medium text-muted-foreground"><button type="button" className="inline-flex items-center hover:text-foreground" onClick={() => toggleSort("status")}>Status<SortIcon field="status" activeField={sortField} direction={sortDir} /></button></th>
-              <th className="w-[112px] px-4 py-3 text-center font-medium text-muted-foreground">Ações</th>
+              <th className="w-[30%] px-4 py-3 text-left font-medium text-muted-foreground">
+                <button
+                  type="button"
+                  className="inline-flex items-center hover:text-foreground"
+                  onClick={() => toggleSort("card")}
+                >
+                  Cartão
+                  <SortIcon
+                    field="card"
+                    activeField={sortField}
+                    direction={sortDir}
+                  />
+                </button>
+              </th>
+              <th className="w-[20%] px-4 py-3 text-left font-medium text-muted-foreground">
+                <button
+                  type="button"
+                  className="inline-flex items-center hover:text-foreground"
+                  onClick={() => toggleSort("dueDate")}
+                >
+                  Vencimento
+                  <SortIcon
+                    field="dueDate"
+                    activeField={sortField}
+                    direction={sortDir}
+                  />
+                </button>
+              </th>
+              <th className="w-[15%] px-4 py-3 text-right font-medium text-muted-foreground">
+                <button
+                  type="button"
+                  className="inline-flex items-center hover:text-foreground"
+                  onClick={() => toggleSort("amount")}
+                >
+                  Valor
+                  <SortIcon
+                    field="amount"
+                    activeField={sortField}
+                    direction={sortDir}
+                  />
+                </button>
+              </th>
+              <th className="w-[15%] px-4 py-3 text-center font-medium text-muted-foreground">
+                <button
+                  type="button"
+                  className="inline-flex items-center hover:text-foreground"
+                  onClick={() => toggleSort("status")}
+                >
+                  Status
+                  <SortIcon
+                    field="status"
+                    activeField={sortField}
+                    direction={sortDir}
+                  />
+                </button>
+              </th>
+              <th className="w-[112px] px-4 py-3 text-center font-medium text-muted-foreground">
+                Ações
+              </th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               Array.from({ length: 5 }).map((_, rowIndex) => (
-                <tr key={`skeleton-${rowIndex}`} className="border-b" aria-hidden="true">
+                <tr
+                  key={`skeleton-${rowIndex}`}
+                  className="border-b"
+                  aria-hidden="true"
+                >
                   {Array.from({ length: 6 }).map((_, columnIndex) => (
                     <td key={columnIndex} className="px-4 py-3">
                       <div className="h-4 w-full animate-pulse rounded bg-muted" />
@@ -448,63 +724,109 @@ export function InvoicesTab() {
                 </tr>
               ))
             ) : invoices.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                Nenhuma fatura neste mês.
-              </td></tr>
-            ) : sortedInvoices.map((invoice) => (
-              <tr key={invoice.id} className="border-b transition-colors hover:bg-muted/50">
-                <td className="w-10 px-3 py-3">
-                  <div className="flex items-center justify-center">
-                    <input type="checkbox" className="h-4 w-4" checked={selectedIds.has(invoice.id)} onChange={() => toggleSelect(invoice.id)} />
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <button type="button" onClick={() => setSelectedInvoice(invoice)} className="flex items-center gap-3 text-left font-medium hover:underline">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white" style={{ backgroundColor: invoice.card.color }}>{invoice.card.name.charAt(0)}</span>
-                    {invoice.card.name}
-                    {invoice.importSessionId && (
-                      <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); window.history.replaceState(null, "", "/cards?tab=invoices"); router.push(`/invoices/${invoice.id}/analysis`) }} className="ml-1.5 cursor-pointer rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground">
-                        <BarChart3 className="h-3.5 w-3.5" />
-                      </span>
-                    )}
-                  </button>
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">{formatDate(invoice.dueDate)}</td>
-                <td className="px-4 py-3 text-right font-medium">{formatCurrency(invoice.effectiveTotal)}</td>
-                <td className="px-4 py-3 text-center">
-                  {invoice.status === "PAID" ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600">
-                      Pago{invoice.paymentMethod ? ` · ${methodLabels[invoice.paymentMethod] ?? invoice.paymentMethod}` : ""}
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-600">{lifecycleLabels[invoice.lifecycleStatus]}</span>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex justify-center gap-2">
-                    {invoice.status === "PENDING" ? (
-                      <InvoiceActionIcon
-                        label="Pagar fatura"
-                        icon={<CheckCircle2 className="h-3.5 w-3.5" />}
-                        onClick={() => openPayDialog(invoice)}
-                      />
-                    ) : (
-                      <InvoiceActionIcon
-                        label="Estornar pagamento"
-                        tone="success"
-                        icon={<RotateCcw className="h-3.5 w-3.5" />}
-                        onClick={() => handleUnpay(invoice.id)}
-                      />
-                    )}
-                    <InvoiceActionIcon
-                      label="Editar fatura"
-                      icon={<Settings className="h-3.5 w-3.5" />}
-                      onClick={() => setSelectedInvoice(invoice)}
-                    />
-                  </div>
+              <tr>
+                <td
+                  colSpan={6}
+                  className="px-4 py-8 text-center text-muted-foreground"
+                >
+                  Nenhuma fatura neste mês.
                 </td>
               </tr>
-            ))}
+            ) : (
+              sortedInvoices.map((invoice) => (
+                <tr
+                  key={invoice.id}
+                  className="border-b transition-colors hover:bg-muted/50"
+                >
+                  <td className="w-10 px-3 py-3">
+                    <div className="flex items-center justify-center">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4"
+                        checked={selectedIds.has(invoice.id)}
+                        onChange={() => toggleSelect(invoice.id)}
+                      />
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedInvoice(invoice)}
+                      className="flex items-center gap-3 text-left font-medium hover:underline"
+                    >
+                      <span
+                        className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white"
+                        style={{ backgroundColor: invoice.card.color }}
+                      >
+                        {invoice.card.name.charAt(0)}
+                      </span>
+                      {invoice.card.name}
+                      {invoice.importSessionId && (
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.history.replaceState(
+                              null,
+                              "",
+                              "/cards?tab=invoices",
+                            );
+                            router.push(`/invoices/${invoice.id}/analysis`);
+                          }}
+                          className="ml-1.5 cursor-pointer rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                        >
+                          <BarChart3 className="h-3.5 w-3.5" />
+                        </span>
+                      )}
+                    </button>
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {formatDate(invoice.dueDate)}
+                  </td>
+                  <td className="px-4 py-3 text-right font-medium">
+                    {formatCurrency(invoice.effectiveTotal)}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {invoice.status === "PAID" ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600">
+                        Pago
+                        {invoice.paymentMethod
+                          ? ` · ${methodLabels[invoice.paymentMethod] ?? invoice.paymentMethod}`
+                          : ""}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-medium text-amber-600">
+                        {lifecycleLabels[invoice.lifecycleStatus]}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-center gap-2">
+                      {invoice.status === "PENDING" ? (
+                        <InvoiceActionIcon
+                          label="Pagar fatura"
+                          icon={<CheckCircle2 className="h-3.5 w-3.5" />}
+                          onClick={() => openPayDialog(invoice)}
+                        />
+                      ) : (
+                        <InvoiceActionIcon
+                          label="Estornar pagamento"
+                          tone="success"
+                          icon={<RotateCcw className="h-3.5 w-3.5" />}
+                          onClick={() => handleUnpay(invoice.id)}
+                        />
+                      )}
+                      <InvoiceActionIcon
+                        label="Editar fatura"
+                        icon={<Settings className="h-3.5 w-3.5" />}
+                        onClick={() => setSelectedInvoice(invoice)}
+                      />
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
             {invoices.length > 0 && (
               <tr className="border-t bg-muted/50 font-medium">
                 <td className="w-10 px-3 py-3" />
@@ -519,7 +841,17 @@ export function InvoicesTab() {
                   )}
                 </td>
                 <td className="px-4 py-3 text-center">
-                  <span className="text-xs text-muted-foreground">{invoices.filter((i) => i.status === "PAID").length} pago{invoices.filter((i) => i.status === "PAID").length !== 1 ? "s" : ""} · {invoices.filter((i) => i.status === "PENDING").length} pendente{invoices.filter((i) => i.status === "PENDING").length !== 1 ? "s" : ""}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {invoices.filter((i) => i.status === "PAID").length} pago
+                    {invoices.filter((i) => i.status === "PAID").length !== 1
+                      ? "s"
+                      : ""}{" "}
+                    · {invoices.filter((i) => i.status === "PENDING").length}{" "}
+                    pendente
+                    {invoices.filter((i) => i.status === "PENDING").length !== 1
+                      ? "s"
+                      : ""}
+                  </span>
                 </td>
                 <td className="px-4 py-3" />
               </tr>
@@ -531,7 +863,11 @@ export function InvoicesTab() {
       <div className="space-y-2 md:hidden">
         {loading ? (
           Array.from({ length: 3 }).map((_, index) => (
-            <div key={`mobile-skeleton-${index}`} className="rounded-lg border bg-card p-4" aria-hidden="true">
+            <div
+              key={`mobile-skeleton-${index}`}
+              className="rounded-lg border bg-card p-4"
+              aria-hidden="true"
+            >
               <div className="flex items-center gap-3">
                 <div className="size-9 shrink-0 animate-pulse rounded-full bg-muted" />
                 <div className="flex-1 space-y-2">
@@ -547,46 +883,76 @@ export function InvoicesTab() {
             </div>
           ))
         ) : invoices.length === 0 ? (
-          <Card className="border-0 shadow-sm"><CardContent className="p-8 text-center text-sm text-muted-foreground">
-            Nenhuma fatura neste mês.
-          </CardContent></Card>
-        ) : invoices.map((invoice) => (
-          <div key={invoice.id} className="rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50">
-            <div className="flex items-center gap-3">
-              <button type="button" onClick={() => setSelectedInvoice(invoice)} className="flex flex-1 items-center gap-3 text-left min-w-0">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white" style={{ backgroundColor: invoice.card.color }}>{invoice.card.name.charAt(0)}</div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="font-medium truncate">{invoice.card.name}</span>
-                      {invoice.importSessionId && <BarChart3 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
-                    </div>
-                    <strong className="shrink-0">{formatCurrency(invoice.effectiveTotal)}</strong>
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-8 text-center text-sm text-muted-foreground">
+              Nenhuma fatura neste mês.
+            </CardContent>
+          </Card>
+        ) : (
+          invoices.map((invoice) => (
+            <div
+              key={invoice.id}
+              className="rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50"
+            >
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSelectedInvoice(invoice)}
+                  className="flex flex-1 items-center gap-3 text-left min-w-0"
+                >
+                  <div
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+                    style={{ backgroundColor: invoice.card.color }}
+                  >
+                    {invoice.card.name.charAt(0)}
                   </div>
-                  <p className="text-xs text-muted-foreground truncate">
-                    Vence {formatDate(invoice.dueDate)} ·{" "}
-                    {invoice.status === "PAID"
-                      ? `Pago${invoice.paymentMethod ? ` via ${methodLabels[invoice.paymentMethod] ?? invoice.paymentMethod}` : ""}`
-                      : lifecycleLabels[invoice.lifecycleStatus]}
-                  </p>
-                </div>
-              </button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8 shrink-0"
-                aria-label="Editar fatura"
-                onClick={() => setSelectedInvoice(invoice)}
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
-            </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="font-medium truncate">
+                          {invoice.card.name}
+                        </span>
+                        {invoice.importSessionId && (
+                          <BarChart3 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        )}
+                      </div>
+                      <strong className="shrink-0">
+                        {formatCurrency(invoice.effectiveTotal)}
+                      </strong>
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">
+                      Vence {formatDate(invoice.dueDate)} ·{" "}
+                      {invoice.status === "PAID"
+                        ? `Pago${invoice.paymentMethod ? ` via ${methodLabels[invoice.paymentMethod] ?? invoice.paymentMethod}` : ""}`
+                        : lifecycleLabels[invoice.lifecycleStatus]}
+                    </p>
+                  </div>
+                </button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 shrink-0"
+                  aria-label="Editar fatura"
+                  onClick={() => setSelectedInvoice(invoice)}
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </div>
               <div className="mt-2 ml-12">
                 {invoice.status === "PENDING" ? (
                   <span
-                    role="button" tabIndex={0}
-                    onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); openPayDialog(invoice) } }}
-                    onClick={(e) => { e.stopPropagation(); openPayDialog(invoice) }}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.stopPropagation();
+                        openPayDialog(invoice);
+                      }
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openPayDialog(invoice);
+                    }}
                     className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/80"
                   >
                     <CheckCircle2 className="h-3.5 w-3.5" />
@@ -594,9 +960,18 @@ export function InvoicesTab() {
                   </span>
                 ) : (
                   <span
-                    role="button" tabIndex={0}
-                    onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); handleUnpay(invoice.id) } }}
-                    onClick={(e) => { e.stopPropagation(); handleUnpay(invoice.id) }}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.stopPropagation();
+                        handleUnpay(invoice.id);
+                      }
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleUnpay(invoice.id);
+                    }}
                     className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-600 transition-colors hover:bg-emerald-500/20"
                   >
                     <CheckCircle2 className="h-3.5 w-3.5 fill-emerald-600 text-white" />
@@ -605,10 +980,16 @@ export function InvoicesTab() {
                 )}
               </div>
             </div>
-        ))}
+          ))
+        )}
       </div>
 
-      <Dialog open={!!payingInvoice} onOpenChange={(open) => { if (!open) setPayingInvoice(null) }}>
+      <Dialog
+        open={!!payingInvoice}
+        onOpenChange={(open) => {
+          if (!open) setPayingInvoice(null);
+        }}
+      >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Pagar fatura</DialogTitle>
@@ -616,10 +997,17 @@ export function InvoicesTab() {
           {payingInvoice && (
             <div className="space-y-4">
               <div className="flex items-center gap-3 rounded-lg bg-muted p-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white" style={{ backgroundColor: payingInvoice.card.color }}>{payingInvoice.card.name.charAt(0)}</div>
+                <div
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white"
+                  style={{ backgroundColor: payingInvoice.card.color }}
+                >
+                  {payingInvoice.card.name.charAt(0)}
+                </div>
                 <div>
                   <p className="font-medium">{payingInvoice.card.name}</p>
-                  <p className="text-lg font-bold">{formatCurrency(payingInvoice.effectiveTotal)}</p>
+                  <p className="text-lg font-bold">
+                    {formatCurrency(payingInvoice.effectiveTotal)}
+                  </p>
                 </div>
               </div>
 
@@ -631,7 +1019,9 @@ export function InvoicesTab() {
                   onChange={(e) => setPayMethod(e.target.value)}
                 >
                   {paymentMethods.map((m) => (
-                    <option key={m.value} value={m.value}>{m.label}</option>
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -646,49 +1036,96 @@ export function InvoicesTab() {
                   >
                     <option value="">Selecione uma conta</option>
                     {bankAccounts.map((acc) => (
-                      <option key={acc.id} value={acc.id}>{acc.name} ({formatCurrency(acc.balance)})</option>
+                      <option key={acc.id} value={acc.id}>
+                        {acc.name} ({formatCurrency(acc.balance)})
+                      </option>
                     ))}
                   </select>
                 </div>
               )}
 
               {(() => {
-                if (!currentMethod?.needsAccount || !payAccountId) return null
-                const acc = bankAccounts.find((a) => a.id === payAccountId)
-                if (!acc) return null
-                const after = acc.balance - payingInvoice.effectiveTotal
-                const available = getAvailableBalance(acc.balance, acc.overdraftLimit)
+                if (!currentMethod?.needsAccount || !payAccountId) return null;
+                const acc = bankAccounts.find((a) => a.id === payAccountId);
+                if (!acc) return null;
+                const after = acc.balance - payingInvoice.effectiveTotal;
+                const available = getAvailableBalance(
+                  acc.balance,
+                  acc.overdraftLimit,
+                );
                 return (
                   <div className="space-y-1 rounded-lg bg-muted p-3 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Saldo</span>
-                      <span className={isAccountNegative(acc.balance, acc.overdraftLimit) ? "font-medium text-red-600" : "font-medium"}>{formatCurrency(acc.balance)}</span>
+                      <span
+                        className={
+                          isAccountNegative(acc.balance, acc.overdraftLimit)
+                            ? "font-medium text-red-600"
+                            : "font-medium"
+                        }
+                      >
+                        {formatCurrency(acc.balance)}
+                      </span>
                     </div>
                     {acc.overdraftLimit > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Disponível (c/ cheque)</span>
-                        <span className={available < 0 ? "font-medium text-red-600" : "font-medium text-emerald-600"}>{formatCurrency(available)}</span>
+                        <span className="text-muted-foreground">
+                          Disponível (c/ cheque)
+                        </span>
+                        <span
+                          className={
+                            available < 0
+                              ? "font-medium text-red-600"
+                              : "font-medium text-emerald-600"
+                          }
+                        >
+                          {formatCurrency(available)}
+                        </span>
                       </div>
                     )}
                     <div className="flex justify-between border-t pt-1">
-                      <span className="text-muted-foreground">Após pagamento</span>
-                      <span className={isAccountNegative(after, acc.overdraftLimit) ? "font-bold text-destructive" : "font-bold text-emerald-600"}>{formatCurrency(after)}</span>
+                      <span className="text-muted-foreground">
+                        Após pagamento
+                      </span>
+                      <span
+                        className={
+                          isAccountNegative(after, acc.overdraftLimit)
+                            ? "font-bold text-destructive"
+                            : "font-bold text-emerald-600"
+                        }
+                      >
+                        {formatCurrency(after)}
+                      </span>
                     </div>
                     {isAccountNegative(after, acc.overdraftLimit) && (
-                      <p className="text-xs text-destructive">Saldo insuficiente (considerando cheque especial).</p>
+                      <p className="text-xs text-destructive">
+                        Saldo insuficiente (considerando cheque especial).
+                      </p>
                     )}
                   </div>
-                )
+                );
               })()}
 
-              {payError && <p className="text-sm text-destructive">{payError}</p>}
+              {payError && (
+                <p className="text-sm text-destructive">{payError}</p>
+              )}
 
               <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => setPayingInvoice(null)}>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setPayingInvoice(null)}
+                >
                   Cancelar
                 </Button>
-                <Button className="flex-1" onClick={handlePay} disabled={paying}>
-                  {paying ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
+                <Button
+                  className="flex-1"
+                  onClick={handlePay}
+                  disabled={paying}
+                >
+                  {paying ? (
+                    <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                  ) : null}
                   Confirmar pagamento
                 </Button>
               </div>
@@ -697,7 +1134,12 @@ export function InvoicesTab() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={simulatorOpen} onOpenChange={(open) => { if (!open) setSimulatorOpen(false) }}>
+      <Dialog
+        open={simulatorOpen}
+        onOpenChange={(open) => {
+          if (!open) setSimulatorOpen(false);
+        }}
+      >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Simular pagamento</DialogTitle>
@@ -709,14 +1151,17 @@ export function InvoicesTab() {
                 className="w-full rounded-md border bg-background px-3 py-2 text-sm"
                 value={simInvoiceId}
                 onChange={(e) => {
-                  setSimInvoiceId(e.target.value)
-                  const inv = invoices.find((i) => i.id === e.target.value)
-                  if (inv) setSimAmount(String(inv.effectiveTotal))
+                  setSimInvoiceId(e.target.value);
+                  const inv = invoices.find((i) => i.id === e.target.value);
+                  if (inv) setSimAmount(String(inv.effectiveTotal));
                 }}
               >
                 <option value="">Selecione uma fatura</option>
                 {invoices.map((inv) => (
-                  <option key={inv.id} value={inv.id}>{inv.card.name} — {formatCurrency(inv.effectiveTotal)}{inv.status === "PAID" ? " (paga)" : ""}</option>
+                  <option key={inv.id} value={inv.id}>
+                    {inv.card.name} — {formatCurrency(inv.effectiveTotal)}
+                    {inv.status === "PAID" ? " (paga)" : ""}
+                  </option>
                 ))}
               </select>
             </div>
@@ -729,93 +1174,192 @@ export function InvoicesTab() {
               >
                 <option value="">Selecione uma conta</option>
                 {bankAccounts.map((acc) => (
-                  <option key={acc.id} value={acc.id}>{acc.name} ({formatCurrency(acc.balance)})</option>
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name} ({formatCurrency(acc.balance)})
+                  </option>
                 ))}
               </select>
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium">Valor a pagar</label>
-              <Input type="number" min="0" step="0.01" placeholder="0,00" value={simAmount} onChange={(e) => setSimAmount(e.target.value)} />
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0,00"
+                value={simAmount}
+                onChange={(e) => setSimAmount(e.target.value)}
+              />
             </div>
             {(() => {
-              const simInv = invoices.find((i) => i.id === simInvoiceId)
-              const simAcc = bankAccounts.find((a) => a.id === simAccountId)
-              const amount = Number.parseFloat(simAmount) || 0
-              if (!simInv || !simAcc || amount <= 0) return null
-              const after = simAcc.balance - amount
-              const available = getAvailableBalance(simAcc.balance, simAcc.overdraftLimit)
+              const simInv = invoices.find((i) => i.id === simInvoiceId);
+              const simAcc = bankAccounts.find((a) => a.id === simAccountId);
+              const amount = Number.parseFloat(simAmount) || 0;
+              if (!simInv || !simAcc || amount <= 0) return null;
+              const after = simAcc.balance - amount;
+              const available = getAvailableBalance(
+                simAcc.balance,
+                simAcc.overdraftLimit,
+              );
               return (
                 <div className="space-y-2 rounded-lg bg-muted p-4 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Saldo atual</span>
-                    <span className={isAccountNegative(simAcc.balance, simAcc.overdraftLimit) ? "font-medium text-red-600" : "font-medium"}>{formatCurrency(simAcc.balance)}</span>
+                    <span
+                      className={
+                        isAccountNegative(simAcc.balance, simAcc.overdraftLimit)
+                          ? "font-medium text-red-600"
+                          : "font-medium"
+                      }
+                    >
+                      {formatCurrency(simAcc.balance)}
+                    </span>
                   </div>
                   {simAcc.overdraftLimit > 0 && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Disponível (c/ cheque)</span>
-                      <span className={available < 0 ? "font-medium text-red-600" : "font-medium text-emerald-600"}>{formatCurrency(available)}</span>
+                      <span className="text-muted-foreground">
+                        Disponível (c/ cheque)
+                      </span>
+                      <span
+                        className={
+                          available < 0
+                            ? "font-medium text-red-600"
+                            : "font-medium text-emerald-600"
+                        }
+                      >
+                        {formatCurrency(available)}
+                      </span>
                     </div>
                   )}
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Pagamento</span>
-                    <span className="font-medium text-destructive">-{formatCurrency(amount)}</span>
+                    <span className="font-medium text-destructive">
+                      -{formatCurrency(amount)}
+                    </span>
                   </div>
                   <div className="flex justify-between border-t pt-2">
                     <span className="text-muted-foreground">Saldo após</span>
-                    <span className={`font-bold ${isAccountNegative(after, simAcc.overdraftLimit) ? "text-destructive" : "text-emerald-600"}`}>
+                    <span
+                      className={`font-bold ${isAccountNegative(after, simAcc.overdraftLimit) ? "text-destructive" : "text-emerald-600"}`}
+                    >
                       {formatCurrency(after)}
                     </span>
                   </div>
                   {isAccountNegative(after, simAcc.overdraftLimit) && (
-                    <p className="text-xs text-destructive">Saldo insuficiente (considerando cheque especial).</p>
+                    <p className="text-xs text-destructive">
+                      Saldo insuficiente (considerando cheque especial).
+                    </p>
                   )}
                 </div>
-              )
+              );
             })()}
-            <Button className="w-full" variant="outline" onClick={() => setSimulatorOpen(false)}>Fechar</Button>
+            <Button
+              className="w-full"
+              variant="outline"
+              onClick={() => setSimulatorOpen(false)}
+            >
+              Fechar
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      <Sheet open={creating || !!selectedInvoice} onOpenChange={(open) => { if (!open) { setCreating(false); setSelectedInvoice(null) } }}>
+      <Sheet
+        open={creating || !!selectedInvoice}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCreating(false);
+            setSelectedInvoice(null);
+          }
+        }}
+      >
         <SheetContent className="w-full sm:max-w-md">
           {creating ? (
             <>
-              <SheetHeader><SheetTitle>Nova fatura</SheetTitle></SheetHeader>
-              <form action={handleCreate} className="flex-1 overflow-y-auto px-4 pb-4">
+              <SheetHeader>
+                <SheetTitle>Nova fatura</SheetTitle>
+              </SheetHeader>
+              <form
+                action={handleCreate}
+                className="flex-1 overflow-y-auto px-4 pb-4"
+              >
                 <div className="mt-4 grid gap-4">
                   <div className="space-y-1">
                     <label className="text-sm font-medium">Cartão</label>
-                    <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="cardId" required>
-                      {cards.map((card) => <option key={card.id} value={card.id}>{card.name}</option>)}
+                    <select
+                      className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                      name="cardId"
+                      required
+                    >
+                      {cards.map((card) => (
+                        <option key={card.id} value={card.id}>
+                          {card.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-sm font-medium">Data de vencimento</label>
+                    <label className="text-sm font-medium">
+                      Data de vencimento
+                    </label>
                     <Input name="dueDate" type="date" required />
                   </div>
                   <div className="space-y-1">
                     <label className="text-sm font-medium">Como calcular</label>
-                    <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="calculationMode" value={createMode} onChange={(event) => setCreateMode(event.target.value as typeof createMode)}>
-                      <option value="ENTERED_TOTAL">Informar valor total da fatura</option>
-                      <option value="CALCULATED">Calcular pelos lançamentos</option>
+                    <select
+                      className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                      name="calculationMode"
+                      value={createMode}
+                      onChange={(event) =>
+                        setCreateMode(event.target.value as typeof createMode)
+                      }
+                    >
+                      <option value="ENTERED_TOTAL">
+                        Informar valor total da fatura
+                      </option>
+                      <option value="CALCULATED">
+                        Calcular pelos lançamentos
+                      </option>
                     </select>
-                    <p className="text-xs text-muted-foreground">{createMode === "ENTERED_TOTAL" ? "O valor já inclui gastos fixos pagos neste cartão." : "Soma lançamentos, parcelas e gastos fixos previstos."}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {createMode === "ENTERED_TOTAL"
+                        ? "O valor já inclui gastos fixos pagos neste cartão."
+                        : "Soma lançamentos, parcelas e gastos fixos previstos."}
+                    </p>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-sm font-medium">Valor total {createMode === "CALCULATED" && "(opcional, preservado para conferência)"}</label>
-                    <Input name="amount" type="number" min="0" step="0.01" placeholder="0,00" required={createMode === "ENTERED_TOTAL"} />
+                    <label className="text-sm font-medium">
+                      Valor total{" "}
+                      {createMode === "CALCULATED" &&
+                        "(opcional, preservado para conferência)"}
+                    </label>
+                    <Input
+                      name="amount"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0,00"
+                      required={createMode === "ENTERED_TOTAL"}
+                    />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-sm font-medium">Etapa da fatura</label>
-                    <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="lifecycleStatus" defaultValue="OPEN">
+                    <label className="text-sm font-medium">
+                      Etapa da fatura
+                    </label>
+                    <select
+                      className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                      name="lifecycleStatus"
+                      defaultValue="OPEN"
+                    >
                       <option value="ESTIMATED">Estimada</option>
                       <option value="OPEN">Aberta</option>
                       <option value="CLOSED">Fechada</option>
                     </select>
                   </div>
                 </div>
-                <Button type="submit" className="mt-6 w-full">Salvar</Button>
+                <Button type="submit" className="mt-6 w-full">
+                  Salvar
+                </Button>
               </form>
             </>
           ) : selectedInvoice ? (
@@ -827,34 +1371,79 @@ export function InvoicesTab() {
                 <div className="mt-4 space-y-4">
                   <div className="rounded-lg bg-muted p-4">
                     <p className="text-xs text-muted-foreground">Valor</p>
-                    <p className="text-2xl font-bold">{formatCurrency(selectedInvoice.effectiveTotal)}</p>
+                    <p className="text-2xl font-bold">
+                      {formatCurrency(selectedInvoice.effectiveTotal)}
+                    </p>
                   </div>
                   <form ref={editFormRef} className="space-y-4">
                     <div className="space-y-1">
                       <label className="text-sm font-medium">Cartão</label>
-                      <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="cardId" defaultValue={selectedInvoice.card.id}>
-                        {cards.map((card) => <option key={card.id} value={card.id}>{card.name}</option>)}
+                      <select
+                        className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                        name="cardId"
+                        defaultValue={selectedInvoice.card.id}
+                      >
+                        {cards.map((card) => (
+                          <option key={card.id} value={card.id}>
+                            {card.name}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-sm font-medium">Data de vencimento</label>
-                      <Input name="dueDate" type="date" defaultValue={selectedInvoice.dueDate.slice(0, 10)} required />
+                      <label className="text-sm font-medium">
+                        Data de vencimento
+                      </label>
+                      <Input
+                        name="dueDate"
+                        type="date"
+                        defaultValue={selectedInvoice.dueDate.slice(0, 10)}
+                        required
+                      />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-sm font-medium">Como calcular</label>
-                      <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="calculationMode" defaultValue={selectedInvoice.calculationMode}>
-                        <option value="ENTERED_TOTAL">Informar valor total da fatura</option>
-                        <option value="CALCULATED">Calcular pelos lançamentos</option>
+                      <label className="text-sm font-medium">
+                        Como calcular
+                      </label>
+                      <select
+                        className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                        name="calculationMode"
+                        defaultValue={selectedInvoice.calculationMode}
+                      >
+                        <option value="ENTERED_TOTAL">
+                          Informar valor total da fatura
+                        </option>
+                        <option value="CALCULATED">
+                          Calcular pelos lançamentos
+                        </option>
                       </select>
-                      <p className="text-xs text-muted-foreground">Itens e valor informado são preservados ao trocar.</p>
+                      <p className="text-xs text-muted-foreground">
+                        Itens e valor informado são preservados ao trocar.
+                      </p>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-sm font-medium">Valor total informado</label>
-                      <Input name="amount" type="number" min="0" step="0.01" defaultValue={selectedInvoice.enteredTotal} required />
+                      <label className="text-sm font-medium">
+                        Valor total informado
+                      </label>
+                      <Input
+                        name="amount"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        defaultValue={selectedInvoice.enteredTotal}
+                        required
+                      />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-sm font-medium">Etapa da fatura</label>
-                      <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="lifecycleStatus" defaultValue={selectedInvoice.lifecycleStatus} disabled={selectedInvoice.lifecycleStatus === "PAID"}>
+                      <label className="text-sm font-medium">
+                        Etapa da fatura
+                      </label>
+                      <select
+                        className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                        name="lifecycleStatus"
+                        defaultValue={selectedInvoice.lifecycleStatus}
+                        disabled={selectedInvoice.lifecycleStatus === "PAID"}
+                      >
                         <option value="ESTIMATED">Estimada</option>
                         <option value="OPEN">Aberta</option>
                         <option value="CLOSED">Fechada</option>
@@ -862,51 +1451,158 @@ export function InvoicesTab() {
                       </select>
                     </div>
                     <div className="flex gap-2">
-                      <Button type="button" className="flex-1" disabled={updatingId === selectedInvoice.id} onClick={() => handleUpdate(selectedInvoice.id, new FormData(editFormRef.current!))}>
-                        {updatingId === selectedInvoice.id ? "Salvando..." : "Salvar alterações"}
+                      <Button
+                        type="button"
+                        className="flex-1"
+                        disabled={updatingId === selectedInvoice.id}
+                        onClick={() =>
+                          handleUpdate(
+                            selectedInvoice.id,
+                            new FormData(editFormRef.current!),
+                          )
+                        }
+                      >
+                        {updatingId === selectedInvoice.id
+                          ? "Salvando..."
+                          : "Salvar alterações"}
                       </Button>
-                      <Button type="button" variant="outline" onClick={() => setDeleteTarget(selectedInvoice.id)}><Trash2 className="h-4 w-4" /></Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setDeleteTarget(selectedInvoice.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </form>
 
                   {selectedInvoice.calculationMode === "CALCULATED" && (
                     <div className="space-y-3 border-t pt-4">
                       <div>
-                        <p className="text-sm font-semibold">Composição calculada</p>
-                        <p className="text-xs text-muted-foreground">Fixos previstos: {formatCurrency(selectedInvoice.projectedFixedTotal)} · Itens: {formatCurrency(selectedInvoice.calculatedTotal - selectedInvoice.projectedFixedTotal)}</p>
+                        <p className="text-sm font-semibold">
+                          Composição calculada
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Fixos previstos:{" "}
+                          {formatCurrency(selectedInvoice.projectedFixedTotal)}{" "}
+                          · Itens:{" "}
+                          {formatCurrency(
+                            selectedInvoice.calculatedTotal -
+                              selectedInvoice.projectedFixedTotal,
+                          )}
+                        </p>
                       </div>
                       {selectedInvoice.items.map((item) => (
-                        <div key={item.id} className="flex items-center justify-between gap-3 rounded-md border p-2 text-sm">
-                          <div><p className="font-medium">{item.description}</p><p className="text-xs text-muted-foreground">{item.postingStatus === "POSTED" ? "Lançado" : "Previsto"}</p></div>
-                          <div className="flex items-center gap-2"><span>{formatCurrency(item.amount)}</span><Button type="button" size="icon-sm" variant="ghost" aria-label={`Excluir ${item.description}`} onClick={() => handleDeleteItem(item.id)}><Trash2 className="h-3.5 w-3.5" /></Button></div>
+                        <div
+                          key={item.id}
+                          className="flex items-center justify-between gap-3 rounded-md border p-2 text-sm"
+                        >
+                          <div>
+                            <p className="font-medium">{item.description}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {item.postingStatus === "POSTED"
+                                ? "Lançado"
+                                : "Previsto"}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span>{formatCurrency(item.amount)}</span>
+                            <Button
+                              type="button"
+                              size="icon-sm"
+                              variant="ghost"
+                              aria-label={`Excluir ${item.description}`}
+                              onClick={() => handleDeleteItem(item.id)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         </div>
                       ))}
-                      <form action={handleAddItem} className="grid gap-2 rounded-md bg-muted/50 p-3">
-                        <Input name="description" placeholder="Descrição do lançamento" required />
-                        <Input name="amount" type="number" min="0.01" step="0.01" placeholder="Valor" required />
-                        <select className="rounded-md border bg-background px-2 py-2 text-sm" name="fixedCostOccurrenceId" defaultValue="">
+                      <form
+                        action={handleAddItem}
+                        className="grid gap-2 rounded-md bg-muted/50 p-3"
+                      >
+                        <Input
+                          name="description"
+                          placeholder="Descrição do lançamento"
+                          required
+                        />
+                        <Input
+                          name="amount"
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          placeholder="Valor"
+                          required
+                        />
+                        <select
+                          className="rounded-md border bg-background px-2 py-2 text-sm"
+                          name="fixedCostOccurrenceId"
+                          defaultValue=""
+                        >
                           <option value="">Não vincular a gasto fixo</option>
                           {selectedInvoice.fixedOccurrences
-                            .filter((occurrence) => !selectedInvoice.items.some((item) => item.fixedCostOccurrenceId === occurrence.id))
-                            .map((occurrence) => <option key={occurrence.id} value={occurrence.id}>Substituir previsão: {occurrence.fixedCost.name} ({formatCurrency(occurrence.amount)})</option>)}
+                            .filter(
+                              (occurrence) =>
+                                !selectedInvoice.items.some(
+                                  (item) =>
+                                    item.fixedCostOccurrenceId ===
+                                    occurrence.id,
+                                ),
+                            )
+                            .map((occurrence) => (
+                              <option key={occurrence.id} value={occurrence.id}>
+                                Substituir previsão: {occurrence.fixedCost.name}{" "}
+                                ({formatCurrency(occurrence.amount)})
+                              </option>
+                            ))}
                         </select>
                         <div className="grid grid-cols-2 gap-2">
-                          <select className="rounded-md border bg-background px-2 py-2 text-sm" name="kind" defaultValue="MANUAL"><option value="MANUAL">Avulso</option><option value="INSTALLMENT">Parcela</option><option value="FORECAST">Outro previsto</option></select>
-                          <select className="rounded-md border bg-background px-2 py-2 text-sm" name="postingStatus" defaultValue="POSTED"><option value="POSTED">Lançado</option><option value="PROJECTED">Previsto</option></select>
+                          <select
+                            className="rounded-md border bg-background px-2 py-2 text-sm"
+                            name="kind"
+                            defaultValue="MANUAL"
+                          >
+                            <option value="MANUAL">Avulso</option>
+                            <option value="INSTALLMENT">Parcela</option>
+                            <option value="FORECAST">Outro previsto</option>
+                          </select>
+                          <select
+                            className="rounded-md border bg-background px-2 py-2 text-sm"
+                            name="postingStatus"
+                            defaultValue="POSTED"
+                          >
+                            <option value="POSTED">Lançado</option>
+                            <option value="PROJECTED">Previsto</option>
+                          </select>
                         </div>
-                        <Button type="submit" size="sm">Adicionar lançamento</Button>
+                        <Button type="submit" size="sm">
+                          Adicionar lançamento
+                        </Button>
                       </form>
                     </div>
                   )}
 
                   <div className="border-t pt-4">
-                    <p className="text-xs text-muted-foreground mb-2">Importação de fatura</p>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Importação de fatura
+                    </p>
                     {selectedInvoice.importSessionId ? (
                       <div className="flex gap-2">
                         <Button
                           variant="outline"
                           className="flex-1"
-                          onClick={() => { window.history.replaceState(null, "", "/cards?tab=invoices"); router.push(`/invoices/${selectedInvoice.id}/analysis`) }}
+                          onClick={() => {
+                            window.history.replaceState(
+                              null,
+                              "",
+                              "/cards?tab=invoices",
+                            );
+                            router.push(
+                              `/invoices/${selectedInvoice.id}/analysis`,
+                            );
+                          }}
                         >
                           <FileText className="mr-2 h-4 w-4" />
                           Ver análise
@@ -917,8 +1613,8 @@ export function InvoicesTab() {
                         variant="outline"
                         className="w-full"
                         onClick={() => {
-                          setImportInvoiceId(selectedInvoice.id)
-                          setImportDialogOpen(true)
+                          setImportInvoiceId(selectedInvoice.id);
+                          setImportDialogOpen(true);
                         }}
                       >
                         <FileText className="mr-2 h-4 w-4" />
@@ -933,7 +1629,16 @@ export function InvoicesTab() {
         </SheetContent>
       </Sheet>
 
-      <ConfirmDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }} title="Excluir fatura" description="Tem certeza que deseja excluir esta fatura? Esta ação não pode ser feita." onConfirm={handleDelete} confirmText="Excluir" />
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title="Excluir fatura"
+        description="Tem certeza que deseja excluir esta fatura? Esta ação não pode ser feita."
+        onConfirm={handleDelete}
+        confirmText="Excluir"
+      />
 
       <ConfirmDialog
         open={confirmBatchDelete}
@@ -945,13 +1650,20 @@ export function InvoicesTab() {
         onConfirm={handleBatchDelete}
       />
 
-      <Dialog open={copyDialogOpen} onOpenChange={(open) => { if (!open) setCopyDialogOpen(false) }}>
+      <Dialog
+        open={copyDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) setCopyDialogOpen(false);
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Copiar faturas</DialogTitle>
           </DialogHeader>
           {availableMonths.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">Nenhuma fatura disponível para copiar.</p>
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              Nenhuma fatura disponível para copiar.
+            </p>
           ) : (
             <>
               <div className="space-y-1">
@@ -973,10 +1685,15 @@ export function InvoicesTab() {
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
               ) : prevInvoices.length === 0 ? (
-                <p className="py-4 text-center text-sm text-muted-foreground">Nenhuma fatura encontrada neste mês.</p>
+                <p className="py-4 text-center text-sm text-muted-foreground">
+                  Nenhuma fatura encontrada neste mês.
+                </p>
               ) : (
                 <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">Selecione as faturas que deseja copiar para {monthLabel(month)}:</p>
+                  <p className="text-sm text-muted-foreground">
+                    Selecione as faturas que deseja copiar para{" "}
+                    {monthLabel(month)}:
+                  </p>
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     {prevInvoices.map((inv) => (
                       <button
@@ -985,27 +1702,58 @@ export function InvoicesTab() {
                         onClick={() => toggleCopyId(inv.id)}
                         className={`flex w-full items-center gap-3 rounded-lg border-2 p-3 text-left transition-colors ${selectedCopyIds.includes(inv.id) ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}
                       >
-                        <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 ${selectedCopyIds.includes(inv.id) ? "border-primary bg-primary" : "border-muted-foreground/40"}`}>
-                          {selectedCopyIds.includes(inv.id) && <Check className="h-3 w-3 text-primary-foreground" />}
+                        <span
+                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 ${selectedCopyIds.includes(inv.id) ? "border-primary bg-primary" : "border-muted-foreground/40"}`}
+                        >
+                          {selectedCopyIds.includes(inv.id) && (
+                            <Check className="h-3 w-3 text-primary-foreground" />
+                          )}
                         </span>
-                        <span className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: inv.card.color }}>{inv.card.name.charAt(0)}</span>
+                        <span
+                          className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white"
+                          style={{ backgroundColor: inv.card.color }}
+                        >
+                          {inv.card.name.charAt(0)}
+                        </span>
                         <div className="flex-1">
                           <p className="text-sm font-medium">{inv.card.name}</p>
-                          <p className="text-xs text-muted-foreground">Vence {formatDate(inv.dueDate)}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Vence {formatDate(inv.dueDate)}
+                          </p>
                         </div>
-                        <span className="text-sm font-medium">{formatCurrency(inv.effectiveTotal)}</span>
+                        <span className="text-sm font-medium">
+                          {formatCurrency(inv.effectiveTotal)}
+                        </span>
                       </button>
                     ))}
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" className="flex-1" onClick={() => setCopyDialogOpen(false)}>Cancelar</Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setCopyDialogOpen(false)}
+                    >
+                      Cancelar
+                    </Button>
                     <Button
                       className="flex-1"
                       disabled={selectedCopyIds.length === 0 || copiando}
-                      onClick={() => handleCopyFromPrevious(selectedCopyIds.length === prevInvoices.length ? undefined : selectedCopyIds)}
+                      onClick={() =>
+                        handleCopyFromPrevious(
+                          selectedCopyIds.length === prevInvoices.length
+                            ? undefined
+                            : selectedCopyIds,
+                        )
+                      }
                     >
-                      {copiando ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Copy className="mr-1 h-4 w-4" />}
-                      {selectedCopyIds.length === prevInvoices.length ? "Copiar todas" : `Copiar ${selectedCopyIds.length}`}
+                      {copiando ? (
+                        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Copy className="mr-1 h-4 w-4" />
+                      )}
+                      {selectedCopyIds.length === prevInvoices.length
+                        ? "Copiar todas"
+                        : `Copiar ${selectedCopyIds.length}`}
                     </Button>
                   </div>
                 </div>
@@ -1021,8 +1769,8 @@ export function InvoicesTab() {
           onOpenChange={setImportDialogOpen}
           invoiceId={importInvoiceId}
           onImportComplete={() => {
-            fetchData()
-            setSelectedInvoice(null)
+            fetchData();
+            setSelectedInvoice(null);
           }}
         />
       )}
@@ -1033,11 +1781,14 @@ export function InvoicesTab() {
           onOpenChange={setImportStandaloneOpen}
           cards={cards}
           onImportComplete={(invId) => {
-            fetchData()
-            if (invId) { window.history.replaceState(null, "", "/cards?tab=invoices"); router.push(`/invoices/${invId}/analysis`) }
+            fetchData();
+            if (invId) {
+              window.history.replaceState(null, "", "/cards?tab=invoices");
+              router.push(`/invoices/${invId}/analysis`);
+            }
           }}
         />
       )}
     </div>
-  )
+  );
 }
