@@ -1,7 +1,7 @@
 "use client"
 
 import type { FormEvent } from "react"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { ArrowLeftRight, ArrowUpDown, Eye, Gift, Info, Loader2, Pencil, Plus, Settings, SlidersHorizontal, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -47,11 +47,13 @@ export default function BankAccountsPage() {
   const [transferOpen, setTransferOpen] = useState(false)
   const [adjustTarget, setAdjustTarget] = useState("")
   const [adjustSubmitting, setAdjustSubmitting] = useState(false)
+  const [updateSubmitting, setUpdateSubmitting] = useState(false)
   const [loading, setLoading] = useState(true)
   const [sortField, setSortField] = useState<AccountSortField>("name")
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
   const [creatingType, setCreatingType] = useState<BankAccount["type"]>("DIGITAL")
   const [editingType, setEditingType] = useState<BankAccount["type"]>("DIGITAL")
+  const updateInFlightRef = useRef(false)
 
   const fetchAccounts = async () => {
     setLoading(true)
@@ -94,26 +96,34 @@ export default function BankAccountsPage() {
   }
 
   const handleUpdate = async (accountId: string, formData: FormData) => {
-    const res = await fetch(`/api/bank-accounts/${accountId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: formData.get("name"),
-        institution: formData.get("institution") || null,
-        type: formData.get("type"),
-        color: formData.get("color") || "#22C55E",
-        overdraftLimit: formData.get("overdraftLimit") || 0,
-        benefitDailyRate: formData.get("benefitDailyRate") || null,
-      }),
-    })
-    if (res.ok) {
-      setSelectedAccount(null)
-      toast.success("Conta atualizada com sucesso.")
-    } else {
-      const err = await res.json().catch(() => ({}))
-      toast.error(err.error ?? "Não foi possível atualizar a conta.")
+    if (updateInFlightRef.current) return
+    updateInFlightRef.current = true
+    setUpdateSubmitting(true)
+    try {
+      const res = await fetch(`/api/bank-accounts/${accountId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.get("name"),
+          institution: formData.get("institution") || null,
+          type: formData.get("type"),
+          color: formData.get("color") || "#22C55E",
+          overdraftLimit: formData.get("overdraftLimit") || 0,
+          benefitDailyRate: formData.get("benefitDailyRate") || null,
+        }),
+      })
+      if (res.ok) {
+        setSelectedAccount(null)
+        toast.success("Conta atualizada com sucesso.")
+      } else {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.error ?? "Não foi possível atualizar a conta.")
+      }
+      fetchAccounts()
+    } finally {
+      updateInFlightRef.current = false
+      setUpdateSubmitting(false)
     }
-    fetchAccounts()
   }
 
   const handleDelete = async (accountId: string) => {
@@ -679,7 +689,9 @@ export default function BankAccountsPage() {
                         <label className="text-sm font-medium">Cor:</label>
                         <Input name="color" type="color" defaultValue={selectedAccount.color} className="w-16" />
                       </div>
-                      <Button type="submit" className="w-full">Salvar alterações</Button>
+                      <Button type="submit" className="w-full" disabled={updateSubmitting}>
+                        {updateSubmitting ? "Salvando..." : "Salvar alterações"}
+                      </Button>
                     </form>
                     <Button type="button" variant="destructive" className="w-full" onClick={() => setConfirmDelete(selectedAccount.id)}>
                       <Trash2 className="mr-2 h-4 w-4" />Excluir conta
