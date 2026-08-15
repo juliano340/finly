@@ -2,6 +2,7 @@
 
 import type { FormEvent } from "react"
 import { useEffect, useRef, useState } from "react"
+import { useFormStatus } from "react-dom"
 import { ArrowLeftRight, ArrowUpDown, Eye, Gift, Info, Loader2, Pencil, Plus, Settings, SlidersHorizontal, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -173,12 +174,13 @@ export default function BankAccountsPage() {
         }),
       })
       if (res.ok) {
+        await fetchAccounts()
         toast.success("Saldo ajustado com sucesso.")
       } else {
         const err = await res.json().catch(() => ({}))
         toast.error(err.error ?? "Não foi possível ajustar o saldo.")
+        fetchAccounts()
       }
-      fetchAccounts()
     } finally {
       setAdjustSubmitting(false)
     }
@@ -604,7 +606,7 @@ export default function BankAccountsPage() {
 
                     {showForm === "adjust" && (
                       <div className="rounded-lg border p-4 space-y-4">
-                        <form action={(formData) => { handleAdjustment(selectedAccount.id, formData); setShowForm(null); setAdjustTarget("") }} className="space-y-4">
+                        <form action={async (formData) => { await handleAdjustment(selectedAccount.id, formData); setShowForm(null); setAdjustTarget("") }} className="space-y-4">
                           <div className="space-y-1.5">
                             <label className="text-sm font-medium">Saldo correto</label>
                             <Input
@@ -637,9 +639,7 @@ export default function BankAccountsPage() {
                             <Input name="adjustDate" type="date" />
                           </div>
                           <div className="flex gap-2">
-                            <Button type="submit" className="flex-1" disabled={adjustSubmitting}>
-                              {adjustSubmitting ? "Ajustando..." : "Ajustar saldo"}
-                            </Button>
+                            <AdjustSubmitButton submitting={adjustSubmitting} />
                             <Button type="button" variant="outline" onClick={() => { setShowForm(null); setAdjustTarget("") }}>
                               Cancelar
                             </Button>
@@ -747,6 +747,12 @@ function businessDaysInCurrentMonth(reference = new Date()) {
 
 function estimatedBenefitCredit(dailyRate: number) {
   return dailyRate * businessDaysInCurrentMonth()
+}
+
+function AdjustSubmitButton({ submitting }: { submitting: boolean }) {
+  const { pending } = useFormStatus()
+  const isPending = pending || submitting
+  return <Button type="submit" className="flex-1" disabled={isPending}>{isPending ? "Ajustando..." : "Ajustar saldo"}</Button>
 }
 
 function SummaryCard({ title, value, highlight = false, loading = false, infoContent, className }: { title: string; value: string; highlight?: boolean; loading?: boolean; infoContent?: React.ReactNode; className?: string }) {
