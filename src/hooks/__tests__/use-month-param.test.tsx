@@ -50,7 +50,9 @@ describe("useMonthParam", () => {
     window.localStorage.setItem(LAST_SELECTED_MONTH_STORAGE_KEY, "2026-07")
     const { result } = renderHook(() => useMonthParam({ defaultMonth: "2026-08" }))
 
+    expect(result.current[2]).toBe(false)
     await waitFor(() => expect(result.current[0]).toBe("2026-07"))
+    expect(result.current[2]).toBe(true)
   })
 
   it("salva no navegador o mês escolhido", () => {

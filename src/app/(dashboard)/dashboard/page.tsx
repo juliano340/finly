@@ -48,7 +48,7 @@ export default function DashboardPage() {
 function DashboardPageContent() {
   const { data: session } = useSession()
   const [{ min: minMonth, max: maxMonth }] = useState(() => getSupportedMonthWindow())
-  const [month, setMonth] = useMonthParam({ defaultMonth: getBusinessMonthKey(new Date()), minMonth, maxMonth })
+  const [month, setMonth, isMonthReady] = useMonthParam({ defaultMonth: getBusinessMonthKey(new Date()), minMonth, maxMonth })
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [closing, setClosing] = useState<{ summary: { totalToPay: number; totalSpent: number } } | null>(null)
@@ -59,27 +59,33 @@ function DashboardPageContent() {
   const [selectedCardId, setSelectedCardId] = useState("all")
   const [monthlyPlan, setMonthlyPlan] = useState<MonthlyPlanDto | null>(null)
 
-  const fetchStats = useCallback(async () => {
+  const fetchStats = useCallback(async (signal: AbortSignal) => {
     setLoading(true)
     setMonthlyPlan(null)
     try {
-      const res = await fetch(`/api/dashboard/summary?month=${month}&months=6`)
-      if (!res.ok) return
+      const res = await fetch(`/api/dashboard/summary?month=${month}&months=6`, { signal })
+      if (signal.aborted || !res.ok) return
       const data = await res.json()
+      if (signal.aborted) return
       setStats(data.stats)
       setBankTotal(data.bankTotal)
       setClosing(data.closing)
       setEvolution(data.evolution)
       setCardEvolution(data.cardEvolution)
       setMonthlyPlan(data.monthlyPlan)
+    } catch (error) {
+      if (!signal.aborted) throw error
     } finally {
-      setLoading(false)
+      if (!signal.aborted) setLoading(false)
     }
   }, [month])
 
   useEffect(() => {
-    if (session?.user) fetchStats() // eslint-disable-line react-hooks/set-state-in-effect
-  }, [session, fetchStats])
+    if (!session?.user || !isMonthReady) return
+    const controller = new AbortController()
+    void fetchStats(controller.signal) // eslint-disable-line react-hooks/set-state-in-effect
+    return () => controller.abort()
+  }, [session, fetchStats, isMonthReady])
 
   const summary = stats
     ? { balance: stats.balance, income: stats.income, expense: stats.expense }

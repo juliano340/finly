@@ -39,6 +39,7 @@ export function useMonthParam({ defaultMonth, minMonth, maxMonth }: UseMonthPara
   const validUrlMonth = isValidMonth(urlMonth) && isWithinRange(urlMonth, minMonth, maxMonth) ? urlMonth : null
   const [interactiveMonth, setInteractiveMonth] = useState<string | null>(null)
   const [storedMonth, setStoredMonth] = useState<string | null>(null)
+  const [isStoredMonthReady, setIsStoredMonthReady] = useState(false)
   const [previousUrlMonth, setPreviousUrlMonth] = useState(urlMonth)
 
   if (urlMonth !== previousUrlMonth) {
@@ -48,7 +49,10 @@ export function useMonthParam({ defaultMonth, minMonth, maxMonth }: UseMonthPara
 
   useEffect(() => {
     const nextStoredMonth = validUrlMonth ?? window.localStorage.getItem(LAST_SELECTED_MONTH_STORAGE_KEY)
-    const timer = window.setTimeout(() => setStoredMonth(nextStoredMonth), 0)
+    const timer = window.setTimeout(() => {
+      setStoredMonth(nextStoredMonth)
+      setIsStoredMonthReady(true)
+    }, 0)
     if (validUrlMonth) window.localStorage.setItem(LAST_SELECTED_MONTH_STORAGE_KEY, validUrlMonth)
     return () => window.clearTimeout(timer)
   }, [validUrlMonth])
@@ -65,11 +69,14 @@ export function useMonthParam({ defaultMonth, minMonth, maxMonth }: UseMonthPara
 
     setInteractiveMonth(nextMonth)
     setStoredMonth(nextMonth)
+    setIsStoredMonthReady(true)
     window.localStorage.setItem(LAST_SELECTED_MONTH_STORAGE_KEY, nextMonth)
     const params = new URLSearchParams(searchParams.toString())
     params.set("month", nextMonth)
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
   }, [maxMonth, minMonth, pathname, router, searchParams])
 
-  return [month, setMonth] as const
+  const isMonthReady = validUrlMonth !== null || isStoredMonthReady
+
+  return [month, setMonth, isMonthReady] as const
 }

@@ -10,7 +10,8 @@ import {
   recordLoginFailure,
 } from "@/features/auth/login-rate-limit.service"
 
-const DUMMY_PASSWORD_HASH = "$2b$12$AFX1qqGxoGwG6.wcRv2GoOPr1r4vsEfaPdCjHY/rdZof1Zkc0Os4e"
+// Public dummy hash used only to keep failed-login timing consistent; it is not a credential.
+const DUMMY_PASSWORD_HASH = "$2b$12$AFX1qqGxoGwG6.wcRv2GoOPr1r4vsEfaPdCjHY/rdZof1Zkc0Os4e" // nosemgrep: generic.secrets.security.detected-bcrypt-hash.detected-bcrypt-hash
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },

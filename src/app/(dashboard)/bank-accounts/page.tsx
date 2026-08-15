@@ -107,6 +107,7 @@ export default function BankAccountsPage() {
       }),
     })
     if (res.ok) {
+      setSelectedAccount(null)
       toast.success("Conta atualizada com sucesso.")
     } else {
       const err = await res.json().catch(() => ({}))
