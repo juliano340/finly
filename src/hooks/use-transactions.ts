@@ -1,24 +1,28 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import type { TransactionWithRelations } from "@/features/transactions/transactions.types"
 import type { TransactionInput } from "@/features/transactions/transactions.schema"
 
-export function useTransactions() {
+interface TransactionFilters {
+  id?: string
+  type?: "INCOME" | "EXPENSE"
+  categoryId?: string
+  month?: string
+}
+
+export function useTransactions(initialFilters?: TransactionFilters) {
   const [transactions, setTransactions] = useState<TransactionWithRelations[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
-  const [filters, setFilters] = useState<{
-    id?: string
-    type?: "INCOME" | "EXPENSE"
-    categoryId?: string
-    month?: string
-  }>({})
+  const [filters, setFilters] = useState<TransactionFilters>(initialFilters ?? {})
+  const requestIdRef = useRef(0)
 
   const limit = 20
 
   const fetchTransactions = useCallback(async () => {
+    const requestId = ++requestIdRef.current
     setLoading(true)
     const params = new URLSearchParams({
       page: String(page),
@@ -28,8 +32,10 @@ export function useTransactions() {
       ),
     })
     const res = await fetch(`/api/transactions?${params}`)
+    if (requestIdRef.current !== requestId) return
     if (res.ok) {
       const data = await res.json()
+      if (requestIdRef.current !== requestId) return
       setTransactions(data.transactions)
       setTotal(data.total)
     }

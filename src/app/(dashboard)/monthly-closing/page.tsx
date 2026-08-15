@@ -114,7 +114,7 @@ function MonthlyClosingPageContent() {
           pending={summary?.totalToPay ?? 0}
           loading={loading}
         />
-        <ExpenseComposition items={totalFormula} pendingItems={pendingFormula} loading={loading} />
+        <ExpenseComposition items={totalFormula} pendingItems={pendingFormula} loading={loading} month={month} />
       </div>
       <section className="grid gap-4 lg:grid-cols-2">
         <Card className="border-0 shadow-sm lg:col-span-2"><CardHeader><CardTitle className="text-base">Cartões e faturas</CardTitle><p className="text-sm text-muted-foreground">Compare o valor lançado com a previsão dos custos fixos por cartão.</p></CardHeader><CardContent><CardRows loading={loading} invoices={data?.invoices} estimates={summary?.estimatedInvoicesByCard} /></CardContent></Card>
@@ -186,7 +186,7 @@ function OverviewValue({ label, value, detail, loading, tone = "default" }: {
   )
 }
 
-function ExpenseComposition({ items, pendingItems, loading }: { items: DetailItem[]; pendingItems: DetailItem[]; loading: boolean }) {
+function ExpenseComposition({ items, pendingItems, loading, month }: { items: DetailItem[]; pendingItems: DetailItem[]; loading: boolean; month: string }) {
   const pendingByLabel = new Map(pendingItems.map((item) => [item.label, item.value ?? 0]))
   const pendingLabels: Record<string, string> = {
     Faturas: "Faturas pendentes",
@@ -194,11 +194,12 @@ function ExpenseComposition({ items, pendingItems, loading }: { items: DetailIte
     Avulsas: "Avulsas",
     "Fixos no cartão sem fatura": "Fixos no cartão sem fatura",
   }
+  const monthQuery = `month=${month}`
   const links: Record<string, string> = {
-    Faturas: "/invoices",
-    "Fixos fora": "/fixed-costs",
-    Avulsas: "/transactions",
-    "Fixos no cartão sem fatura": "/fixed-costs",
+    Faturas: `/cards?tab=invoices&${monthQuery}`,
+    "Fixos fora": `/fixed-costs?${monthQuery}`,
+    Avulsas: `/transactions?${monthQuery}`,
+    "Fixos no cartão sem fatura": `/fixed-costs?${monthQuery}`,
   }
 
   return (

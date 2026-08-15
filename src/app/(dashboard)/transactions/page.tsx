@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/select"
 import { useTransactions } from "@/hooks/use-transactions"
 import { useCategories } from "@/hooks/use-categories"
+import { MonthNavigator, getCurrentMonth } from "@/components/month-navigator"
+import { useMonthParam } from "@/hooks/use-month-param"
 import { TransactionRow } from "./_components/transaction-row"
 import { TransactionTable } from "./_components/transaction-table"
 import { TransactionForm } from "./_components/transaction-form"
@@ -40,6 +42,7 @@ interface InvoiceOption {
 export default function TransactionsPage() {
   const searchParams = useSearchParams()
   const highlightId = searchParams.get("id")
+  const [month, setMonth] = useMonthParam({ defaultMonth: getCurrentMonth() })
 
   const {
     transactions,
@@ -52,7 +55,12 @@ export default function TransactionsPage() {
     createTransaction,
     updateTransaction,
     deleteTransaction,
-  } = useTransactions()
+  } = useTransactions({ month })
+
+  useEffect(() => {
+    setFilters((prev) => (prev.month === month ? prev : { ...prev, month }))
+    setPage(1)
+  }, [month, setFilters, setPage])
 
   const { categories } = useCategories()
   const [bankAccounts, setBankAccounts] = useState<BankAccountOption[]>([])
@@ -132,16 +140,19 @@ export default function TransactionsPage() {
             Avulsas, receitas e ajustes · {total} {total === 1 ? "item" : "itens"}
           </p>
         </div>
-        <Button
-          onClick={() => {
-            setEditing(null)
-            setFormOpen(true)
-          }}
-          className="w-full gap-2 sm:w-auto"
-        >
-          <Plus className="h-4 w-4" />
-          Novo lançamento avulso
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+          <MonthNavigator month={month} todayMonth={getCurrentMonth()} onMonthChange={setMonth} />
+          <Button
+            onClick={() => {
+              setEditing(null)
+              setFormOpen(true)
+            }}
+            className="w-full gap-2 sm:w-auto"
+          >
+            <Plus className="h-4 w-4" />
+            Novo lançamento avulso
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:hidden">
@@ -232,7 +243,7 @@ export default function TransactionsPage() {
               <Wallet className="h-6 w-6 text-muted-foreground" />
             </div>
             <p className="text-sm text-muted-foreground">
-              Nenhuma transação ainda. Comece adicionando sua primeira!
+              Nenhuma transação neste mês.
             </p>
           </div>
         ) : (

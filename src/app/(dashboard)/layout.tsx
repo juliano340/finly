@@ -166,7 +166,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const renderNavigation = (isCollapsed: boolean, onNavigate?: () => void) => (
     <nav className="flex-1 space-y-1 p-2">
       {navItems.map((item) => {
-        const isActive = item.href === "/cards" ? pathname.startsWith("/cards") || pathname.startsWith("/invoices/") : pathname === item.href
+        const isActive = item.href === "/cards" ? pathname.startsWith("/cards") || pathname.startsWith("/invoices") : pathname === item.href
         const sharedMonth = searchParams.get("month")
         const href = sharedMonth ? `${item.href}?month=${encodeURIComponent(sharedMonth)}` : item.href
         return (
