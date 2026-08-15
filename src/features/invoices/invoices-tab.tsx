@@ -173,6 +173,126 @@ const lifecycleLabels = {
   PAID: "Paga",
 } as const;
 
+const kindLabels: Record<string, string> = {
+  MANUAL: "Avulso",
+  INSTALLMENT: "Parcela",
+  FIXED_COST: "Fixo",
+  IMPORTED: "Importado",
+  FORECAST: "Outro previsto",
+};
+
+const MAX_TOOLTIP_ENTRIES = 6;
+
+function InvoiceTotalCell({ invoice }: { invoice: Invoice }) {
+  const linkedOccurrenceIds = new Set(
+    invoice.items
+      .map((item) => item.fixedCostOccurrenceId)
+      .filter((id): id is string => !!id),
+  );
+  const unlinkedOccurrences = invoice.fixedOccurrences.filter(
+    (occurrence) => !linkedOccurrenceIds.has(occurrence.id),
+  );
+  const entries = [
+    ...unlinkedOccurrences.map((occurrence) => ({
+      key: occurrence.id,
+      label: occurrence.fixedCost.name,
+      sub: "Fixo · Previsto",
+      amount: occurrence.amount,
+    })),
+    ...invoice.items.map((item) => ({
+      key: item.id,
+      label: item.description,
+      sub: `${kindLabels[item.kind] ?? item.kind} · ${
+        item.postingStatus === "POSTED" ? "Lançado" : "Previsto"
+      }`,
+      amount: item.amount,
+    })),
+  ];
+  const hasComposition =
+    entries.length > 0 || invoice.calculationMode === "ENTERED_TOTAL";
+  if (!hasComposition) {
+    return <>{formatCurrency(invoice.effectiveTotal)}</>;
+  }
+  const visibleEntries = entries.slice(0, MAX_TOOLTIP_ENTRIES);
+  const hiddenEntries = entries.slice(MAX_TOOLTIP_ENTRIES);
+  const showDifference =
+    invoice.calculationMode === "ENTERED_TOTAL" && invoice.difference !== 0;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={<span />}
+        className="cursor-help underline decoration-dotted decoration-muted-foreground/50 underline-offset-4"
+      >
+        {formatCurrency(invoice.effectiveTotal)}
+      </TooltipTrigger>
+      <TooltipContent className="w-64 flex-col items-stretch gap-0 px-3 py-2 text-left">
+        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider opacity-60">
+          Composição da fatura
+        </p>
+        <div className="space-y-1.5">
+          {visibleEntries.map((entry) => (
+            <div
+              key={entry.key}
+              className="flex items-baseline justify-between gap-3"
+            >
+              <span className="min-w-0">
+                <span className="block truncate">{entry.label}</span>
+                <span className="block text-[10px] opacity-60">{entry.sub}</span>
+              </span>
+              <span className="shrink-0 font-medium tabular-nums">
+                {formatCurrency(entry.amount)}
+              </span>
+            </div>
+          ))}
+          {hiddenEntries.length > 0 && (
+            <div className="flex items-baseline justify-between gap-3 opacity-70">
+              <span>
+                + {hiddenEntries.length}{" "}
+                {hiddenEntries.length === 1 ? "outro" : "outros"}
+              </span>
+              <span className="font-medium tabular-nums">
+                {formatCurrency(
+                  hiddenEntries.reduce((sum, entry) => sum + entry.amount, 0),
+                )}
+              </span>
+            </div>
+          )}
+        </div>
+        <div className="mt-1.5 space-y-1 border-t border-background/25 pt-1.5">
+          {showDifference && (
+            <>
+              <div className="flex items-baseline justify-between gap-3 opacity-80">
+                <span>Composição calculada</span>
+                <span className="tabular-nums">
+                  {formatCurrency(invoice.calculatedTotal)}
+                </span>
+              </div>
+              <div className="flex items-baseline justify-between gap-3 opacity-80">
+                <span>Diferença</span>
+                <span className="tabular-nums">
+                  {invoice.difference > 0 ? "+" : ""}
+                  {formatCurrency(invoice.difference)}
+                </span>
+              </div>
+            </>
+          )}
+          <div className="flex items-baseline justify-between gap-3 font-semibold">
+            <span>
+              {invoice.calculationMode === "ENTERED_TOTAL"
+                ? "Informado manualmente"
+                : "Total"}
+            </span>
+            <span className="tabular-nums">
+              {formatCurrency(invoice.effectiveTotal)}
+            </span>
+          </div>
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 export function InvoicesTab() {
   const router = useRouter();
   const [cards, setCards] = useState<CardItem[]>([]);
@@ -785,7 +905,7 @@ export function InvoicesTab() {
                     {formatDate(invoice.dueDate)}
                   </td>
                   <td className="px-4 py-3 text-right font-medium">
-                    {formatCurrency(invoice.effectiveTotal)}
+                    <InvoiceTotalCell invoice={invoice} />
                   </td>
                   <td className="px-4 py-3 text-center">
                     {invoice.status === "PAID" ? (
