@@ -46,10 +46,10 @@ export async function POST(request: Request) {
   try {
     const budget = await createBudget(session.user.id, result.data)
     return NextResponse.json(budget, { status: 201 })
-  } catch {
+  } catch (error) {
     return NextResponse.json(
-      { error: "Erro ao criar orçamento" },
-      { status: 500 }
+      { error: error instanceof Error ? error.message : "Erro ao criar orçamento" },
+      { status: 400 }
     )
   }
 }

@@ -25,13 +25,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
 
-  const { normalizedDesc, categoryId } = await request.json()
+  let normalizedDesc: unknown, categoryId: unknown
+  try {
+    ({ normalizedDesc, categoryId } = await request.json())
+  } catch {
+    return NextResponse.json({ error: "JSON inválido" }, { status: 400 })
+  }
 
-  if (!normalizedDesc || !categoryId) {
+  if (typeof normalizedDesc !== "string" || typeof categoryId !== "string" || !normalizedDesc || !categoryId) {
     return NextResponse.json(
       { error: "normalizedDesc e categoryId são obrigatórios" },
       { status: 400 }
     )
+  }
+
+  const category = await prisma.category.findFirst({
+    where: { id: categoryId, userId: session.user.id },
+    select: { id: true },
+  })
+  if (!category) {
+    return NextResponse.json({ error: "Categoria inválida" }, { status: 400 })
   }
 
   const mapping = await prisma.descriptionMapping.upsert({

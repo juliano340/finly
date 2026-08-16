@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { updateTransaction, deleteTransaction } from "@/features/transactions/transactions.service"
+import { transactionSchema } from "@/features/transactions/transactions.schema"
 
 export async function PUT(
   request: Request,
@@ -14,7 +15,11 @@ export async function PUT(
   const { id } = await params
   try {
     const body = await request.json()
-    const updated = await updateTransaction(id, session.user.id, body)
+    const parsed = transactionSchema.partial().safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Dados inválidos" }, { status: 400 })
+    }
+    const updated = await updateTransaction(id, session.user.id, parsed.data)
 
     if (!updated) {
       return NextResponse.json({ error: "Transação não encontrada" }, { status: 404 })

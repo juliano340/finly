@@ -74,6 +74,12 @@ export async function createTransaction(
 ) {
   const db = client ?? defaultPrisma
 
+  const category = await db.category.findFirst({
+    where: { id: input.categoryId, userId },
+    select: { id: true },
+  })
+  if (!category) throw new Error("Categoria inválida")
+
   if (input.invoiceId) {
     if (input.type !== "EXPENSE") throw new Error("Somente despesas podem ser lançadas em faturas")
     const invoice = await getEditableInvoice(input.invoiceId, userId, db)
@@ -108,6 +114,12 @@ export async function createTransaction(
   }
 
   if (input.bankAccountId) {
+    const account = await db.bankAccount.findFirst({
+      where: { id: input.bankAccountId, userId },
+      select: { id: true },
+    })
+    if (!account) throw new Error("Conta não encontrada")
+
     if (input.type === "EXPENSE") {
       const check = await validateExpenseLimit(input.bankAccountId, userId, input.amount, db)
       if (!check.allowed) throw new Error(check.reason)
@@ -167,6 +179,14 @@ export async function updateTransaction(
   const existing = await db.transaction.findUnique({ where: { id }, include: { invoiceItem: true } })
   if (!existing || existing.userId !== userId) return null
 
+  if (input.categoryId !== undefined) {
+    const category = await db.category.findFirst({
+      where: { id: input.categoryId, userId },
+      select: { id: true },
+    })
+    if (!category) throw new Error("Categoria inválida")
+  }
+
   const oldBankAccountId = existing.bankAccountId
   const newBankAccountId = input.bankAccountId
   const oldInvoiceId = existing.invoiceItem?.invoiceId ?? null
@@ -185,6 +205,14 @@ export async function updateTransaction(
     if (finalInvoiceId) {
       if (finalType !== "EXPENSE") throw new Error("Somente despesas podem ser lançadas em faturas")
       if (!await getEditableInvoice(finalInvoiceId, userId, db)) throw new Error("Fatura inválida ou fechada")
+    }
+
+    if (finalBankAccountId) {
+      const account = await db.bankAccount.findFirst({
+        where: { id: finalBankAccountId, userId },
+        select: { id: true },
+      })
+      if (!account) throw new Error("Conta não encontrada")
     }
 
     if (finalType === "EXPENSE" && finalBankAccountId) {

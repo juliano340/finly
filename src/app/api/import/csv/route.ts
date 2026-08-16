@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { parseCSV } from "@/features/import/import.service"
 import { prisma } from "@/lib/prisma"
+import { validateCsvUpload } from "@/lib/upload-validation"
 
 export async function POST(request: Request) {
   const session = await auth()
@@ -16,6 +17,11 @@ export async function POST(request: Request) {
 
   if (!file) {
     return NextResponse.json({ error: "Arquivo não fornecido" }, { status: 400 })
+  }
+
+  const uploadError = validateCsvUpload(file)
+  if (uploadError) {
+    return NextResponse.json({ error: uploadError }, { status: 400 })
   }
 
   if (!categoryId) {

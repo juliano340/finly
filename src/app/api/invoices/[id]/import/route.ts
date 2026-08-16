@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { uploadAndParsePdf } from "@/features/pdf-import/pdf-import.service"
+import { validatePdfUpload } from "@/lib/upload-validation"
 
 export async function POST(
   request: Request,
@@ -21,8 +22,9 @@ export async function POST(
       return NextResponse.json({ error: "Nenhum arquivo enviado" }, { status: 400 })
     }
 
-    if (file.type !== "application/pdf") {
-      return NextResponse.json({ error: "Arquivo não é um PDF" }, { status: 400 })
+    const uploadError = await validatePdfUpload(file)
+    if (uploadError) {
+      return NextResponse.json({ error: uploadError }, { status: 400 })
     }
 
     const result = await uploadAndParsePdf(

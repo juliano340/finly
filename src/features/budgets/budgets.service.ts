@@ -26,6 +26,12 @@ export async function createBudget(
   client?: PrismaClient
 ): Promise<BudgetWithCategory> {
   const db = client ?? defaultPrisma
+  const category = await db.category.findFirst({
+    where: { id: input.categoryId, userId },
+    select: { id: true },
+  })
+  if (!category) throw new Error("Categoria inválida")
+
   const budget = await db.budget.create({
     data: {
       amount: input.amount,
@@ -49,6 +55,14 @@ export async function updateBudget(
   const db = client ?? defaultPrisma
   const budget = await db.budget.findUnique({ where: { id } })
   if (!budget || budget.userId !== userId) return null
+
+  if (input.categoryId !== undefined) {
+    const category = await db.category.findFirst({
+      where: { id: input.categoryId, userId },
+      select: { id: true },
+    })
+    if (!category) throw new Error("Categoria inválida")
+  }
 
   const updated = await db.budget.update({
     where: { id },

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { importPdfStandalone } from "@/features/pdf-import/pdf-import.service"
+import { validatePdfUpload } from "@/lib/upload-validation"
 
 export async function POST(request: NextRequest) {
   const session = await auth()
@@ -19,8 +20,9 @@ export async function POST(request: NextRequest) {
     if (!cardId) {
       return NextResponse.json({ error: "Selecione um cartão" }, { status: 400 })
     }
-    if (file.type !== "application/pdf") {
-      return NextResponse.json({ error: "Arquivo não é um PDF" }, { status: 400 })
+    const uploadError = await validatePdfUpload(file)
+    if (uploadError) {
+      return NextResponse.json({ error: uploadError }, { status: 400 })
     }
 
     const result = await importPdfStandalone(file, cardId, session.user.id)

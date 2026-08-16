@@ -23,12 +23,18 @@ export async function PUT(
     )
   }
 
-  const budget = await updateBudget(id, session.user.id, result.data)
-  if (!budget) {
-    return NextResponse.json({ error: "Orçamento não encontrado" }, { status: 404 })
+  try {
+    const budget = await updateBudget(id, session.user.id, result.data)
+    if (!budget) {
+      return NextResponse.json({ error: "Orçamento não encontrado" }, { status: 404 })
+    }
+    return NextResponse.json(budget)
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Erro ao atualizar orçamento" },
+      { status: 400 }
+    )
   }
-
-  return NextResponse.json(budget)
 }
 
 export async function DELETE(

@@ -21,6 +21,14 @@ export async function uploadAndParsePdf(
 ): Promise<PdfImportResult> {
   const db = client ?? defaultPrisma
 
+  if (cardInvoiceId) {
+    const invoice = await db.cardInvoice.findFirst({
+      where: { id: cardInvoiceId, userId },
+      select: { id: true },
+    })
+    if (!invoice) throw new Error("Fatura não encontrada")
+  }
+
   const arrayBuffer = await file.arrayBuffer()
   const buffer = Buffer.from(arrayBuffer)
 
