@@ -59,7 +59,7 @@ export async function getMonthlyClosing(
 
   await ensureFixedCostOccurrences(userId, month, financialMonth.id, db)
 
-  const [invoices, occurrences, looseExpenses, looseIncome] = await Promise.all([
+  const [invoices, occurrences, looseExpenseItems, looseIncome] = await Promise.all([
     db.cardInvoice.findMany({
       where: { userId, month },
       include: { card: true, items: true },
@@ -70,7 +70,7 @@ export async function getMonthlyClosing(
       include: { fixedCost: { include: { category: true, card: true, bankAccount: true } } },
       orderBy: { fixedCost: { name: "asc" } },
     }),
-    aggregateTransactions(userId, month, "EXPENSE", db),
+    getLooseExpenseTransactions(userId, month, db),
     getLooseIncomeTransactions(userId, month, db),
   ])
 
@@ -78,6 +78,7 @@ export async function getMonthlyClosing(
   const incomeOccurrences = occurrences.filter((item) => item.fixedCost.type === "INCOME")
   const fixedCostsTotal = sum(expenseOccurrences.map((item) => item.amount))
   const fixedIncomeTotal = sum(incomeOccurrences.map((item) => item.amount))
+  const looseExpenses = sum(looseExpenseItems.map((item) => item.amount))
   const insideCard = expenseOccurrences.filter((item) => item.fixedCost.paidInsideCard)
   const outsideCard = expenseOccurrences.filter((item) => !item.fixedCost.paidInsideCard)
   const invoicesWithTotals = invoices.map((invoice) => {
@@ -85,7 +86,12 @@ export async function getMonthlyClosing(
       ...invoice,
       fixedOccurrences: insideCard.filter((item) => item.fixedCost.cardId === invoice.cardId),
     })
-    return { ...invoice, ...totals, amount: totals.effectiveTotal }
+    return {
+      ...invoice,
+      ...totals,
+      amount: totals.effectiveTotal,
+      items: invoice.items.map((item) => ({ ...item, amount: moneyToNumber(item.amount) })),
+    }
   })
   const cardInvoicesTotal = sum(invoicesWithTotals.filter((inv) => inv.status === "PENDING").map((inv) => inv.amount))
   const fixedCostsInsideCardTotal = sum(insideCard.map((item) => item.amount))
@@ -127,6 +133,7 @@ export async function getMonthlyClosing(
     financialMonth,
     invoices: invoicesWithTotals,
     fixedCosts: occurrences,
+    looseExpenses: looseExpenseItems,
     summary: {
       month,
       cardInvoicesTotal,
@@ -606,6 +613,34 @@ async function aggregateTransactions(
     _sum: { amount: true },
   })
   return moneyToNumber(result._sum.amount ?? 0)
+}
+
+async function getLooseExpenseTransactions(
+  userId: string,
+  month: string,
+  db: PrismaClient
+) {
+  const [year, m] = month.split("-").map(Number)
+  const transactions = await db.transaction.findMany({
+    where: {
+      userId,
+      type: "EXPENSE",
+      invoiceItem: null,
+      OR: [{ bankAccountId: null }, { bankAccount: { type: { not: "BENEFIT" } } }],
+      date: { gte: new Date(year, m - 1, 1), lt: new Date(year, m, 1) },
+    },
+    select: {
+      id: true,
+      amount: true,
+      description: true,
+      category: { select: { name: true } },
+    },
+    orderBy: { date: "desc" },
+  })
+  return transactions.map((transaction) => ({
+    ...transaction,
+    amount: moneyToNumber(transaction.amount),
+  }))
 }
 
 async function getLooseIncomeTransactions(

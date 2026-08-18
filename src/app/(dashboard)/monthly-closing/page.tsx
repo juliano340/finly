@@ -15,8 +15,9 @@ import { useMonthParam } from "@/hooks/use-month-param"
     estimatedInvoicesByCard: { cardId: string; cardName: string; estimatedAmount: number; invoiceAmount: number; difference: number }[]
     incomeItems: { name: string; amount: number; type: "FIXED" | "LOOSE"; status: "PENDING" | "PAID" }[]
   }
-  invoices: { id: string; amount: number; dueDate: string; status: "PENDING" | "PAID"; card: { name: string } }[]
+  invoices: { id: string; amount: number; dueDate: string; status: "PENDING" | "PAID"; card: { name: string }; items: { id: string; description: string; amount: number }[] }[]
   fixedCosts: { id: string; amount: number; status: "PENDING" | "PAID"; fixedCost: { name: string; type: "INCOME" | "EXPENSE"; paidInsideCard: boolean; paymentMethod: string; category: { name: string }; card: { name: string } | null; bankAccount: { name: string } | null } }[]
+  looseExpenses: { id: string; amount: number; description: string | null; category: { name: string } }[]
 }
 
 export default function MonthlyClosingPage() {
@@ -75,6 +76,28 @@ function MonthlyClosingPageContent() {
     { label: "Fixos fora", value: summary?.fixedCostsOutsideCardTotalAll ?? 0 },
     { label: "Avulsas", value: summary?.looseExpensesTotal ?? 0 },
   ]
+  const invoiceCardIds = new Set((data?.invoices ?? []).map((invoice) => invoice.card.name))
+  const expenseDetails: Record<string, ExpenseDetail[]> = {
+    Faturas: (data?.invoices ?? []).map((invoice) => ({
+      id: invoice.id,
+      name: `Fatura ${invoice.card.name}`,
+      amount: invoice.amount,
+      status: invoice.status,
+      children: invoice.items.map((item) => ({ id: item.id, name: item.description, amount: item.amount })),
+    })),
+    "Fixos fora": (data?.fixedCosts ?? [])
+      .filter((item) => item.fixedCost.type === "EXPENSE" && !item.fixedCost.paidInsideCard)
+      .map((item) => ({ id: item.id, name: item.fixedCost.name, amount: item.amount, status: item.status })),
+    Avulsas: (data?.looseExpenses ?? []).map((item) => ({
+      id: item.id,
+      name: item.description ?? item.category.name,
+      amount: item.amount,
+      status: "PAID" as const,
+    })),
+    "Fixos no cartão sem fatura": (data?.fixedCosts ?? [])
+      .filter((item) => item.fixedCost.type === "EXPENSE" && item.fixedCost.paidInsideCard && (!item.fixedCost.card || !invoiceCardIds.has(item.fixedCost.card.name)))
+      .map((item) => ({ id: item.id, name: item.fixedCost.name, amount: item.amount, status: item.status })),
+  }
 
   return (
     <div className="space-y-6">
@@ -114,7 +137,7 @@ function MonthlyClosingPageContent() {
           pending={summary?.totalToPay ?? 0}
           loading={loading}
         />
-        <ExpenseComposition items={totalFormula} pendingItems={pendingFormula} loading={loading} month={month} />
+        <ExpenseComposition items={totalFormula} pendingItems={pendingFormula} details={expenseDetails} loading={loading} month={month} />
       </div>
       <section className="grid gap-4 lg:grid-cols-2">
         <Card className="border-0 shadow-sm lg:col-span-2"><CardHeader><CardTitle className="text-base">Cartões e faturas</CardTitle><p className="text-sm text-muted-foreground">Compare o valor lançado com a previsão dos custos fixos por cartão.</p></CardHeader><CardContent><CardRows loading={loading} invoices={data?.invoices} estimates={summary?.estimatedInvoicesByCard} /></CardContent></Card>
@@ -125,6 +148,7 @@ function MonthlyClosingPageContent() {
 }
 
 type DetailItem = { name?: string; label?: string; amount?: number; value?: number; status?: string }
+type ExpenseDetail = { id: string; name: string; amount: number; status: string; children?: { id: string; name: string; amount: number }[] }
 
 function MonthlyOverview({ income, receivedIncome, expenses, result, paid, pending, loading }: {
   income: number
@@ -186,7 +210,8 @@ function OverviewValue({ label, value, detail, loading, tone = "default" }: {
   )
 }
 
-function ExpenseComposition({ items, pendingItems, loading, month }: { items: DetailItem[]; pendingItems: DetailItem[]; loading: boolean; month: string }) {
+function ExpenseComposition({ items, pendingItems, details, loading, month }: { items: DetailItem[]; pendingItems: DetailItem[]; details: Record<string, ExpenseDetail[]>; loading: boolean; month: string }) {
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const pendingByLabel = new Map(pendingItems.map((item) => [item.label, item.value ?? 0]))
   const pendingLabels: Record<string, string> = {
     Faturas: "Faturas pendentes",
@@ -201,6 +226,17 @@ function ExpenseComposition({ items, pendingItems, loading, month }: { items: De
     Avulsas: `/transactions?${monthQuery}`,
     "Fixos no cartão sem fatura": `/fixed-costs?${monthQuery}`,
   }
+  const totals = items.reduce(
+    (acc, item) => {
+      const total = item.value ?? item.amount ?? 0
+      const pending = pendingByLabel.get(pendingLabels[item.label ?? ""] ?? "") ?? 0
+      acc.total += total
+      acc.paid += total - pending
+      acc.pending += pending
+      return acc
+    },
+    { total: 0, paid: 0, pending: 0 },
+  )
 
   return (
     <Card className="border-0 shadow-sm">
@@ -217,15 +253,57 @@ function ExpenseComposition({ items, pendingItems, loading, month }: { items: De
             {loading ? <div className="flex items-center gap-2 px-3 py-6 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div> : items.map((item) => {
               const total = item.value ?? item.amount ?? 0
               const pending = pendingByLabel.get(pendingLabels[item.label ?? ""] ?? "") ?? 0
+              const label = item.label ?? ""
+              const itemDetails = details[label] ?? []
+              const isExpanded = expanded[label] ?? false
               return (
-                <Link href={links[item.label ?? ""] ?? "#"} key={item.label} className="group grid grid-cols-[1.5fr_1fr_1fr_1fr] gap-4 border-b px-3 py-3 last:border-0 hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:outline-none">
-                  <span className="font-medium underline-offset-4 group-hover:underline">{item.label}</span>
-                  <span className="text-right font-semibold tabular-nums">{formatCurrency(total)}</span>
-                  <span className="text-right tabular-nums text-success">{formatCurrency(total - pending)}</span>
-                  <span className="text-right tabular-nums text-muted-foreground">{formatCurrency(pending)}</span>
-                </Link>
+                <div key={item.label} className="border-b last:border-0">
+                  <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr] gap-4 px-3 py-3 hover:bg-muted/40">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <button
+                        type="button"
+                        aria-expanded={isExpanded}
+                        onClick={() => setExpanded((current) => ({ ...current, [label]: !isExpanded }))}
+                        className="min-w-0 truncate text-left font-medium underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        {item.label}
+                      </button>
+                      {itemDetails.length > 0 && <Link href={links[label] ?? "#"} className="shrink-0 text-xs text-muted-foreground hover:text-foreground">Abrir lista</Link>}
+                    </div>
+                    <span className="text-right font-semibold tabular-nums">{formatCurrency(total)}</span>
+                    <span className="text-right tabular-nums text-success">{formatCurrency(total - pending)}</span>
+                    <span className="text-right tabular-nums text-muted-foreground">{formatCurrency(pending)}</span>
+                  </div>
+                  {isExpanded && (
+                    <div className="space-y-1 bg-muted/20 px-3 pb-3 pt-1">
+                      {itemDetails.map((detail) => (
+                        <div key={detail.id}>
+                          <div className="flex items-center justify-between gap-3 rounded-md px-3 py-2 text-xs font-medium">
+                            <span className="min-w-0 truncate">{detail.name}</span>
+                            <span className="shrink-0 tabular-nums">{formatCurrency(detail.amount)}</span>
+                          </div>
+                          {detail.children?.map((child) => (
+                            <div key={child.id} className="flex items-center justify-between gap-3 px-6 py-1 text-xs text-muted-foreground">
+                              <span className="min-w-0 truncate">{child.name}</span>
+                              <span className="shrink-0 tabular-nums">{formatCurrency(child.amount)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                      {itemDetails.length === 0 && <p className="px-3 py-2 text-xs text-muted-foreground">Nenhum lançamento detalhado.</p>}
+                    </div>
+                  )}
+                </div>
               )
             })}
+            {!loading && (
+              <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr] gap-4 border-t bg-muted/30 px-3 py-3 font-semibold">
+                <span>Total</span>
+                <span className="text-right tabular-nums">{formatCurrency(totals.total)}</span>
+                <span className="text-right tabular-nums text-success">{formatCurrency(totals.paid)}</span>
+                <span className="text-right tabular-nums text-muted-foreground">{formatCurrency(totals.pending)}</span>
+              </div>
+            )}
           </div>
         </div>
         <p className="mt-3 text-xs text-muted-foreground">No modo valor total, a fatura já inclui os fixos. No modo calculado, eles compõem a previsão. Sem fatura, aparecem separadamente como previsão do cartão.</p>
@@ -243,6 +321,14 @@ function CardRows({ loading, invoices = [], estimates = [] }: {
   if (invoices.length === 0 && estimates.length === 0) return <p className="py-4 text-sm text-muted-foreground">Nenhuma fatura ou previsão para este mês.</p>
 
   const names = [...new Set([...invoices.map((invoice) => invoice.card.name), ...estimates.map((item) => item.cardName)])]
+  const cardTotals = names.reduce((totals, name) => {
+    const invoice = invoices.find((item) => item.card.name === name)
+    const estimate = estimates.find((item) => item.cardName === name)
+    totals.invoice += invoice?.amount ?? 0
+    totals.estimate += estimate?.estimatedAmount ?? 0
+    totals.difference += estimate?.difference ?? 0
+    return totals
+  }, { invoice: 0, estimate: 0, difference: 0 })
   return (
     <div className="divide-y">
       <div className="hidden grid-cols-[1.5fr_1fr_1fr_1fr] gap-4 border-b px-3 pb-2 text-xs font-medium text-muted-foreground sm:grid">
@@ -263,6 +349,12 @@ function CardRows({ loading, invoices = [], estimates = [] }: {
           </div>
         )
       })}
+      <div className="grid gap-2 border-t bg-muted/30 px-3 py-3 text-sm font-semibold sm:grid-cols-[1.5fr_1fr_1fr_1fr] sm:gap-4">
+        <span>Total</span>
+        <span className="flex justify-between gap-3 sm:block sm:text-right"><span className="text-muted-foreground sm:hidden">Fatura</span>{formatCurrency(cardTotals.invoice)}</span>
+        <span className="flex justify-between gap-3 sm:block sm:text-right"><span className="text-muted-foreground sm:hidden">Previsão</span>{formatCurrency(cardTotals.estimate)}</span>
+        <span className="flex justify-between gap-3 sm:block sm:text-right"><span className="text-muted-foreground sm:hidden">Diferença</span>{formatCurrency(cardTotals.difference)}</span>
+      </div>
     </div>
   )
 }
@@ -276,24 +368,28 @@ function FixedCostRows({ loading, items = [], onPay }: {
   if (items.length === 0) return <p className="py-4 text-sm text-muted-foreground">Nenhum custo fixo neste mês.</p>
 
   return (
-    <div className="space-y-3">
+    <div>
+      <div className="hidden grid-cols-[1.5fr_1fr_1.2fr_1.2fr_auto_auto] gap-4 border-b px-3 pb-2 text-xs font-medium text-muted-foreground sm:grid">
+        <span>Custo</span><span>Categoria</span><span>Pagamento</span><span>Conta</span><span>Status</span><span className="text-right">Valor</span>
+      </div>
+      <div className="space-y-3 sm:space-y-0">
       {items.map((item) => (
-        <div key={item.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-lg border p-3 sm:items-start">
+        <div key={item.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-lg border p-3 sm:grid-cols-[1.5fr_1fr_1.2fr_1.2fr_auto_auto] sm:items-center sm:gap-4 sm:rounded-none sm:border-0 sm:border-b sm:px-3">
           <div className="min-w-0">
             <p className="truncate font-semibold">{item.fixedCost.name}</p>
-            <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-xs text-muted-foreground">
+            <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-xs text-muted-foreground sm:hidden">
               <span>{item.fixedCost.category.name}</span>
               <span aria-hidden="true">·</span>
               <span>{item.fixedCost.paidInsideCard ? `Incluído na fatura ${item.fixedCost.card?.name ?? ""}` : "Fora do cartão"}</span>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-xs text-muted-foreground sm:hidden">
               Conta: {item.fixedCost.bankAccount?.name ?? "não definida"}
             </p>
-            <span className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${item.status === "PAID" ? "bg-success/10 text-success" : "bg-amber-500/10 text-amber-600"}`}>
+            <span className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium sm:hidden ${item.status === "PAID" ? "bg-success/10 text-success" : "bg-amber-500/10 text-amber-600"}`}>
               {item.status === "PAID" ? "Pago" : "Pendente"}
             </span>
           </div>
-          <div className="text-right">
+          <div className="text-right sm:col-start-6">
             <p className="whitespace-nowrap font-semibold tabular-nums">{formatCurrency(item.amount)}</p>
             {item.status === "PENDING" && item.fixedCost.bankAccount && (
               <Button className="mt-2" size="sm" variant="outline" onClick={() => onPay(item.id)}>
@@ -301,8 +397,17 @@ function FixedCostRows({ loading, items = [], onPay }: {
               </Button>
             )}
           </div>
+          <span className="hidden text-sm sm:col-start-2 sm:block">{item.fixedCost.category.name}</span>
+          <span className="hidden text-sm text-muted-foreground sm:col-start-3 sm:block">{item.fixedCost.paidInsideCard ? `Fatura ${item.fixedCost.card?.name ?? ""}` : "Fora do cartão"}</span>
+          <span className="hidden text-sm text-muted-foreground sm:col-start-4 sm:block">{item.fixedCost.bankAccount?.name ?? "não definida"}</span>
+          <span className="hidden text-xs sm:col-start-5 sm:block">{item.status === "PAID" ? "Pago" : "Pendente"}</span>
         </div>
       ))}
+      </div>
+      <div className="flex items-center justify-between border-t bg-muted/30 px-3 py-3 text-sm font-semibold">
+        <span>Total</span>
+        <span className="tabular-nums">{formatCurrency(items.reduce((total, item) => total + item.amount, 0))}</span>
+      </div>
     </div>
   )
 }
