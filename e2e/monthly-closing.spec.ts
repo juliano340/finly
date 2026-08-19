@@ -74,6 +74,6 @@ test.describe("Fechamento Mensal", () => {
 
     await page.goto("/monthly-closing")
     await expect(page.locator('main :visible:text("R$ 420,00")').first()).toBeVisible({ timeout: 10000 })
-    await expect(page.locator("text=Incluído na fatura Cartão E2E")).toBeVisible()
+    await expect(page.getByText("Fatura Cartão E2E", { exact: true })).toBeVisible()
   })
 })
