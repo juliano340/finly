@@ -102,6 +102,10 @@ function formatDueDate(dueDay: number | null, month: string) {
   return date.toLocaleDateString("pt-BR", { timeZone: "UTC" })
 }
 
+function formatCalendarDate(value: string) {
+  return new Date(value).toLocaleDateString("pt-BR", { timeZone: "UTC" })
+}
+
 function FixedCostsPageInner() {
   const [month, setMonth] = useMonthParam({ defaultMonth: getCurrentMonth() })
 
@@ -131,6 +135,7 @@ function FixedCostsPageInner() {
   const [loading, setLoading] = useState(true)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [editScope, setEditScope] = useState<FixedCostEditScope>("THIS_MONTH")
+  const [editMode, setEditMode] = useState<"AMOUNT" | "SERIES">("AMOUNT")
   const [creatingLoading, setCreatingLoading] = useState(false)
   const [sortField, setSortField] = useState<OccurrenceSortField>("dueDate")
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
@@ -317,6 +322,51 @@ function FixedCostsPageInner() {
     }
   }
 
+  const handleSeriesUpdate = async (occurrence: Occurrence, formData: FormData) => {
+    if (inFlightUpdateRef.current) return
+    inFlightUpdateRef.current = true
+    const item = occurrence.fixedCost
+    const paidInsideCard = item.type === "EXPENSE" && formData.get("paidInsideCard") === "on"
+    setUpdateError("")
+    setUpdatingId(occurrence.id)
+    try {
+      const res = await fetch(`/api/fixed-costs/${occurrence.fixedCostId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.get("name"),
+          type: item.type,
+          categoryId: formData.get("categoryId"),
+          paymentMethod: paidInsideCard ? "CREDIT_CARD" : formData.get("paymentMethod") || "PIX",
+          dueDay: formData.get("dueDay") || null,
+          paidInsideCard,
+          cardId: paidInsideCard ? formData.get("cardId") : null,
+          bankAccountId: formData.get("bankAccountId") || null,
+          active: formData.get("active") === "on",
+          startDate: recStartDate,
+          frequency: recFrequencyType === "custom" ? "CUSTOM" : recFrequency,
+          customInterval: recFrequencyType === "custom" ? (Number(recCustomInterval) || null) : null,
+          customUnit: recFrequencyType === "custom" ? recCustomUnit : null,
+          endType: recEndType,
+          endDate: recEndType === "DATE" ? recEndDate : null,
+          endAfterCount: recEndType === "COUNT" ? (Number(recEndAfterCount) || null) : null,
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        setUpdateError(err.error ?? "Erro ao salvar")
+        toast.error(err.error ?? "Erro ao atualizar configurações da série")
+        return
+      }
+      toast.success("Configurações da série atualizadas.")
+      setSelectedOccurrence(null)
+      await fetchData()
+    } finally {
+      setUpdatingId(null)
+      inFlightUpdateRef.current = false
+    }
+  }
+
   const handleDelete = async (itemId: string) => {
     const res = await fetch(`/api/fixed-costs/${itemId}`, { method: "DELETE" })
     setConfirmDelete(null)
@@ -350,6 +400,16 @@ function FixedCostsPageInner() {
   const openEditSheet = (occurrence: Occurrence) => {
     setSelectedOccurrence(occurrence)
     setEditScope("THIS_MONTH")
+    setEditMode("AMOUNT")
+    setInsideCard(occurrence.fixedCost.paidInsideCard)
+    setRecStartDate(occurrence.fixedCost.startDate?.split("T")[0] ?? new Date().toISOString().split("T")[0])
+    setRecFrequency(occurrence.fixedCost.frequency ?? "MONTHLY")
+    setRecFrequencyType(occurrence.fixedCost.frequency === "CUSTOM" ? "custom" : "standard")
+    setRecCustomInterval(occurrence.fixedCost.customInterval?.toString() ?? "")
+    setRecCustomUnit(occurrence.fixedCost.customUnit ?? "MONTHS")
+    setRecEndType(occurrence.fixedCost.endType ?? "NONE")
+    setRecEndDate(occurrence.fixedCost.endDate?.split("T")[0] ?? "")
+    setRecEndAfterCount(occurrence.fixedCost.endAfterCount?.toString() ?? "")
   }
 
   const selectedTemplate = selectedOccurrence?.fixedCost ?? null
@@ -502,7 +562,7 @@ function FixedCostsPageInner() {
                       : <span className="font-medium text-foreground">Fora do cartão{occ.fixedCost.bankAccount ? ` · ${occ.fixedCost.bankAccount.name}` : ""}</span>
                     }
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">{occ.dueDate ? new Date(occ.dueDate).toLocaleDateString("pt-BR") : formatDueDate(occ.fixedCost.dueDay, occ.month)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{occ.dueDate ? formatCalendarDate(occ.dueDate) : formatDueDate(occ.fixedCost.dueDay, occ.month)}</td>
                   <td className="w-[140px] px-4 py-3 text-right font-medium">{formatCurrency(occ.amount)}</td>
                   <td className="w-[160px] px-4 py-3">
                     <div className="flex min-w-[72px] items-center justify-center gap-2">
@@ -614,7 +674,7 @@ function FixedCostsPageInner() {
           const isLoading = payingId === occ.fixedCostId || unpayingId === occ.fixedCostId
           const isLoadingCard = payingCardId === occ.fixedCostId || unpayingCardId === occ.fixedCostId
           const sourceLabel = occ.fixedCost.paidInsideCard ? `Cartão ${occ.fixedCost.card?.name ?? "-"}` : "Fora do cartão"
-          const dueLabel = occ.dueDate ? new Date(occ.dueDate).toLocaleDateString("pt-BR") : occ.fixedCost.dueDay ? formatDueDate(occ.fixedCost.dueDay, occ.month) : null
+          const dueLabel = occ.dueDate ? formatCalendarDate(occ.dueDate) : occ.fixedCost.dueDay ? formatDueDate(occ.fixedCost.dueDay, occ.month) : null
           return (
             <div key={occ.id} className="rounded-lg border bg-card p-3 transition-colors hover:bg-muted/50">
               <div className="flex items-start gap-3">
@@ -869,47 +929,135 @@ function FixedCostsPageInner() {
           ) : selectedOccurrence && selectedTemplate ? (
             <>
               <SheetHeader>
-                <SheetTitle>{selectedTemplate.name}</SheetTitle>
+                <SheetTitle>{editMode === "AMOUNT" ? selectedTemplate.name : `Configurações · ${selectedTemplate.name}`}</SheetTitle>
               </SheetHeader>
               <div className="flex-1 overflow-y-auto px-4 pb-4">
                 <div className="mt-4 space-y-4">
-                  <form ref={editFormRef} className="space-y-4">
-                    <fieldset className="space-y-2">
-                      <legend className="text-sm font-medium">Aplicar alteração em</legend>
-                      {([
-                        ["THIS_MONTH", `Somente esta ocorrência (${formatMonth(selectedOccurrence.month)})`],
-                        ["THIS_AND_FUTURE", `Esta ocorrência e as próximas, a partir de ${formatMonth(selectedOccurrence.month)}`],
-                        ["ENTIRE_SERIES", "Toda a série"],
-                      ] as const).map(([scope, label]) => (
-                        <label key={scope} className="flex cursor-pointer items-start gap-2 rounded-md border p-3 text-sm">
-                          <input
-                            type="radio"
-                            name="scope"
-                            value={scope}
-                            checked={editScope === scope}
-                            onChange={() => setEditScope(scope)}
-                          />
-                          <span>{label}</span>
-                        </label>
-                      ))}
-                    </fieldset>
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium">Novo valor</label>
-                      <Input name="amount" type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*" defaultValue={selectedOccurrence.amount} required />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {editScope === "THIS_MONTH"
-                        ? "Somente o valor desta ocorrência será alterado."
-                        : editScope === "THIS_AND_FUTURE"
-                          ? "O novo valor será usado nesta ocorrência, nas próximas ocorrências abertas e como padrão para novas ocorrências."
-                          : "O novo valor será aplicado às ocorrências abertas da série e usado como padrão. Valores pagos, meses fechados e ocorrências excluídas serão preservados."}
-                    </p>
-                    <p className="text-xs text-muted-foreground">As demais configurações pertencem à série e não podem ser alteradas neste editor.</p>
-                    {updateError && <p className="text-sm text-destructive">{updateError}</p>}
-                    <Button type="button" className="w-full" disabled={updatingId === selectedOccurrence.id} onClick={() => handleUpdate(selectedOccurrence, new FormData(editFormRef.current!))}>
-                      {updatingId === selectedOccurrence.id ? "Salvando..." : saveEditLabel}
-                    </Button>
-                  </form>
+                  {editMode === "AMOUNT" ? (
+                    <form ref={editFormRef} className="space-y-4">
+                      <fieldset className="space-y-2">
+                        <legend className="text-sm font-medium">Aplicar alteração em</legend>
+                        {([
+                          ["THIS_MONTH", `Somente esta ocorrência (${formatMonth(selectedOccurrence.month)})`],
+                          ["THIS_AND_FUTURE", `Esta ocorrência e as próximas, a partir de ${formatMonth(selectedOccurrence.month)}`],
+                          ["ENTIRE_SERIES", "Toda a série"],
+                        ] as const).map(([scope, label]) => (
+                          <label key={scope} className="flex cursor-pointer items-start gap-2 rounded-md border p-3 text-sm">
+                            <input type="radio" name="scope" value={scope} checked={editScope === scope} onChange={() => setEditScope(scope)} />
+                            <span>{label}</span>
+                          </label>
+                        ))}
+                      </fieldset>
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium" htmlFor="occurrence-amount">Novo valor</label>
+                        <Input id="occurrence-amount" name="amount" type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*" defaultValue={selectedOccurrence.amount} required />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {editScope === "THIS_MONTH"
+                          ? "Somente o valor desta ocorrência será alterado."
+                          : editScope === "THIS_AND_FUTURE"
+                            ? "O novo valor será usado nesta ocorrência, nas próximas ocorrências abertas e como padrão para novas ocorrências."
+                            : "O novo valor será aplicado às ocorrências abertas da série e usado como padrão. Valores pagos, meses fechados e ocorrências excluídas serão preservados."}
+                      </p>
+                      {updateError && <p className="text-sm text-destructive">{updateError}</p>}
+                      <Button type="button" className="w-full" disabled={updatingId === selectedOccurrence.id} onClick={() => handleUpdate(selectedOccurrence, new FormData(editFormRef.current!))}>
+                        {updatingId === selectedOccurrence.id ? "Salvando..." : saveEditLabel}
+                      </Button>
+                      <Button type="button" variant="outline" className="w-full" onClick={() => { setUpdateError(""); setEditMode("SERIES") }}>
+                        Editar configurações da série
+                      </Button>
+                    </form>
+                  ) : (
+                    <form ref={editFormRef} className="space-y-4">
+                      <p className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300">
+                        Estas configurações pertencem à série e afetam todos os meses que exibem este cadastro. O valor é alterado separadamente por escopo.
+                      </p>
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium" htmlFor="series-name">Nome</label>
+                        <Input id="series-name" name="name" defaultValue={selectedTemplate.name} required />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium" htmlFor="series-due-day">Dia de vencimento</label>
+                        <Input id="series-due-day" name="dueDay" type="number" min="1" max="31" defaultValue={selectedTemplate.dueDay ?? ""} placeholder="Ex: 10" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium" htmlFor="series-category">Categoria</label>
+                        <select id="series-category" className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="categoryId" defaultValue={selectedTemplate.categoryId} required>
+                          {categories.filter((category) => category.type === selectedTemplate.type).map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                        </select>
+                      </div>
+                      {selectedTemplate.type === "EXPENSE" && (
+                        <>
+                          <label className="flex items-center gap-2 text-sm">
+                            <input type="checkbox" checked={insideCard} name="paidInsideCard" onChange={(event) => setInsideCard(event.target.checked)} />
+                            Dentro do cartão
+                          </label>
+                          {!insideCard ? (
+                            <div className="space-y-1">
+                              <label className="text-sm font-medium" htmlFor="series-payment-method">Método de pagamento</label>
+                              <select id="series-payment-method" className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="paymentMethod" defaultValue={selectedTemplate.paymentMethod}>
+                                <option value="PIX">Pix</option>
+                                <option value="BANK_SLIP">Boleto</option>
+                                <option value="DEBIT">Débito</option>
+                                <option value="CASH">Dinheiro</option>
+                              </select>
+                            </div>
+                          ) : (
+                            <div className="space-y-1">
+                              <label className="text-sm font-medium" htmlFor="series-card">Cartão</label>
+                              <select id="series-card" className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="cardId" defaultValue={selectedTemplate.cardId ?? ""} required>
+                                <option value="">Selecione um cartão</option>
+                                {cards.map((card) => <option key={card.id} value={card.id}>{card.name}</option>)}
+                              </select>
+                            </div>
+                          )}
+                      </>
+                      )}
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium" htmlFor="series-bank-account">Conta prevista (débito)</label>
+                        <select id="series-bank-account" className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="bankAccountId" defaultValue={selectedTemplate.bankAccountId ?? ""}>
+                          <option value="">Sem conta prevista</option>
+                          {bankAccounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+                        </select>
+                      </div>
+                      <div className="space-y-3 border-t pt-4">
+                        <p className="text-sm font-medium">Recorrência</p>
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium" htmlFor="series-start-date">Data de início</label>
+                          <input id="series-start-date" type="date" className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recStartDate} onChange={(event) => setRecStartDate(event.target.value)} required />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button type="button" variant={recFrequencyType === "standard" ? "default" : "secondary"} className="flex-1" onClick={() => setRecFrequencyType("standard")}>Padrão</Button>
+                          <Button type="button" variant={recFrequencyType === "custom" ? "default" : "secondary"} className="flex-1" onClick={() => setRecFrequencyType("custom")}>Personalizada</Button>
+                        </div>
+                        {recFrequencyType === "standard" ? (
+                          <div className="space-y-1">
+                            <label className="text-sm font-medium" htmlFor="series-frequency">Frequência</label>
+                            <select id="series-frequency" className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recFrequency} onChange={(event) => setRecFrequency(event.target.value)}>
+                              <option value="DAILY">Diária</option><option value="WEEKLY">Semanal</option><option value="BIWEEKLY">Quinzenal</option><option value="MONTHLY">Mensal</option><option value="BIMONTHLY">Bimestral</option><option value="QUARTERLY">Trimestral</option><option value="SEMIANNUAL">Semestral</option><option value="ANNUAL">Anual</option>
+                            </select>
+                          </div>
+                        ) : (
+                          <div className="flex gap-2">
+                            <div className="flex-1 space-y-1"><label className="text-sm font-medium" htmlFor="series-interval">A cada</label><Input id="series-interval" type="number" min="1" value={recCustomInterval} onChange={(event) => setRecCustomInterval(event.target.value)} /></div>
+                            <div className="flex-[2] space-y-1"><label className="text-sm font-medium" htmlFor="series-unit">Unidade</label><select id="series-unit" className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recCustomUnit} onChange={(event) => setRecCustomUnit(event.target.value)}><option value="DAYS">Dias</option><option value="WEEKS">Semanas</option><option value="MONTHS">Meses</option><option value="YEARS">Anos</option></select></div>
+                          </div>
+                        )}
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium" htmlFor="series-end-type">Término</label>
+                          <select id="series-end-type" className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recEndType} onChange={(event) => setRecEndType(event.target.value)}><option value="NONE">Sem data final</option><option value="DATE">Encerrar em uma data</option><option value="COUNT">Após N ocorrências</option></select>
+                        </div>
+                        {recEndType === "DATE" && <div className="space-y-1"><label className="text-sm font-medium" htmlFor="series-end-date">Data de término</label><input id="series-end-date" type="date" className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recEndDate} onChange={(event) => setRecEndDate(event.target.value)} /></div>}
+                        {recEndType === "COUNT" && <div className="space-y-1"><label className="text-sm font-medium" htmlFor="series-end-count">Número de ocorrências</label><Input id="series-end-count" type="number" min="1" value={recEndAfterCount} onChange={(event) => setRecEndAfterCount(event.target.value)} /></div>}
+                      </div>
+                      <label className="flex items-center gap-2 text-sm"><input type="checkbox" defaultChecked={selectedTemplate.active} name="active" />Ativo</label>
+                      {updateError && <p className="text-sm text-destructive">{updateError}</p>}
+                      <Button type="button" className="w-full" disabled={updatingId === selectedOccurrence.id} onClick={() => handleSeriesUpdate(selectedOccurrence, new FormData(editFormRef.current!))}>
+                        {updatingId === selectedOccurrence.id ? "Salvando..." : "Salvar configurações da série"}
+                      </Button>
+                      <Button type="button" variant="outline" className="w-full" onClick={() => { setUpdateError(""); setEditMode("AMOUNT") }}>Voltar para valor e escopo</Button>
+                    </form>
+                  )}
                   <Button type="button" variant="destructive" className="w-full" onClick={() => setConfirmDelete(selectedTemplate.id)}>
                     <Trash2 className="mr-2 h-4 w-4" />Excluir lançamento fixo
                   </Button>

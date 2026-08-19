@@ -331,7 +331,7 @@ describe("fixed-costs.service - update amount propagation", () => {
     expect(transaction).toHaveBeenCalledWith(expect.any(Function), { isolationLevel: "Serializable" })
   })
 
-  it("gera ocorrência de lançamento sem data de fim ao consultar mês futuro", async () => {
+  it("gera vencimento no dia 1 ao consultar mês futuro", async () => {
     const name = uniqueName()
     const created = await createFixedCost(userId, {
       name,
@@ -339,7 +339,7 @@ describe("fixed-costs.service - update amount propagation", () => {
       defaultAmount: 88.77,
       categoryId,
       paymentMethod: "DEBIT",
-      dueDay: 10,
+      dueDay: 1,
       paidInsideCard: false,
       bankAccountId,
       active: true,
@@ -361,7 +361,7 @@ describe("fixed-costs.service - update amount propagation", () => {
       where: { fixedCostId: created.id, month: futureMonth, userId, deletedAt: null },
     })
     expect(occurrence?.amount.toNumber()).toBe(88.77)
-    expect(occurrence?.dueDate?.toISOString().slice(0, 10)).toBe(`${futureMonth}-10`)
+    expect(occurrence?.dueDate?.toISOString().slice(0, 10)).toBe(`${futureMonth}-01`)
   })
 
   it("zera apenas despesas fixas do usuário e preserva receitas, outros usuários e movimentos", async () => {

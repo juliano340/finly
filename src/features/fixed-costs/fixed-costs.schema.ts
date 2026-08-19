@@ -39,6 +39,40 @@ export const fixedCostSchema = z.object(fixedCostShape).refine(
 
 export const fixedCostPartialSchema = z.object(fixedCostShape).partial()
 
+export const fixedCostSeriesUpdateSchema = z.object({
+  name: fixedCostShape.name,
+  type: fixedCostShape.type,
+  categoryId: fixedCostShape.categoryId,
+  paymentMethod: fixedCostShape.paymentMethod,
+  dueDay: fixedCostShape.dueDay,
+  paidInsideCard: fixedCostShape.paidInsideCard,
+  cardId: fixedCostShape.cardId,
+  bankAccountId: fixedCostShape.bankAccountId,
+  active: fixedCostShape.active,
+  startDate: fixedCostShape.startDate,
+  frequency: fixedCostShape.frequency,
+  customInterval: fixedCostShape.customInterval,
+  customUnit: fixedCostShape.customUnit,
+  endType: fixedCostShape.endType,
+  endDate: fixedCostShape.endDate,
+  endAfterCount: fixedCostShape.endAfterCount,
+}).strict().refine(
+  (data) => !data.paidInsideCard || !!data.cardId,
+  { message: "Cartão é obrigatório para custos pagos dentro do cartão", path: ["cardId"] }
+).refine(
+  (data) => data.type !== "INCOME" || !data.paidInsideCard,
+  { message: "Receitas fixas não podem ser pagas dentro do cartão", path: ["paidInsideCard"] }
+).refine(
+  (data) => data.frequency !== "CUSTOM" || (data.customInterval != null && data.customUnit != null),
+  { message: "Intervalo e unidade são obrigatórios para recorrência personalizada", path: ["customInterval"] }
+).refine(
+  (data) => data.endType !== "DATE" || !!data.endDate,
+  { message: "Data de término é obrigatória quando selecionada", path: ["endDate"] }
+).refine(
+  (data) => data.endType !== "COUNT" || (data.endAfterCount != null && data.endAfterCount > 0),
+  { message: "Número de ocorrências deve ser maior que zero", path: ["endAfterCount"] }
+)
+
 export const fixedCostEditScopeSchema = z.enum(["THIS_MONTH", "THIS_AND_FUTURE", "ENTIRE_SERIES"])
 
 export const fixedCostOccurrenceAmountUpdateSchema = z.object({

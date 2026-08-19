@@ -15,19 +15,19 @@ updated: 2026-08-18T22:17:00-03:00
 
 ## Current Focus
 
-- hypothesis: CORRIGIDA — ocorrência exata protegida agora é rejeitada, stale check roda em transação Serializable e editor contém somente escopo+valor.
-- test: Verificação focada concluída em serviço, rota e componente; aguardar validação end-to-end no fluxo real após aplicação autorizada da migration.
-- expecting: THIS_MONTH protegido retorna 409 sem side effects; conflito transacional retorna stale; UI envia cada escopo e exibe botão correspondente.
-- next_action: Aplicar migration no ambiente autorizado e validar os três escopos pela tela; responder "confirmed fixed" ou relatar divergência.
+- hypothesis: REGRESSÃO CONFIRMADA — o editor amount-only removeu a configuração da série; datas ISO de calendário são exibidas em horário local e podem recuar de 01/09 para 31/08 em America/Sao_Paulo.
+- test: Verificação automatizada concluída; aguardar validação humana do editor de configuração e das datas na tela real.
+- expecting: PUT scoped permanece isolado; PATCH altera configurações sem amount/defaultAmount; vencimento dia 1 permanece dia 1.
+- next_action: Validar na UI editar valor mensal, editar configurações da série separadamente e conferir vencimento dia 1.
 - reasoning_checkpoint:
-    hypothesis: "A ausência de occurrenceId/month/scope faz a edição mensal cair em update global baseado no relógio do servidor."
+    hypothesis: "O commit de escopo substituiu integralmente o formulário da série pelo formulário amount-only e datas ISO de calendário ainda são formatadas no timezone local."
     confirming_evidence:
-      - "A UI abre uma Occurrence, mas envia apenas campos de FixedCost para /api/fixed-costs/:id."
-      - "updateFixedCost grava defaultAmount e executa updateMany com cutoff calculado por new Date(), não pelo mês selecionado."
-      - "FixedCostOccurrence já possui amount, status, deletedAt, updatedAt e relação com FinancialMonth, suficientes para escopo seguro somente de valor."
-    falsification_test: "Um teste que edita 2026-11 com THIS_MONTH e observa qualquer outra ocorrência alterada, ou que altera PAID/CLOSED/deleted, refuta a correção."
-    fix_rationale: "Contrato por ocorrência torna origem e cutoff explícitos; transação filtra somente PENDING+OPEN+não excluídas; limitar UI a amount evita prometer histórico de metadados sem snapshots."
-    blind_spots: "Metadados continuam globais por decisão explícita desta entrega; UI de edição foi limitada a valor."
+      - "Diff de 4973978 remove 162 linhas do formulário de nome, categoria, fonte, recorrência e ativo, deixando apenas escopo+amount."
+      - "A rota PUT agora aceita estritamente o contrato de ocorrência; não existe outro método/rota usado pela UI para updateFixedCost."
+      - "Tabela e card mobile chamam new Date(occ.dueDate).toLocaleDateString('pt-BR') sem timeZone UTC."
+    falsification_test: "A hipótese seria falsa se houvesse outra ação acessível que salvasse configurações da série, ou se 2026-09-01T00:00:00Z fosse sempre renderizado como 01/09 independentemente do timezone."
+    fix_rationale: "PATCH autenticado e validado, sem defaultAmount, separa configuração global do PUT por ocorrência; helper UTC preserva semântica de data de calendário."
+    blind_spots: "Configurações continuam globais por design e mudanças de regra não reconciliam ocorrências já materializadas; isso deve ser comunicado no editor, não misturado ao escopo de amount."
 - tdd_checkpoint:
 
 ## Evidence
@@ -102,6 +102,21 @@ updated: 2026-08-18T22:17:00-03:00
   found: ESLint focado passou; 3 arquivos Vitest, 17 testes, todos verdes; schemas Prisma PostgreSQL/SQLite válidos; git diff --check passou.
   implication: Todos os sete achados de revisão possuem implementação e regressão automatizada; nenhuma migration foi aplicada nesta continuação.
 
+- timestamp: 2026-08-19T10:10:00-03:00
+  checked: Regressões RED para configuração separada e data UTC
+  found: 4 testes falharam como previsto: PATCH não exportado, botão de configuração ausente e 01/09/2026 não renderizado para ISO meia-noite UTC.
+  implication: Testes reproduzem diretamente as duas regressões antes da correção e preservam PUT scoped como contrato independente.
+
+- timestamp: 2026-08-19T10:12:00-03:00
+  checked: Regressões GREEN após PATCH separado, editor explícito e helper UTC
+  found: 2 arquivos Vitest, 10 testes, todos verdes; inclui três escopos PUT, PATCH sem amount e data 01/09/2026.
+  implication: Correção aborda diretamente as duas regressões sem reabrir update global de valor.
+
+- timestamp: 2026-08-19T10:16:00-03:00
+  checked: Armazenamento de vencimento gerado no dia 1
+  found: Geração usa meia-noite local de São Paulo, persistida como 03:00Z; o dia ISO continua 01. O risco 31/08 ocorre ao formatar localmente um valor de calendário recebido como 00:00Z.
+  implication: Persistência gerada não recua o dia; helper de exibição UTC normaliza ambos os formatos e teste de geração deve validar identidade do dia, não hora absoluta.
+
 ## Eliminated
 
 - hypothesis: O update de novembro altera fisicamente amounts de ocorrências PAID ou em FinancialMonth CLOSED.
@@ -115,6 +130,6 @@ updated: 2026-08-18T22:17:00-03:00
 ## Resolution
 
 - root_cause: A UI apresenta uma ocorrência mensal mas edita a única definição FixedCost. API não recebe occurrenceId, mês nem scope. Serviço atualiza a definição global e propaga amount por um updateMany baseado no mês corrente do servidor, enquanto schema não guarda snapshots de nome/tipo/categoria/fonte/regra na ocorrência. Assim não existe fronteira representável entre esta ocorrência, futuro e série inteira; guardas protegem apenas amount PAID/CLOSED e integrações continuam usando metadados atuais.
-- fix: Edição mensal limitada a amount com escopo explícito; contrato autenticado por ocorrência/mês; transação com proteção histórica e stale-write; revisão efetiva de valor para geração futura; ENTIRE_SERIES redefine baseline e limpa revisões; UI PT-BR com THIS_MONTH padrão.
-- verification: Prisma schemas válidos; Prisma clients gerados; ESLint focado e diff check verdes; Vitest focado 17/17 em serviço, rota e componente. tsc global permanece bloqueado por erros preexistentes fora do escopo. Migration PostgreSQL criada, não aplicada; somente test.db SQLite havia sido sincronizado na verificação anterior.
-- files_changed: [prisma/schema.prisma, prisma/schema.sqlite.prisma, prisma/migrations/20260819010000_add_fixed_cost_amount_revisions/migration.sql, src/features/fixed-costs/fixed-costs.schema.ts, src/features/fixed-costs/fixed-costs.service.ts, src/features/monthly-closing/monthly-closing.service.ts, src/app/api/fixed-costs/[id]/route.ts, src/app/api/fixed-costs/[id]/route.test.ts, src/app/(dashboard)/fixed-costs/page.tsx, src/features/fixed-costs/__tests__/fixed-costs.service.test.ts, src/app/(dashboard)/fixed-costs/__tests__/page.test.tsx]
+- fix: Edição mensal limitada a amount com escopo explícito; PATCH separado e estrito restaura configurações da série sem aceitar amount/defaultAmount; editor distingue os dois fluxos com aviso de alcance global; datas de calendário são exibidas em UTC.
+- verification: Vitest focado 21/21 verde em serviço, rota e componente; teste adicional de geração dia 1 verde; ESLint focado e git diff --check verdes. tsc global segue bloqueado por erros preexistentes; o único erro novo de fixture foi corrigido. Nenhuma migration aplicada e nenhum commit criado.
+- files_changed: [src/features/fixed-costs/fixed-costs.schema.ts, src/app/api/fixed-costs/[id]/route.ts, src/app/api/fixed-costs/[id]/route.test.ts, src/app/(dashboard)/fixed-costs/page.tsx, src/app/(dashboard)/fixed-costs/__tests__/page.test.tsx, src/features/fixed-costs/__tests__/fixed-costs.service.test.ts]

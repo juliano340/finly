@@ -161,6 +161,56 @@ describe("FixedCostsPage", () => {
       ])
     })
   })
+
+  it("edita configurações da série por uma ação separada sem enviar valor", async () => {
+    const item = occurrence("occurrence-1", "Internet", "2026-08")
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url === "/api/categories") return Promise.resolve(response([item.fixedCost.category]))
+      if (url === "/api/cards" || url === "/api/bank-accounts") return Promise.resolve(response([]))
+      if (url === "/api/fixed-costs/occurrences?month=2026-08") return Promise.resolve(response([item]))
+      if (url === "/api/fixed-costs/occurrence-1" && init?.method === "PATCH") return Promise.resolve(response({ id: "occurrence-1" }))
+      throw new Error(`Unexpected request: ${url}`)
+    })
+    vi.stubGlobal("fetch", fetchMock)
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+
+    render(<FixedCostsPage />)
+    await screen.findAllByText("Internet")
+    await user.click(screen.getByRole("button", { name: "Editar custo fixo" }))
+    await user.click(screen.getByRole("button", { name: "Editar configurações da série" }))
+
+    const name = screen.getByRole("textbox", { name: "Nome" })
+    await user.clear(name)
+    await user.type(name, "Internet residencial")
+    await user.click(screen.getByRole("button", { name: "Salvar configurações da série" }))
+
+    await waitFor(() => {
+      const request = fetchMock.mock.calls.find(([url, init]) => String(url) === "/api/fixed-costs/occurrence-1" && init?.method === "PATCH")
+      const body = JSON.parse(String(request?.[1]?.body))
+      expect(body.name).toBe("Internet residencial")
+      expect(body).not.toHaveProperty("defaultAmount")
+      expect(body).not.toHaveProperty("scope")
+      expect(body).not.toHaveProperty("occurrenceId")
+    })
+  })
+
+  it("exibe datas ISO de calendário sem recuar no timezone local", async () => {
+    const item = occurrence("occurrence-1", "Internet", "2026-09")
+    item.dueDate = "2026-09-01T00:00:00.000Z"
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url === "/api/categories" || url === "/api/cards" || url === "/api/bank-accounts") return Promise.resolve(response([]))
+      if (url === "/api/fixed-costs/occurrences?month=2026-08") return Promise.resolve(response([item]))
+      throw new Error(`Unexpected request: ${url}`)
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    render(<FixedCostsPage />)
+
+    expect((await screen.findAllByText("01/09/2026")).length).toBeGreaterThan(0)
+    expect(screen.queryAllByText("31/08/2026")).toHaveLength(0)
+  })
 })
 
 function response(data: unknown) {
@@ -172,7 +222,7 @@ function occurrence(id: string, name: string, month: string) {
     id,
     fixedCostId: id,
     month,
-    dueDate: null,
+    dueDate: null as string | null,
     amount: 100,
     status: "PENDING",
     paidAt: null,
@@ -190,7 +240,7 @@ function occurrence(id: string, name: string, month: string) {
       cardId: null,
       bankAccountId: null,
       active: true,
-      startDate: null,
+      startDate: "2026-01-01T00:00:00.000Z",
       frequency: "MONTHLY",
       customInterval: null,
       customUnit: null,
