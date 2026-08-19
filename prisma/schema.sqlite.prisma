@@ -380,9 +380,23 @@ model FixedCost {
   card        Card?                 @relation(fields: [cardId], references: [id], onDelete: SetNull)
   bankAccount BankAccount?          @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
   occurrences FixedCostOccurrence[]
+  amountRevisions FixedCostAmountRevision[]
 
   @@unique([name, userId])
   @@index([userId, active])
+}
+
+model FixedCostAmountRevision {
+  id          String   @id @default(cuid())
+  fixedCostId String
+  effectiveAt DateTime
+  amount      Decimal
+  createdAt   DateTime @default(now())
+
+  fixedCost FixedCost @relation(fields: [fixedCostId], references: [id], onDelete: Cascade)
+
+  @@unique([fixedCostId, effectiveAt])
+  @@index([fixedCostId, effectiveAt])
 }
 
 model FixedCostOccurrence {

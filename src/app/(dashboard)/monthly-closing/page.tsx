@@ -2,7 +2,6 @@
 
 import { Suspense, useEffect, useState } from "react"
 import Link from "next/link"
-import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatCurrency, formatDate } from "@/lib/utils"
@@ -22,7 +21,7 @@ import { useMonthParam } from "@/hooks/use-month-param"
 
 export default function MonthlyClosingPage() {
   return (
-    <Suspense fallback={<div className="py-12 text-center text-sm text-muted-foreground">Carregando...</div>}>
+    <Suspense fallback={<ClosingSkeleton />}>
       <MonthlyClosingPageContent />
     </Suspense>
   )
@@ -203,7 +202,7 @@ function OverviewValue({ label, value, detail, loading, tone = "default" }: {
     <div>
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <p className={`mt-1 text-xl font-bold tabular-nums ${tone === "positive" ? "text-success" : tone === "negative" ? "text-destructive" : ""}`}>
-        {loading ? <Loader2 className="h-5 w-5 animate-spin opacity-60" /> : formatCurrency(value)}
+        {loading ? <span className="inline-block h-6 w-32 animate-pulse rounded bg-muted" /> : formatCurrency(value)}
       </p>
       <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
     </div>
@@ -250,7 +249,18 @@ function ExpenseComposition({ items, pendingItems, details, loading, month }: { 
             <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr] gap-4 border-b px-3 pb-2 text-xs font-medium text-muted-foreground">
               <span>Origem</span><span className="text-right">Total</span><span className="text-right">Pago</span><span className="text-right">Pendente</span>
             </div>
-            {loading ? <div className="flex items-center gap-2 px-3 py-6 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div> : items.map((item) => {
+            {loading ? (
+              <div className="space-y-3 px-3 py-6">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="grid grid-cols-[1.5fr_1fr_1fr_1fr] gap-4">
+                    <div className="h-4 animate-pulse rounded bg-muted" />
+                    <div className="h-4 animate-pulse rounded bg-muted" />
+                    <div className="h-4 animate-pulse rounded bg-muted" />
+                    <div className="h-4 animate-pulse rounded bg-muted" />
+                  </div>
+                ))}
+              </div>
+            ) : items.map((item) => {
               const total = item.value ?? item.amount ?? 0
               const pending = pendingByLabel.get(pendingLabels[item.label ?? ""] ?? "") ?? 0
               const label = item.label ?? ""
@@ -317,7 +327,21 @@ function CardRows({ loading, invoices = [], estimates = [] }: {
   invoices?: ClosingData["invoices"]
   estimates?: ClosingData["summary"]["estimatedInvoicesByCard"]
 }) {
-  if (loading) return <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div>
+  if (loading) return (
+    <div className="space-y-3 py-4">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div key={i} className="grid grid-cols-[1.5fr_1fr_1fr_1fr] gap-4">
+          <div className="space-y-2">
+            <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
+            <div className="h-3 w-1/2 animate-pulse rounded bg-muted" />
+          </div>
+          <div className="h-4 animate-pulse rounded bg-muted" />
+          <div className="h-4 animate-pulse rounded bg-muted" />
+          <div className="h-4 animate-pulse rounded bg-muted" />
+        </div>
+      ))}
+    </div>
+  )
   if (invoices.length === 0 && estimates.length === 0) return <p className="py-4 text-sm text-muted-foreground">Nenhuma fatura ou previsão para este mês.</p>
 
   const names = [...new Set([...invoices.map((invoice) => invoice.card.name), ...estimates.map((item) => item.cardName)])]
@@ -364,7 +388,20 @@ function FixedCostRows({ loading, items = [], onPay }: {
   items?: ClosingData["fixedCosts"]
   onPay: (id: string) => void
 }) {
-  if (loading) return <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div>
+  if (loading) return (
+    <div className="space-y-3 py-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="grid grid-cols-[1.5fr_1fr_1.2fr_1.2fr_auto_auto] gap-4">
+          <div className="h-4 animate-pulse rounded bg-muted" />
+          <div className="h-4 animate-pulse rounded bg-muted" />
+          <div className="h-4 animate-pulse rounded bg-muted" />
+          <div className="h-4 animate-pulse rounded bg-muted" />
+          <div className="h-4 w-16 animate-pulse rounded bg-muted" />
+          <div className="h-4 w-20 animate-pulse rounded bg-muted" />
+        </div>
+      ))}
+    </div>
+  )
   if (items.length === 0) return <p className="py-4 text-sm text-muted-foreground">Nenhum custo fixo neste mês.</p>
 
   return (
@@ -434,7 +471,7 @@ function MobileClosingSummary({
       <CardContent className="space-y-4 p-4">
         <div className="rounded-xl bg-primary p-4 text-primary-foreground">
           <p className="text-xs font-medium opacity-80">Saídas totais do mês</p>
-          <p className="mt-1 text-2xl font-bold tabular-nums">{loading ? <Loader2 className="h-5 w-5 animate-spin opacity-70" /> : formatCurrency(total)}</p>
+          <p className="mt-1 text-2xl font-bold tabular-nums">{loading ? <span className="inline-block h-7 w-36 animate-pulse rounded bg-white/20" /> : formatCurrency(total)}</p>
           <div className="mt-3">
             <BreakdownRows items={totalItems} className="bg-white/10 text-primary-foreground/90" />
           </div>
@@ -443,11 +480,11 @@ function MobileClosingSummary({
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-xl bg-muted/50 p-3">
             <p className="text-xs font-medium text-muted-foreground">Já pago</p>
-            <p className="mt-1 text-lg font-bold tabular-nums text-success">{loading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : formatCurrency(paid)}</p>
+            <p className="mt-1 text-lg font-bold tabular-nums text-success">{loading ? <span className="inline-block h-5 w-24 animate-pulse rounded bg-muted" /> : formatCurrency(paid)}</p>
           </div>
           <div className="rounded-xl bg-muted/50 p-3">
             <p className="text-xs font-medium text-muted-foreground">Ainda a pagar</p>
-            <p className="mt-1 text-lg font-bold tabular-nums text-destructive">{loading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : formatCurrency(pending)}</p>
+            <p className="mt-1 text-lg font-bold tabular-nums text-destructive">{loading ? <span className="inline-block h-5 w-24 animate-pulse rounded bg-muted" /> : formatCurrency(pending)}</p>
           </div>
         </div>
 
@@ -483,6 +520,127 @@ function BreakdownRows({ items, className = "bg-muted/50" }: { items: DetailItem
           <span className="shrink-0 font-semibold tabular-nums">{formatCurrency(item.amount ?? item.value ?? 0)}</span>
         </div>
       ))}
+    </div>
+  )
+}
+
+function ClosingSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-2">
+          <div className="h-7 w-44 animate-pulse rounded bg-muted" />
+          <div className="h-4 w-52 animate-pulse rounded bg-muted" />
+        </div>
+        <div className="h-9 w-48 animate-pulse rounded bg-muted" />
+      </div>
+
+      <div className="rounded-xl border-0 bg-card shadow-sm p-6 space-y-4 md:hidden">
+        <div className="rounded-xl bg-primary p-4 space-y-3">
+          <div className="h-3 w-32 animate-pulse rounded bg-white/20" />
+          <div className="h-7 w-36 animate-pulse rounded bg-white/20" />
+          <div className="space-y-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex justify-between">
+                <div className="h-3 w-24 animate-pulse rounded bg-white/10" />
+                <div className="h-3 w-16 animate-pulse rounded bg-white/10" />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-xl bg-muted/50 p-3 space-y-2">
+            <div className="h-3 w-16 animate-pulse rounded bg-muted" />
+            <div className="h-5 w-24 animate-pulse rounded bg-muted" />
+          </div>
+          <div className="rounded-xl bg-muted/50 p-3 space-y-2">
+            <div className="h-3 w-20 animate-pulse rounded bg-muted" />
+            <div className="h-5 w-24 animate-pulse rounded bg-muted" />
+          </div>
+        </div>
+      </div>
+
+      <div className="hidden md:block space-y-4">
+        <div className="rounded-xl border-0 bg-card shadow-sm p-6 space-y-4">
+          <div className="space-y-2">
+            <div className="h-5 w-40 animate-pulse rounded bg-muted" />
+            <div className="h-4 w-56 animate-pulse rounded bg-muted" />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="space-y-2">
+                <div className="h-3 w-24 animate-pulse rounded bg-muted" />
+                <div className="h-6 w-32 animate-pulse rounded bg-muted" />
+                <div className="h-3 w-36 animate-pulse rounded bg-muted" />
+              </div>
+            ))}
+          </div>
+          <div className="rounded-lg bg-muted/60 p-4 space-y-3">
+            <div className="flex justify-between">
+              <div className="h-4 w-40 animate-pulse rounded bg-muted" />
+              <div className="h-4 w-20 animate-pulse rounded bg-muted" />
+            </div>
+            <div className="h-2 w-full animate-pulse rounded-full bg-muted" />
+            <div className="flex justify-between">
+              <div className="h-3 w-20 animate-pulse rounded bg-muted" />
+              <div className="h-3 w-24 animate-pulse rounded bg-muted" />
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border-0 bg-card shadow-sm p-6 space-y-4">
+          <div className="space-y-2">
+            <div className="h-5 w-44 animate-pulse rounded bg-muted" />
+            <div className="h-4 w-60 animate-pulse rounded bg-muted" />
+          </div>
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="grid grid-cols-[1.5fr_1fr_1fr_1fr] gap-4">
+                <div className="h-4 animate-pulse rounded bg-muted" />
+                <div className="h-4 animate-pulse rounded bg-muted" />
+                <div className="h-4 animate-pulse rounded bg-muted" />
+                <div className="h-4 animate-pulse rounded bg-muted" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border-0 bg-card shadow-sm p-6 space-y-4">
+        <div className="space-y-2">
+          <div className="h-5 w-36 animate-pulse rounded bg-muted" />
+          <div className="h-4 w-48 animate-pulse rounded bg-muted" />
+        </div>
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="grid grid-cols-[1.5fr_1fr_1fr_1fr] gap-4">
+              <div className="space-y-2">
+                <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
+                <div className="h-3 w-1/2 animate-pulse rounded bg-muted" />
+              </div>
+              <div className="h-4 animate-pulse rounded bg-muted" />
+              <div className="h-4 animate-pulse rounded bg-muted" />
+              <div className="h-4 animate-pulse rounded bg-muted" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-xl border-0 bg-card shadow-sm p-6 space-y-4">
+        <div className="h-5 w-40 animate-pulse rounded bg-muted" />
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="grid grid-cols-[1.5fr_1fr_1.2fr_1.2fr_auto_auto] gap-4">
+              <div className="h-4 animate-pulse rounded bg-muted" />
+              <div className="h-4 animate-pulse rounded bg-muted" />
+              <div className="h-4 animate-pulse rounded bg-muted" />
+              <div className="h-4 animate-pulse rounded bg-muted" />
+              <div className="h-4 w-16 animate-pulse rounded bg-muted" />
+              <div className="h-4 w-20 animate-pulse rounded bg-muted" />
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

@@ -438,6 +438,10 @@ export async function ensureFixedCostOccurrencesForMonths(
       endType: true,
       endDate: true,
       endAfterCount: true,
+      amountRevisions: {
+        select: { effectiveAt: true, amount: true },
+        orderBy: { effectiveAt: "asc" },
+      },
     },
   })
   if (fixedCosts.length === 0) return
@@ -528,7 +532,10 @@ export async function ensureFixedCostOccurrencesForMonths(
       month: item.month,
       scheduledDate: item.scheduledDate,
       dueDate: item.dueDate,
-      amount: fc.defaultAmount,
+      amount: [...fc.amountRevisions]
+        .reverse()
+        .find((revision) => revision.effectiveAt.getTime() <= item.scheduledDate.getTime())
+        ?.amount ?? fc.defaultAmount,
       userId,
     })
   }

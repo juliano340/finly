@@ -1,7 +1,7 @@
 "use client"
 
 import { Suspense, useCallback, useEffect, useState } from "react"
-import { Loader2, RefreshCw } from "lucide-react"
+import { RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -140,9 +140,52 @@ function MonthlyPlanPageContent() {
 
 function PlanLoading() {
   return (
-    <div role="status" className="flex min-h-64 items-center justify-center gap-2 text-muted-foreground">
-      <Loader2 aria-hidden="true" className="h-5 w-5 animate-spin" />
-      Carregando plano do mês…
+    <div role="status" className="space-y-6">
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="space-y-4">
+          <div className="rounded-xl border-0 bg-card shadow-sm p-6 space-y-4">
+            <div className="h-5 w-40 animate-pulse rounded bg-muted" />
+            <div className="grid gap-4 sm:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <div className="h-3 w-24 animate-pulse rounded bg-muted" />
+                  <div className="h-6 w-32 animate-pulse rounded bg-muted" />
+                </div>
+              ))}
+            </div>
+            <div className="space-y-2">
+              <div className="h-3 w-36 animate-pulse rounded bg-muted" />
+              <div className="h-2 w-full animate-pulse rounded-full bg-muted" />
+              <div className="flex justify-between">
+                <div className="h-3 w-20 animate-pulse rounded bg-muted" />
+                <div className="h-3 w-24 animate-pulse rounded bg-muted" />
+              </div>
+            </div>
+          </div>
+          <div className="rounded-xl border-0 bg-card shadow-sm p-6 space-y-4">
+            <div className="h-5 w-44 animate-pulse rounded bg-muted" />
+            <div className="grid gap-3 sm:grid-cols-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <div className="h-4 w-4 animate-pulse rounded bg-muted" />
+                  <div className="h-4 flex-1 animate-pulse rounded bg-muted" />
+                  <div className="h-4 w-20 animate-pulse rounded bg-muted" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="rounded-xl border-0 bg-card shadow-sm p-6 space-y-4">
+          <div className="h-5 w-36 animate-pulse rounded bg-muted" />
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="space-y-2">
+              <div className="h-3 w-28 animate-pulse rounded bg-muted" />
+              <div className="h-9 w-full animate-pulse rounded bg-muted" />
+            </div>
+          ))}
+          <div className="h-9 w-full animate-pulse rounded bg-muted" />
+        </div>
+      </div>
     </div>
   )
 }

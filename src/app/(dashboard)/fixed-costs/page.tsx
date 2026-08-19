@@ -39,8 +39,11 @@ interface Occurrence {
   status: "PENDING" | "PAID"
   paidAt: string | null
   paidViaCard: boolean
+  updatedAt: string
   fixedCost: FixedCostData
 }
+
+type FixedCostEditScope = "THIS_MONTH" | "THIS_AND_FUTURE" | "ENTIRE_SERIES"
 
 type OccurrenceSortField = "name" | "category" | "source" | "dueDate" | "amount" | "status"
 
@@ -127,6 +130,7 @@ function FixedCostsPageInner() {
   const [unpayingCardId, setUnpayingCardId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [editScope, setEditScope] = useState<FixedCostEditScope>("THIS_MONTH")
   const [creatingLoading, setCreatingLoading] = useState(false)
   const [sortField, setSortField] = useState<OccurrenceSortField>("dueDate")
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
@@ -279,34 +283,21 @@ function FixedCostsPageInner() {
     }
   }
 
-  const handleUpdate = async (item: FixedCostData, formData: FormData) => {
+  const handleUpdate = async (occurrence: Occurrence, formData: FormData) => {
     if (inFlightUpdateRef.current) return
     inFlightUpdateRef.current = true
-    const paidInsideCard = item.type === "EXPENSE" && formData.get("paidInsideCard") === "on"
     setUpdateError("")
-    setUpdatingId(item.id)
+    setUpdatingId(occurrence.id)
     try {
-      const res = await fetch(`/api/fixed-costs/${item.id}`, {
+      const res = await fetch(`/api/fixed-costs/${occurrence.fixedCostId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: formData.get("name"),
-          type: item.type,
-          defaultAmount: String(formData.get("defaultAmount") ?? "").replace(",", "."),
-          categoryId: formData.get("categoryId"),
-          paymentMethod: paidInsideCard ? "CREDIT_CARD" : formData.get("paymentMethod") || "PIX",
-          dueDay: formData.get("dueDay") || null,
-          paidInsideCard,
-          cardId: paidInsideCard ? formData.get("cardId") : null,
-          bankAccountId: formData.get("bankAccountId") || null,
-          active: formData.get("active") === "on",
-          startDate: recStartDate,
-          frequency: recFrequencyType === "custom" ? "CUSTOM" : recFrequency,
-          customInterval: recFrequencyType === "custom" ? (Number(recCustomInterval) || null) : null,
-          customUnit: recFrequencyType === "custom" ? recCustomUnit : null,
-          endType: recEndType,
-          endDate: recEndType === "DATE" ? recEndDate : null,
-          endAfterCount: recEndType === "COUNT" ? (Number(recEndAfterCount) || null) : null,
+          occurrenceId: occurrence.id,
+          month: occurrence.month,
+          scope: editScope,
+          amount: String(formData.get("amount") ?? "").replace(",", "."),
+          expectedUpdatedAt: occurrence.updatedAt,
         }),
       })
       if (!res.ok) {
@@ -315,21 +306,11 @@ function FixedCostsPageInner() {
         toast.error(err.error ?? "Erro ao atualizar custo fixo")
         return
       }
-      const newAmount = parseFloat(String(formData.get("defaultAmount") ?? "0").replace(",", "."))
-      setOccurrences((prev) =>
-        prev.map((o) =>
-          o.fixedCostId === item.id
-            ? {
-                ...o,
-                amount: newAmount,
-                fixedCost: { ...o.fixedCost, defaultAmount: newAmount },
-              }
-            : o
-        )
-      )
-      toast.success("Custo fixo atualizado.")
+      const result = await res.json() as { affected: number; skipped: { paid: number; closed: number; deleted: number } }
+      const skipped = result.skipped.paid + result.skipped.closed + result.skipped.deleted
+      toast.success(`${result.affected} ocorrência${result.affected === 1 ? "" : "s"} atualizada${result.affected === 1 ? "" : "s"}.${skipped > 0 ? ` ${skipped} preservada${skipped === 1 ? "" : "s"}.` : ""}`)
       setSelectedOccurrence(null)
-      fetchData()
+      await fetchData()
     } finally {
       setUpdatingId(null)
       inFlightUpdateRef.current = false
@@ -367,19 +348,17 @@ function FixedCostsPageInner() {
   }
 
   const openEditSheet = (occurrence: Occurrence) => {
-    setInsideCard(occurrence.fixedCost.paidInsideCard)
     setSelectedOccurrence(occurrence)
-    setRecStartDate(occurrence.fixedCost.startDate?.split("T")[0] ?? new Date().toISOString().split("T")[0])
-    setRecFrequency(occurrence.fixedCost.frequency ?? "MONTHLY")
-    setRecFrequencyType(occurrence.fixedCost.frequency === "CUSTOM" ? "custom" : "standard")
-    setRecCustomInterval(occurrence.fixedCost.customInterval?.toString() ?? "")
-    setRecCustomUnit(occurrence.fixedCost.customUnit ?? "MONTHS")
-    setRecEndType(occurrence.fixedCost.endType ?? "NONE")
-    setRecEndDate(occurrence.fixedCost.endDate?.split("T")[0] ?? "")
-    setRecEndAfterCount(occurrence.fixedCost.endAfterCount?.toString() ?? "")
+    setEditScope("THIS_MONTH")
   }
 
   const selectedTemplate = selectedOccurrence?.fixedCost ?? null
+  const selectedMonthLabel = selectedOccurrence ? formatMonth(selectedOccurrence.month) : ""
+  const saveEditLabel = editScope === "THIS_MONTH"
+    ? `Salvar somente ${selectedMonthLabel}`
+    : editScope === "THIS_AND_FUTURE"
+      ? `Salvar ${selectedMonthLabel} e próximos`
+      : "Salvar toda a série"
   const totalPending = filteredOccurrences.filter((o) => o.status === "PENDING").reduce((s, o) => s + o.amount, 0)
   const totalPaid = filteredOccurrences.filter((o) => o.status === "PAID").reduce((s, o) => s + o.amount, 0)
   const totalAll = totalPending + totalPaid
@@ -894,144 +873,41 @@ function FixedCostsPageInner() {
               </SheetHeader>
               <div className="flex-1 overflow-y-auto px-4 pb-4">
                 <div className="mt-4 space-y-4">
-                  <div className="grid gap-3">
-                    <div className="rounded-lg bg-muted p-4">
-                       <p className="text-xs text-muted-foreground">Valor deste mês ({formatMonth(selectedOccurrence.month)})</p>
-                      <p className="text-2xl font-bold">{formatCurrency(selectedOccurrence.amount)}</p>
-                    </div>
-                    <div className="rounded-lg border p-4">
-                      <p className="text-xs text-muted-foreground">Valor padrão do cadastro</p>
-                      <p className="text-2xl font-bold">{formatCurrency(selectedTemplate.defaultAmount)}</p>
-                    </div>
-                  </div>
                   <form ref={editFormRef} className="space-y-4">
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium">Nome</label>
-                      <Input name="name" defaultValue={selectedTemplate.name} required />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium">Valor padrão do cadastro</label>
-                      <Input name="defaultAmount" type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*" defaultValue={selectedTemplate.defaultAmount} required />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium">Dia de vencimento</label>
-                      <Input name="dueDay" type="number" min="1" max="31" defaultValue={selectedTemplate.dueDay ?? ""} placeholder="Ex: 10" />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium">Categoria</label>
-                      <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="categoryId" defaultValue={selectedTemplate.categoryId} required>
-                        {filteredCategories.map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-                      </select>
-                    </div>
-                    {selectedTemplate.type === "EXPENSE" && (
-                      <>
-                        <label className="flex items-center gap-2 text-sm">
-                          <input type="checkbox" defaultChecked={selectedTemplate.paidInsideCard} name="paidInsideCard" onChange={(e) => setInsideCard(e.target.checked)} />
-                          Dentro do cartão
+                    <fieldset className="space-y-2">
+                      <legend className="text-sm font-medium">Aplicar alteração em</legend>
+                      {([
+                        ["THIS_MONTH", `Somente esta ocorrência (${formatMonth(selectedOccurrence.month)})`],
+                        ["THIS_AND_FUTURE", `Esta ocorrência e as próximas, a partir de ${formatMonth(selectedOccurrence.month)}`],
+                        ["ENTIRE_SERIES", "Toda a série"],
+                      ] as const).map(([scope, label]) => (
+                        <label key={scope} className="flex cursor-pointer items-start gap-2 rounded-md border p-3 text-sm">
+                          <input
+                            type="radio"
+                            name="scope"
+                            value={scope}
+                            checked={editScope === scope}
+                            onChange={() => setEditScope(scope)}
+                          />
+                          <span>{label}</span>
                         </label>
-                        {!insideCard && (
-                          <div className="space-y-1">
-                            <label className="text-sm font-medium">Método de pagamento</label>
-                            <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="paymentMethod" defaultValue={selectedTemplate.paymentMethod}>
-                              <option value="PIX">Pix</option>
-                              <option value="BANK_SLIP">Boleto</option>
-                              <option value="DEBIT">Débito</option>
-                              <option value="CASH">Dinheiro</option>
-                            </select>
-                          </div>
-                        )}
-                        {insideCard && (
-                          <div className="space-y-1">
-                            <label className="text-sm font-medium">Cartão</label>
-                            <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="cardId" defaultValue={selectedTemplate.cardId ?? ""} required>
-                              <option value="">Selecione um cartão</option>
-                              {cards.map((card) => <option key={card.id} value={card.id}>{card.name}</option>)}
-                            </select>
-                          </div>
-                        )}
-                      </>
-                    )}
+                      ))}
+                    </fieldset>
                     <div className="space-y-1">
-                      <label className="text-sm font-medium">Conta prevista (débito)</label>
-                      <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="bankAccountId" defaultValue={selectedTemplate.bankAccountId ?? ""}>
-                        <option value="">Sem conta prevista</option>
-                        {bankAccounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
-                      </select>
+                      <label className="text-sm font-medium">Novo valor</label>
+                      <Input name="amount" type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*" defaultValue={selectedOccurrence.amount} required />
                     </div>
-                    <div className="border-t pt-4">
-                      <p className="mb-3 text-sm font-medium">Recorrência</p>
-                      <div className="space-y-3">
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium">Data de início</label>
-                          <input type="date" className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recStartDate} onChange={(e) => setRecStartDate(e.target.value)} required />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium">Tipo</label>
-                          <div className="flex gap-2">
-                            <button type="button" onClick={() => setRecFrequencyType("standard")} className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${recFrequencyType === "standard" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>Padrão</button>
-                            <button type="button" onClick={() => setRecFrequencyType("custom")} className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${recFrequencyType === "custom" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>Personalizada</button>
-                          </div>
-                        </div>
-                        {recFrequencyType === "standard" ? (
-                          <div className="space-y-1">
-                            <label className="text-sm font-medium">Frequência</label>
-                            <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recFrequency} onChange={(e) => setRecFrequency(e.target.value)}>
-                              <option value="DAILY">Diária</option>
-                              <option value="WEEKLY">Semanal</option>
-                              <option value="BIWEEKLY">Quinzenal</option>
-                              <option value="MONTHLY">Mensal</option>
-                              <option value="BIMONTHLY">Bimestral</option>
-                              <option value="QUARTERLY">Trimestral</option>
-                              <option value="SEMIANNUAL">Semestral</option>
-                              <option value="ANNUAL">Anual</option>
-                            </select>
-                          </div>
-                        ) : (
-                          <div className="flex gap-2">
-                            <div className="flex-1 space-y-1">
-                              <label className="text-sm font-medium">A cada</label>
-                              <Input type="number" min="1" className="w-full" value={recCustomInterval} onChange={(e) => setRecCustomInterval(e.target.value)} placeholder="1" />
-                            </div>
-                            <div className="flex-[2] space-y-1">
-                              <label className="text-sm font-medium">Unidade</label>
-                              <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recCustomUnit} onChange={(e) => setRecCustomUnit(e.target.value)}>
-                                <option value="DAYS">Dias</option>
-                                <option value="WEEKS">Semanas</option>
-                                <option value="MONTHS">Meses</option>
-                                <option value="YEARS">Anos</option>
-                              </select>
-                            </div>
-                          </div>
-                        )}
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium">Término</label>
-                          <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recEndType} onChange={(e) => setRecEndType(e.target.value)}>
-                            <option value="NONE">Sem data final</option>
-                            <option value="DATE">Encerrar em uma data</option>
-                            <option value="COUNT">Após N ocorrências</option>
-                          </select>
-                        </div>
-                        {recEndType === "DATE" && (
-                          <div className="space-y-1">
-                            <label className="text-sm font-medium">Data de término</label>
-                            <input type="date" className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recEndDate} onChange={(e) => setRecEndDate(e.target.value)} />
-                          </div>
-                        )}
-                        {recEndType === "COUNT" && (
-                          <div className="space-y-1">
-                            <label className="text-sm font-medium">Número de ocorrências</label>
-                            <Input type="number" min="1" className="w-full" value={recEndAfterCount} onChange={(e) => setRecEndAfterCount(e.target.value)} placeholder="Ex: 12" />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <label className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" defaultChecked={selectedTemplate.active} name="active" />
-                      Ativo
-                    </label>
+                    <p className="text-xs text-muted-foreground">
+                      {editScope === "THIS_MONTH"
+                        ? "Somente o valor desta ocorrência será alterado."
+                        : editScope === "THIS_AND_FUTURE"
+                          ? "O novo valor será usado nesta ocorrência, nas próximas ocorrências abertas e como padrão para novas ocorrências."
+                          : "O novo valor será aplicado às ocorrências abertas da série e usado como padrão. Valores pagos, meses fechados e ocorrências excluídas serão preservados."}
+                    </p>
+                    <p className="text-xs text-muted-foreground">As demais configurações pertencem à série e não podem ser alteradas neste editor.</p>
                     {updateError && <p className="text-sm text-destructive">{updateError}</p>}
-                    <Button type="button" className="w-full" disabled={updatingId === selectedTemplate.id} onClick={() => handleUpdate(selectedTemplate, new FormData(editFormRef.current!))}>
-                      {updatingId === selectedTemplate.id ? "Salvando..." : "Salvar alterações"}
+                    <Button type="button" className="w-full" disabled={updatingId === selectedOccurrence.id} onClick={() => handleUpdate(selectedOccurrence, new FormData(editFormRef.current!))}>
+                      {updatingId === selectedOccurrence.id ? "Salvando..." : saveEditLabel}
                     </Button>
                   </form>
                   <Button type="button" variant="destructive" className="w-full" onClick={() => setConfirmDelete(selectedTemplate.id)}>

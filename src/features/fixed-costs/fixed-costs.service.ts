@@ -1,6 +1,6 @@
 import { prisma as defaultPrisma } from "@/lib/prisma"
 import type { PrismaClient } from "@/generated/prisma/client"
-import type { FixedCostInput } from "./fixed-costs.schema"
+import type { FixedCostInput, FixedCostOccurrenceAmountUpdateInput } from "./fixed-costs.schema"
 import { ensureFinancialMonth } from "@/features/financial-months/financial-months.service"
 import { ensureFixedCostOccurrences } from "@/features/monthly-closing/monthly-closing.service"
 import { moneyToNumber, type MoneyValue } from "@/lib/money"
@@ -9,6 +9,131 @@ export class DuplicateFixedCostNameError extends Error {
   constructor() {
     super("Já existe um lançamento fixo com este nome")
   }
+}
+
+export class StaleFixedCostOccurrenceError extends Error {
+  constructor() {
+    super("Este lançamento foi alterado por outra operação. Recarregue e tente novamente.")
+  }
+}
+
+export class ProtectedFixedCostOccurrenceError extends Error {
+  constructor(public readonly reason: "PAID" | "CLOSED" | "DELETED") {
+    super(
+      reason === "PAID"
+        ? "Esta ocorrência já foi paga e não pode ser alterada."
+        : reason === "CLOSED"
+          ? "Esta ocorrência pertence a um mês fechado e não pode ser alterada."
+          : "Esta ocorrência foi excluída e não pode ser alterada."
+    )
+  }
+}
+
+export async function updateFixedCostOccurrenceAmount(
+  fixedCostId: string,
+  userId: string,
+  input: FixedCostOccurrenceAmountUpdateInput,
+  client?: PrismaClient
+) {
+  const db = client ?? defaultPrisma
+
+  try {
+    return await db.$transaction(async (tx) => {
+    const selected = await tx.fixedCostOccurrence.findFirst({
+      where: {
+        id: input.occurrenceId,
+        fixedCostId,
+        userId,
+        month: input.month,
+      },
+      include: { financialMonth: { select: { status: true } } },
+    })
+    if (!selected) return null
+    if (selected.updatedAt.getTime() !== new Date(input.expectedUpdatedAt).getTime()) {
+      throw new StaleFixedCostOccurrenceError()
+    }
+    if (input.scope === "THIS_MONTH") {
+      if (selected.deletedAt) throw new ProtectedFixedCostOccurrenceError("DELETED")
+      if (selected.status === "PAID") throw new ProtectedFixedCostOccurrenceError("PAID")
+      if (selected.financialMonth.status === "CLOSED") throw new ProtectedFixedCostOccurrenceError("CLOSED")
+    }
+
+    const occurrences = await tx.fixedCostOccurrence.findMany({
+      where: { fixedCostId, userId },
+      include: { financialMonth: { select: { status: true } } },
+    })
+    const selectedCutoff = selected.scheduledDate ?? selected.dueDate
+    const effectiveAt = selectedCutoff ?? new Date(`${input.month}-01T00:00:00.000Z`)
+    const isInScope = (occurrence: (typeof occurrences)[number]) => {
+      if (input.scope === "THIS_MONTH") return occurrence.id === selected.id
+      if (input.scope === "ENTIRE_SERIES") return true
+
+      const occurrenceCutoff = occurrence.scheduledDate ?? occurrence.dueDate
+      if (selectedCutoff && occurrenceCutoff) {
+        return occurrenceCutoff.getTime() >= selectedCutoff.getTime()
+      }
+      return occurrence.id === selected.id || occurrence.month >= input.month
+    }
+
+    const scoped = occurrences.filter(isInScope)
+    const skipped = { paid: 0, closed: 0, deleted: 0 }
+    const affectedIds: string[] = []
+    for (const occurrence of scoped) {
+      if (occurrence.deletedAt) skipped.deleted += 1
+      else if (occurrence.status === "PAID") skipped.paid += 1
+      else if (occurrence.financialMonth.status === "CLOSED") skipped.closed += 1
+      else affectedIds.push(occurrence.id)
+    }
+
+    let affected = 0
+    if (affectedIds.length > 0) {
+      const updated = await tx.fixedCostOccurrence.updateMany({
+        where: {
+          id: { in: affectedIds },
+          userId,
+          fixedCostId,
+          status: "PENDING",
+          deletedAt: null,
+          financialMonth: { status: "OPEN" },
+        },
+        data: { amount: input.amount },
+      })
+      affected = updated.count
+    }
+
+    if (input.scope === "THIS_AND_FUTURE") {
+      await tx.fixedCostAmountRevision.deleteMany({
+        where: { fixedCostId, effectiveAt: { gte: effectiveAt } },
+      })
+      await tx.fixedCostAmountRevision.create({
+        data: { fixedCostId, effectiveAt, amount: input.amount },
+      })
+    }
+
+    if (input.scope === "ENTIRE_SERIES") {
+      await tx.fixedCost.update({
+        where: { id: fixedCostId },
+        data: { defaultAmount: input.amount },
+      })
+      await tx.fixedCostAmountRevision.deleteMany({ where: { fixedCostId } })
+    }
+
+    return {
+      scope: input.scope,
+      cutoff: { occurrenceId: selected.id, month: selected.month },
+      affected,
+      skipped,
+      conflicts: affected === affectedIds.length ? [] as string[] : ["CONCURRENT_CHANGE"],
+    }
+    }, { isolationLevel: "Serializable" })
+  } catch (error) {
+    if (isTransactionConflict(error)) throw new StaleFixedCostOccurrenceError()
+    throw error
+  }
+}
+
+function isTransactionConflict(error: unknown) {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "P2034"
 }
 
 async function validateFixedCostRelations(

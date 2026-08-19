@@ -1,8 +1,8 @@
 // @vitest-environment node
-import { describe, it, expect, beforeAll, afterAll } from "vitest"
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest"
 import { getTestClient } from "@/__tests__/prisma"
 import { registerUser } from "@/features/auth/auth.service"
-import { createFixedCost, resetExpenseFixedCosts, updateFixedCost } from "../fixed-costs.service"
+import { createFixedCost, ProtectedFixedCostOccurrenceError, resetExpenseFixedCosts, StaleFixedCostOccurrenceError, updateFixedCost, updateFixedCostOccurrenceAmount } from "../fixed-costs.service"
 import { ensureFinancialMonth } from "@/features/financial-months/financial-months.service"
 import { ensureFixedCostOccurrences } from "@/features/monthly-closing/monthly-closing.service"
 
@@ -137,6 +137,198 @@ describe("fixed-costs.service - update amount propagation", () => {
     })
     expect(occ?.amount.toNumber()).toBe(50)
     expect(occ?.status).toBe("PAID")
+  })
+
+  it("aplica valor a partir da ocorrência selecionada e preserva histórico protegido", async () => {
+    const months = ["2026-10", "2026-11", "2026-12", "2027-01", "2027-02"]
+    const financialMonths = await Promise.all(months.map((item) => ensureFinancialMonth(userId, item, prisma)))
+    await prisma.financialMonth.update({ where: { id: financialMonths[3].id }, data: { status: "CLOSED" } })
+    const fixedCost = await prisma.fixedCost.create({
+      data: {
+        name: uniqueName(),
+        type: "EXPENSE",
+        defaultAmount: 100,
+        categoryId,
+        paymentMethod: "DEBIT",
+        bankAccountId,
+        active: true,
+        startDate: new Date("2026-10-05T12:00:00Z"),
+        frequency: "MONTHLY",
+        endType: "NONE",
+        userId,
+      },
+    })
+    const created = await Promise.all(months.map((item, index) => prisma.fixedCostOccurrence.create({
+      data: {
+        fixedCostId: fixedCost.id,
+        financialMonthId: financialMonths[index].id,
+        month: item,
+        scheduledDate: new Date(`${item}-05T12:00:00Z`),
+        dueDate: new Date(`${item}-05T12:00:00Z`),
+        amount: 100,
+        status: index === 2 ? "PAID" : "PENDING",
+        paidAt: index === 2 ? new Date() : null,
+        deletedAt: index === 4 ? new Date() : null,
+        userId,
+      },
+    })))
+
+    const thisMonth = await updateFixedCostOccurrenceAmount(fixedCost.id, userId, {
+      occurrenceId: created[1].id,
+      month: "2026-11",
+      scope: "THIS_MONTH",
+      amount: 150,
+      expectedUpdatedAt: created[1].updatedAt.toISOString(),
+    }, prisma)
+    expect(thisMonth).toMatchObject({ affected: 1, skipped: { paid: 0, closed: 0, deleted: 0 } })
+    expect((await prisma.fixedCostOccurrence.findUnique({ where: { id: created[0].id } }))?.amount.toNumber()).toBe(100)
+    expect((await prisma.fixedCost.findUnique({ where: { id: fixedCost.id } }))?.defaultAmount.toNumber()).toBe(100)
+
+    const selected = await prisma.fixedCostOccurrence.findUniqueOrThrow({ where: { id: created[1].id } })
+    const future = await updateFixedCostOccurrenceAmount(fixedCost.id, userId, {
+      occurrenceId: selected.id,
+      month: selected.month,
+      scope: "THIS_AND_FUTURE",
+      amount: 200,
+      expectedUpdatedAt: selected.updatedAt.toISOString(),
+    }, prisma)
+    expect(future).toMatchObject({ affected: 1, skipped: { paid: 1, closed: 1, deleted: 1 } })
+    expect((await prisma.fixedCostOccurrence.findUnique({ where: { id: created[0].id } }))?.amount.toNumber()).toBe(100)
+    expect((await prisma.fixedCostOccurrence.findUnique({ where: { id: created[2].id } }))?.amount.toNumber()).toBe(100)
+    expect((await prisma.fixedCost.findUnique({ where: { id: fixedCost.id } }))?.defaultAmount.toNumber()).toBe(100)
+    expect(await prisma.fixedCostAmountRevision.count({ where: { fixedCostId: fixedCost.id } })).toBe(1)
+  })
+
+  it("usa revisão efetiva ao materializar meses fora de ordem", async () => {
+    const fixedCost = await prisma.fixedCost.create({
+      data: {
+        name: uniqueName(), type: "EXPENSE", defaultAmount: 100, categoryId,
+        paymentMethod: "DEBIT", bankAccountId, active: true,
+        startDate: new Date("2026-10-05T12:00:00Z"), frequency: "MONTHLY", endType: "NONE", userId,
+      },
+    })
+    const novemberMonth = await ensureFinancialMonth(userId, "2026-11", prisma)
+    await ensureFixedCostOccurrences(userId, "2026-11", novemberMonth.id, prisma)
+    const november = await prisma.fixedCostOccurrence.findFirstOrThrow({
+      where: { fixedCostId: fixedCost.id, month: "2026-11", userId },
+    })
+
+    await updateFixedCostOccurrenceAmount(fixedCost.id, userId, {
+      occurrenceId: november.id,
+      month: november.month,
+      scope: "THIS_AND_FUTURE",
+      amount: 200,
+      expectedUpdatedAt: november.updatedAt.toISOString(),
+    }, prisma)
+
+    const octoberMonth = await ensureFinancialMonth(userId, "2026-10", prisma)
+    const decemberMonth = await ensureFinancialMonth(userId, "2026-12", prisma)
+    await ensureFixedCostOccurrences(userId, "2026-10", octoberMonth.id, prisma)
+    await ensureFixedCostOccurrences(userId, "2026-12", decemberMonth.id, prisma)
+
+    const [october, december] = await Promise.all([
+      prisma.fixedCostOccurrence.findFirstOrThrow({ where: { fixedCostId: fixedCost.id, month: "2026-10", userId } }),
+      prisma.fixedCostOccurrence.findFirstOrThrow({ where: { fixedCostId: fixedCost.id, month: "2026-12", userId } }),
+    ])
+    expect(october.amount.toNumber()).toBe(100)
+    expect(december.amount.toNumber()).toBe(200)
+
+    const refreshedNovember = await prisma.fixedCostOccurrence.findUniqueOrThrow({ where: { id: november.id } })
+    await updateFixedCostOccurrenceAmount(fixedCost.id, userId, {
+      occurrenceId: november.id,
+      month: november.month,
+      scope: "ENTIRE_SERIES",
+      amount: 300,
+      expectedUpdatedAt: refreshedNovember.updatedAt.toISOString(),
+    }, prisma)
+    expect(await prisma.fixedCostAmountRevision.count({ where: { fixedCostId: fixedCost.id } })).toBe(0)
+    expect((await prisma.fixedCost.findUniqueOrThrow({ where: { id: fixedCost.id } })).defaultAmount.toNumber()).toBe(300)
+    const reconciled = await prisma.fixedCostOccurrence.findMany({
+      where: { fixedCostId: fixedCost.id, userId },
+      orderBy: { month: "asc" },
+    })
+    expect(reconciled.map((item) => item.amount.toNumber())).toEqual([300, 300, 300])
+
+    const laterMonth = await ensureFinancialMonth(userId, "2027-03", prisma)
+    await ensureFixedCostOccurrences(userId, "2027-03", laterMonth.id, prisma)
+    const later = await prisma.fixedCostOccurrence.findFirstOrThrow({
+      where: { fixedCostId: fixedCost.id, month: "2027-03", userId },
+    })
+    expect(later.amount.toNumber()).toBe(300)
+  })
+
+  it("rejeita edição baseada em versão desatualizada da ocorrência", async () => {
+    const financialMonth = await ensureFinancialMonth(userId, "2028-01", prisma)
+    const fixedCost = await prisma.fixedCost.create({
+      data: {
+        name: uniqueName(), type: "EXPENSE", defaultAmount: 100, categoryId,
+        paymentMethod: "DEBIT", bankAccountId, active: true,
+        startDate: new Date("2028-01-01T12:00:00Z"), frequency: "MONTHLY", endType: "NONE", userId,
+      },
+    })
+    const occurrence = await prisma.fixedCostOccurrence.create({
+      data: { fixedCostId: fixedCost.id, financialMonthId: financialMonth.id, month: "2028-01", amount: 100, userId },
+    })
+
+    await expect(updateFixedCostOccurrenceAmount(fixedCost.id, userId, {
+      occurrenceId: occurrence.id,
+      month: occurrence.month,
+      scope: "THIS_MONTH",
+      amount: 120,
+      expectedUpdatedAt: new Date(occurrence.updatedAt.getTime() - 1000).toISOString(),
+    }, prisma)).rejects.toBeInstanceOf(StaleFixedCostOccurrenceError)
+  })
+
+  it.each([
+    { reason: "PAID" as const, month: "2030-01", status: "PAID" as const, closed: false, deleted: false },
+    { reason: "CLOSED" as const, month: "2030-02", status: "PENDING" as const, closed: true, deleted: false },
+    { reason: "DELETED" as const, month: "2030-03", status: "PENDING" as const, closed: false, deleted: true },
+  ])("rejeita THIS_MONTH para ocorrência protegida: $reason", async ({ reason, month, status, closed, deleted }) => {
+    const financialMonth = await ensureFinancialMonth(userId, month, prisma)
+    if (closed) await prisma.financialMonth.update({ where: { id: financialMonth.id }, data: { status: "CLOSED" } })
+    const fixedCost = await prisma.fixedCost.create({
+      data: {
+        name: uniqueName(), type: "EXPENSE", defaultAmount: 100, categoryId,
+        paymentMethod: "DEBIT", bankAccountId, active: true,
+        startDate: new Date(`${month}-01T12:00:00Z`), frequency: "MONTHLY", endType: "NONE", userId,
+      },
+    })
+    const occurrence = await prisma.fixedCostOccurrence.create({
+      data: {
+        fixedCostId: fixedCost.id,
+        financialMonthId: financialMonth.id,
+        month,
+        amount: 100,
+        status,
+        paidAt: status === "PAID" ? new Date() : null,
+        deletedAt: deleted ? new Date() : null,
+        userId,
+      },
+    })
+
+    await expect(updateFixedCostOccurrenceAmount(fixedCost.id, userId, {
+      occurrenceId: occurrence.id,
+      month,
+      scope: "THIS_MONTH",
+      amount: 999,
+      expectedUpdatedAt: occurrence.updatedAt.toISOString(),
+    }, prisma)).rejects.toMatchObject<ProtectedFixedCostOccurrenceError>({ reason })
+    expect((await prisma.fixedCostOccurrence.findUniqueOrThrow({ where: { id: occurrence.id } })).amount.toNumber()).toBe(100)
+    expect((await prisma.fixedCost.findUniqueOrThrow({ where: { id: fixedCost.id } })).defaultAmount.toNumber()).toBe(100)
+    expect(await prisma.fixedCostAmountRevision.count({ where: { fixedCostId: fixedCost.id } })).toBe(0)
+  })
+
+  it("usa isolamento serializável e traduz conflito transacional em stale edit", async () => {
+    const transaction = vi.fn().mockRejectedValue(Object.assign(new Error("write conflict"), { code: "P2034" }))
+
+    await expect(updateFixedCostOccurrenceAmount("fixed", userId, {
+      occurrenceId: "occurrence",
+      month: "2031-01",
+      scope: "THIS_MONTH",
+      amount: 100,
+      expectedUpdatedAt: "2031-01-01T00:00:00.000Z",
+    }, { $transaction: transaction } as never)).rejects.toBeInstanceOf(StaleFixedCostOccurrenceError)
+    expect(transaction).toHaveBeenCalledWith(expect.any(Function), { isolationLevel: "Serializable" })
   })
 
   it("gera ocorrência de lançamento sem data de fim ao consultar mês futuro", async () => {

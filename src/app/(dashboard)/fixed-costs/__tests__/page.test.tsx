@@ -95,6 +95,72 @@ describe("FixedCostsPage", () => {
     expect(screen.queryAllByText("Julho atrasado")).toHaveLength(0)
     expect(screen.getAllByText("Agosto 2")).not.toHaveLength(0)
   })
+
+  it("edita valor com escopo explícito e usa somente esta ocorrência por padrão", async () => {
+    const item = occurrence("occurrence-1", "Internet", "2026-08")
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url === "/api/categories" || url === "/api/cards" || url === "/api/bank-accounts") return Promise.resolve(response([]))
+      if (url === "/api/fixed-costs/occurrences?month=2026-08") return Promise.resolve(response([item]))
+      if (url === "/api/fixed-costs/occurrence-1" && init?.method === "PUT") {
+        return Promise.resolve(response({ affected: 1, skipped: { paid: 0, closed: 0, deleted: 0 } }))
+      }
+      throw new Error(`Unexpected request: ${url}`)
+    })
+    vi.stubGlobal("fetch", fetchMock)
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+
+    render(<FixedCostsPage />)
+    await screen.findAllByText("Internet")
+    await user.click(screen.getByRole("button", { name: "Editar custo fixo" }))
+
+    expect(screen.getByRole("radio", { name: /somente esta ocorrência/i })).toBeChecked()
+    let amount = document.querySelector<HTMLInputElement>('input[name="amount"]')!
+    const scopeFieldset = screen.getByText("Aplicar alteração em").closest("fieldset")!
+    expect(scopeFieldset.compareDocumentPosition(amount) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Salvar somente agosto de 2026" })).toBeInTheDocument()
+    await user.clear(amount)
+    await user.type(amount, "150")
+    await user.click(screen.getByRole("button", { name: "Salvar somente agosto de 2026" }))
+
+    await waitFor(() => {
+      const request = fetchMock.mock.calls.find(([url, init]) => String(url) === "/api/fixed-costs/occurrence-1" && init?.method === "PUT")
+      expect(JSON.parse(String(request?.[1]?.body))).toEqual({
+        occurrenceId: "occurrence-1",
+        month: "2026-08",
+        scope: "THIS_MONTH",
+        amount: "150",
+        expectedUpdatedAt: "2026-08-01T12:00:00.000Z",
+      })
+    })
+
+    await user.click(screen.getByRole("button", { name: "Editar custo fixo" }))
+    await user.click(screen.getByRole("radio", { name: /esta ocorrência e as próximas/i }))
+    expect(screen.getByRole("button", { name: "Salvar agosto de 2026 e próximos" })).toBeInTheDocument()
+    amount = document.querySelector<HTMLInputElement>('input[name="amount"]')!
+    await user.clear(amount)
+    await user.type(amount, "175")
+    await user.click(screen.getByRole("button", { name: "Salvar agosto de 2026 e próximos" }))
+
+    await user.click(screen.getByRole("button", { name: "Editar custo fixo" }))
+    await user.click(screen.getByRole("radio", { name: "Toda a série" }))
+    expect(screen.getByRole("button", { name: "Salvar toda a série" })).toBeInTheDocument()
+    amount = document.querySelector<HTMLInputElement>('input[name="amount"]')!
+    await user.clear(amount)
+    await user.type(amount, "200")
+    await user.click(screen.getByRole("button", { name: "Salvar toda a série" }))
+
+    await waitFor(() => {
+      const payloads = fetchMock.mock.calls
+        .filter(([url, init]) => String(url) === "/api/fixed-costs/occurrence-1" && init?.method === "PUT")
+        .map(([, init]) => JSON.parse(String(init?.body)))
+      expect(payloads.map((payload) => ({ scope: payload.scope, amount: payload.amount }))).toEqual([
+        { scope: "THIS_MONTH", amount: "150" },
+        { scope: "THIS_AND_FUTURE", amount: "175" },
+        { scope: "ENTIRE_SERIES", amount: "200" },
+      ])
+    })
+  })
 })
 
 function response(data: unknown) {
@@ -111,6 +177,7 @@ function occurrence(id: string, name: string, month: string) {
     status: "PENDING",
     paidAt: null,
     paidViaCard: false,
+    updatedAt: "2026-08-01T12:00:00.000Z",
     fixedCost: {
       id,
       name,

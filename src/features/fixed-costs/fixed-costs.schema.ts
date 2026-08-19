@@ -39,4 +39,15 @@ export const fixedCostSchema = z.object(fixedCostShape).refine(
 
 export const fixedCostPartialSchema = z.object(fixedCostShape).partial()
 
+export const fixedCostEditScopeSchema = z.enum(["THIS_MONTH", "THIS_AND_FUTURE", "ENTIRE_SERIES"])
+
+export const fixedCostOccurrenceAmountUpdateSchema = z.object({
+  occurrenceId: z.string().min(1),
+  month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Mês inválido"),
+  scope: fixedCostEditScopeSchema,
+  amount: z.coerce.number().positive("Valor deve ser maior que zero"),
+  expectedUpdatedAt: z.string().datetime(),
+}).strict()
+
 export type FixedCostInput = z.infer<typeof fixedCostSchema>
+export type FixedCostOccurrenceAmountUpdateInput = z.infer<typeof fixedCostOccurrenceAmountUpdateSchema>

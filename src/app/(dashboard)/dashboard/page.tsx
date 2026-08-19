@@ -8,7 +8,6 @@ import {
   Banknote,
   BarChart3,
   Landmark,
-  Loader2,
   Wallet,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -39,7 +38,7 @@ const evolutionMetrics: { key: EvolutionMetric; label: string }[] = [
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<div className="py-12 text-center text-sm text-muted-foreground">Carregando...</div>}>
+    <Suspense fallback={<DashboardSkeleton />}>
       <DashboardPageContent />
     </Suspense>
   )
@@ -147,7 +146,7 @@ function DashboardPageContent() {
             <div>
               <p className="text-xs font-medium text-muted-foreground">Resultado líquido</p>
               <p className={`mt-1 text-2xl font-bold tabular-nums ${summary.balance >= 0 ? "text-success" : "text-destructive"}`}>
-                {loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(summary.balance)}
+                {loading ? <span className="inline-block h-6 w-32 animate-pulse rounded bg-muted" /> : formatCurrency(summary.balance)}
               </p>
             </div>
             <div className={`rounded-xl p-3 ${summary.balance >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
@@ -174,7 +173,7 @@ function DashboardPageContent() {
                 </p>
                 <p className="text-xl font-bold">
                   {loading ? (
-                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    <span className="inline-block h-5 w-28 animate-pulse rounded bg-muted" />
                   ) : (
                     card.value.toLocaleString("pt-BR", {
                       style: "currency",
@@ -196,7 +195,7 @@ function DashboardPageContent() {
             <div>
               <p className="text-xs font-medium text-muted-foreground">Caixa e compromissos</p>
               <p className={`mt-1 text-xl font-bold tabular-nums ${available >= 0 ? "text-success" : "text-destructive"}`}>
-                {loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(available)}
+                {loading ? <span className="inline-block h-5 w-28 animate-pulse rounded bg-muted" /> : formatCurrency(available)}
               </p>
               <p className="mt-1 text-[11px] text-muted-foreground">Disponível depois do que falta pagar</p>
             </div>
@@ -219,7 +218,7 @@ function DashboardPageContent() {
             <div className="rounded-xl bg-white/20 p-3"><Landmark className="h-5 w-5 text-white" /></div>
             <div>
               <p className="text-xs font-medium opacity-80">Saldo em contas</p>
-              <p className="text-xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin opacity-60" /> : formatCurrency(bankTotal)}</p>
+              <p className="text-xl font-bold">{loading ? <span className="inline-block h-5 w-28 animate-pulse rounded bg-white/20" /> : formatCurrency(bankTotal)}</p>
               <p className="text-[10px] opacity-60">Soma dos saldos bancários</p>
             </div>
           </CardContent>
@@ -229,7 +228,7 @@ function DashboardPageContent() {
             <div className="rounded-xl bg-destructive/10 p-3"><ArrowDown className="h-5 w-5 text-destructive" /></div>
             <div>
               <p className="text-xs font-medium text-muted-foreground">A pagar</p>
-              <p className="text-xl font-bold text-destructive">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(totalToPay)}</p>
+              <p className="text-xl font-bold text-destructive">{loading ? <span className="inline-block h-5 w-28 animate-pulse rounded bg-muted" /> : formatCurrency(totalToPay)}</p>
               <p className="text-[10px] text-muted-foreground/60">Faturas pendentes + contas fixas + avulsas</p>
             </div>
           </CardContent>
@@ -239,7 +238,7 @@ function DashboardPageContent() {
             <div className="rounded-xl bg-primary/10 p-3"><Banknote className="h-5 w-5 text-primary" /></div>
             <div>
               <p className="text-xs font-medium text-muted-foreground">Disponível</p>
-              <p className="text-xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(available)}</p>
+              <p className="text-xl font-bold">{loading ? <span className="inline-block h-5 w-28 animate-pulse rounded bg-muted" /> : formatCurrency(available)}</p>
               <p className="text-[10px] text-muted-foreground/60">Saldo − A pagar</p>
             </div>
           </CardContent>
@@ -249,7 +248,7 @@ function DashboardPageContent() {
             <div className="rounded-xl bg-destructive/10 p-3"><Banknote className="h-5 w-5 text-destructive" /></div>
             <div>
               <p className="text-xs font-medium text-muted-foreground">Gastos do mês</p>
-              <p className="text-xl font-bold text-destructive">{loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : formatCurrency(totalSpent)}</p>
+              <p className="text-xl font-bold text-destructive">{loading ? <span className="inline-block h-5 w-28 animate-pulse rounded bg-muted" /> : formatCurrency(totalSpent)}</p>
               <p className="text-[10px] text-muted-foreground/60">Tudo que entrou na fatura + PIX + avulsas</p>
             </div>
           </CardContent>
@@ -293,7 +292,7 @@ function DashboardPageContent() {
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? <div className="flex h-[280px] items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div> : <MonthlyEvolutionChart data={evolution?.months ?? []} metric={evolutionMetric} />}
+          {loading ? <div className="h-[280px] animate-pulse rounded-lg bg-muted" /> : <MonthlyEvolutionChart data={evolution?.months ?? []} metric={evolutionMetric} />}
         </CardContent>
       </Card>
 
@@ -332,7 +331,7 @@ function DashboardPageContent() {
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? <div className="flex h-[280px] items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div> : <CardInvoiceEvolutionChart data={cardEvolution?.months ?? []} cards={cardEvolution?.cards ?? []} cardId={selectedCardId} color={selectedCard?.color ?? "#2563EB"} />}
+          {loading ? <div className="h-[280px] animate-pulse rounded-lg bg-muted" /> : <CardInvoiceEvolutionChart data={cardEvolution?.months ?? []} cards={cardEvolution?.cards ?? []} cardId={selectedCardId} color={selectedCard?.color ?? "#2563EB"} />}
         </CardContent>
       </Card>
 
@@ -345,7 +344,7 @@ function DashboardPageContent() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {loading ? <div className="flex h-[280px] items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div> : <IncomeVsExpenseChart data={stats?.dailyTrend ?? []} />}
+            {loading ? <div className="h-[280px] animate-pulse rounded-lg bg-muted" /> : <IncomeVsExpenseChart data={stats?.dailyTrend ?? []} />}
           </CardContent>
         </Card>
 
@@ -354,7 +353,7 @@ function DashboardPageContent() {
             <CardTitle className="text-base">Gastos por Categoria</CardTitle>
           </CardHeader>
           <CardContent>
-            {loading ? <div className="flex h-[280px] items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div> : <ExpenseByCategoryChart data={stats?.byCategory ?? []} />}
+            {loading ? <div className="h-[280px] animate-pulse rounded-lg bg-muted" /> : <ExpenseByCategoryChart data={stats?.byCategory ?? []} />}
           </CardContent>
         </Card>
       </div>
@@ -365,7 +364,7 @@ function DashboardPageContent() {
             <CardTitle className="text-base">Evolução Diária</CardTitle>
           </CardHeader>
           <CardContent>
-            {loading ? <div className="flex h-[280px] items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div> : <DailyTrendChart data={stats?.dailyTrend ?? []} />}
+            {loading ? <div className="h-[280px] animate-pulse rounded-lg bg-muted" /> : <DailyTrendChart data={stats?.dailyTrend ?? []} />}
           </CardContent>
         </Card>
 
@@ -374,7 +373,7 @@ function DashboardPageContent() {
             <CardTitle className="text-base">Transações Recentes</CardTitle>
           </CardHeader>
           <CardContent>
-            {loading ? <div className="flex h-[280px] items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</div> : <RecentTransactions transactions={stats?.recentTransactions ?? []} />}
+            {loading ? <div className="h-[280px] animate-pulse rounded-lg bg-muted" /> : <RecentTransactions transactions={stats?.recentTransactions ?? []} />}
           </CardContent>
         </Card>
       </div>
@@ -399,7 +398,7 @@ function InsightCard({
   return (
     <div className="rounded-xl bg-muted p-4">
       <p className="text-xs font-medium text-muted-foreground">{title}</p>
-      <p className={`mt-1 text-lg font-bold ${toneClass}`}>{loading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : value}</p>
+      <p className={`mt-1 text-lg font-bold ${toneClass}`}>{loading ? <span className="inline-block h-5 w-24 animate-pulse rounded bg-muted" /> : value}</p>
       <p className="mt-1 text-[10px] text-muted-foreground/70">{description}</p>
     </div>
   )
@@ -429,7 +428,7 @@ function MobileFinanceItem({
         <span className="min-w-0 truncate text-xs font-medium text-muted-foreground">{label}</span>
       </div>
       <p className={`mt-2 truncate text-sm font-bold tabular-nums ${toneClass}`}>
-        {loading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : formatCurrency(value)}
+        {loading ? <span className="inline-block h-4 w-20 animate-pulse rounded bg-muted" /> : formatCurrency(value)}
       </p>
     </div>
   )
@@ -480,4 +479,89 @@ function getCardInvoiceSummary(items: CardInvoiceEvolutionStats["months"], cardI
     highest,
     changePercent: previous > 0 ? ((current - previous) / previous) * 100 : null,
   }
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-2">
+          <div className="h-7 w-40 animate-pulse rounded bg-muted" />
+          <div className="h-4 w-56 animate-pulse rounded bg-muted" />
+        </div>
+        <div className="h-9 w-48 animate-pulse rounded bg-muted" />
+      </div>
+
+      <div className="hidden gap-4 sm:grid sm:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="rounded-xl border-0 bg-card shadow-sm p-6">
+            <div className="flex items-center gap-4">
+              <div className="h-11 w-11 animate-pulse rounded-xl bg-muted" />
+              <div className="space-y-2">
+                <div className="h-3 w-24 animate-pulse rounded bg-muted" />
+                <div className="h-5 w-28 animate-pulse rounded bg-muted" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden gap-4 sm:grid sm:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="rounded-xl border-0 bg-card shadow-sm p-6">
+            <div className="flex items-center gap-4">
+              <div className="h-11 w-11 animate-pulse rounded-xl bg-muted" />
+              <div className="space-y-2">
+                <div className="h-3 w-20 animate-pulse rounded bg-muted" />
+                <div className="h-5 w-28 animate-pulse rounded bg-muted" />
+                <div className="h-2 w-32 animate-pulse rounded bg-muted" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-xl border-0 bg-card shadow-sm p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <div className="h-5 w-36 animate-pulse rounded bg-muted" />
+            <div className="h-4 w-52 animate-pulse rounded bg-muted" />
+          </div>
+          <div className="flex gap-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-8 w-16 animate-pulse rounded bg-muted" />
+            ))}
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-xl bg-muted p-4 space-y-2">
+              <div className="h-3 w-20 animate-pulse rounded bg-background/50" />
+              <div className="h-5 w-24 animate-pulse rounded bg-background/50" />
+              <div className="h-2 w-28 animate-pulse rounded bg-background/50" />
+            </div>
+          ))}
+        </div>
+        <div className="h-[280px] animate-pulse rounded-lg bg-muted" />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <div key={i} className="rounded-xl border-0 bg-card shadow-sm p-6 space-y-4">
+            <div className="h-5 w-40 animate-pulse rounded bg-muted" />
+            <div className="h-[280px] animate-pulse rounded-lg bg-muted" />
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <div key={i} className="rounded-xl border-0 bg-card shadow-sm p-6 space-y-4">
+            <div className="h-5 w-36 animate-pulse rounded bg-muted" />
+            <div className="h-[280px] animate-pulse rounded-lg bg-muted" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }

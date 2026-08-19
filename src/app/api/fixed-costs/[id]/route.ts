@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { fixedCostPartialSchema } from "@/features/fixed-costs/fixed-costs.schema"
-import { deleteFixedCost, DuplicateFixedCostNameError, updateFixedCost } from "@/features/fixed-costs/fixed-costs.service"
+import { fixedCostOccurrenceAmountUpdateSchema } from "@/features/fixed-costs/fixed-costs.schema"
+import { deleteFixedCost, ProtectedFixedCostOccurrenceError, StaleFixedCostOccurrenceError, updateFixedCostOccurrenceAmount } from "@/features/fixed-costs/fixed-costs.service"
 
 export async function PUT(
   request: Request,
@@ -12,27 +12,30 @@ export async function PUT(
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
 
-  const parsed = fixedCostPartialSchema.safeParse(await request.json())
+  const parsed = fixedCostOccurrenceAmountUpdateSchema.safeParse(await request.json())
   if (!parsed.success) {
     return NextResponse.json({ error: "Dados inválidos" }, { status: 400 })
   }
 
   const { id } = await params
-  let fixedCost
+  let result
   try {
-    fixedCost = await updateFixedCost(id, session.user.id, parsed.data)
+    result = await updateFixedCostOccurrenceAmount(id, session.user.id, parsed.data)
   } catch (err) {
-    if (err instanceof DuplicateFixedCostNameError) {
-      return NextResponse.json({ error: err.message }, { status: 409 })
+    if (err instanceof StaleFixedCostOccurrenceError) {
+      return NextResponse.json({ error: err.message, conflict: "STALE_OCCURRENCE" }, { status: 409 })
+    }
+    if (err instanceof ProtectedFixedCostOccurrenceError) {
+      return NextResponse.json({ error: err.message, conflict: "PROTECTED_OCCURRENCE", reason: err.reason }, { status: 409 })
     }
     console.error("[PUT /api/fixed-costs/:id] error:", err)
     return NextResponse.json({ error: "Erro interno" }, { status: 500 })
   }
-  if (!fixedCost) {
-    return NextResponse.json({ error: "Custo fixo não encontrado" }, { status: 404 })
+  if (!result) {
+    return NextResponse.json({ error: "Ocorrência não encontrada" }, { status: 404 })
   }
 
-  return NextResponse.json(fixedCost)
+  return NextResponse.json(result)
 }
 
 export async function DELETE(
