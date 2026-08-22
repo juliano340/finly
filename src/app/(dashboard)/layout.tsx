@@ -33,6 +33,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { CURRENT_VERSION } from "@/content/releases"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { computeDaysUntilDue, deriveStatus, type DueNotificationStatus } from "@/lib/compute-days-until-due"
 
@@ -204,6 +205,22 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     </div>
   )
 
+  const renderVersion = (isCollapsed: boolean, onNavigate?: () => void) => (
+    <div className="px-2 pb-1">
+      <Link
+        href="/changelog"
+        onClick={onNavigate}
+        aria-label={`Versão ${CURRENT_VERSION}. Abrir changelog`}
+        title={`Finly v${CURRENT_VERSION}`}
+        className={`block rounded-md px-2 py-1 text-center text-[10px] font-medium text-sidebar-foreground/45 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground ${
+          isCollapsed ? "tracking-tight" : "tracking-wide"
+        }`}
+      >
+        v{CURRENT_VERSION}
+      </Link>
+    </div>
+  )
+
   return (
     <div className="flex h-screen overflow-hidden bg-muted/30">
       {/* Desktop sidebar */}
@@ -237,6 +254,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         </div>
         <Separator className="bg-sidebar-border" />
         {renderNavigation(collapsed)}
+        {renderVersion(collapsed)}
         {renderLogout(collapsed)}
       </aside>
 
@@ -272,6 +290,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         </div>
         <Separator className="bg-sidebar-border" />
         {renderNavigation(false, () => setMobileNavOpen(false))}
+        {renderVersion(false, () => setMobileNavOpen(false))}
         {renderLogout(false, () => setMobileNavOpen(false))}
       </aside>
 

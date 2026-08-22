@@ -1,43 +1,87 @@
 # Changelog
 
-## 2026-08-10
+Todas as mudanças relevantes do Finly são registradas neste arquivo.
+
+## [0.2.0] - 2026-08-22
 
 ### Adicionado
 
-- **Plano do Mês**: configuração mensal por usuário com receita sugerida ou ajustada, meta de economia, margem de segurança, limite diário e estados de acompanhamento; página responsiva e resumo integrado ao dashboard.
-- **Contrato contábil (D-16)**: o plano soma compromissos e somente `Transaction` de despesa avulsa. Pagamentos internos de fatura e lançamento fixo usam `BankAccountMovement`; itens importados já pertencem à fatura. Uma transação manual semanticamente duplicada continua avulsa porque não há deduplicação fuzzy; proveniência explícita fica fora deste escopo.
-- **Janela mensal (D-17)**: consultas e alterações aceitam meses do início do ano anterior ao fim do próximo ano, com limites calculados em `America/Sao_Paulo`; meses externos são rejeitados antes da materialização de recorrências.
-- **Validação PostgreSQL**: teste com banco efêmero aplica as migrations e verifica tabela, chave estrangeira, unicidade, ownership e separação entre DML do runtime e DDL do migrator.
+- Plano do Mês com receita, meta de economia, margem de segurança, limite diário e acompanhamento mensal.
+- Planejamento de faturas e suporte a contas de benefício pré-pago.
+- Edição pontual do valor de ocorrências e atualização da configuração completa de séries de lançamentos fixos.
+- Detalhamento da composição das despesas no Fechamento Mensal.
+- Mês selecionado compartilhado e restaurado entre as principais telas financeiras.
+- Estado das abas de cartões e faturas preservado durante a navegação.
+- Barra de seleção compartilhada nas tabelas e seleção de lançamentos fixos preservada por mês e aba.
+- Skeletons de carregamento para tabelas e cards de resumo.
+- Página personalizada para rotas não encontradas.
+- Validação de uploads PDF e CSV com mensagens de erro mais claras.
 
 ### Corrigido
 
-- **Rollout de produção**: build Vercel agora segue migration-before-deploy e falha fechado sem a credencial de migração ou quando migration/smoke estrutural falha, antes de compilar a aplicação.
+- Menu responsivo do dashboard estabilizado em mudanças de viewport e navegação mobile.
+- Usuários autenticados agora são redirecionados para fora da tela de login.
+- Cópia seletiva de faturas preserva faturas pertencentes aos demais cartões.
+- Navegação rápida entre meses não exibe dados antigos de lançamentos fixos ou dashboard.
+- Restauração de backup não recria ocorrências previamente excluídas.
+- Ajustes de saldo bancário bloqueiam atualizações concorrentes e exibem o estado de carregamento correto.
+- Navegação mensal e composição de despesas preservam o parâmetro de mês.
+- Testes de fechamento mensal reconhecem corretamente o texto das faturas.
 
-## 2026-08-09
+### Segurança
 
-### Corrigido
+- Janela mensal limitada do início do ano anterior ao fim do próximo ano no fuso America/Sao_Paulo.
+- Build de produção executa migration e smoke de schema antes da compilação e falha fechado sem credencial privilegiada.
 
-- **Configuração local**: `.env.example` e README agora distinguem claramente SQLite local e PostgreSQL de produção.
-- **Acessibilidade**: tabelas ordenáveis de contas bancárias e lançamentos fixos agora comunicam coluna e direção via `aria-sort` e rótulos acessíveis.
-- **Autenticação**: tentativas inválidas agora têm limite persistente por conta e IP, resposta uniforme e bloqueio temporário sem armazenar identificadores em texto puro.
-- **Dependências**: Next.js, Auth.js e Prisma atualizados para versões compatíveis com correções de segurança disponíveis.
+### Alterado
+
+- Componentes financeiros reorganizados e total de fatura isolado em componente reutilizável.
+
+### Manutenção
+
+- Teste PostgreSQL efêmero valida migrations, relacionamentos, unicidade, ownership e separação de privilégios.
+
+## [0.1.0] - 2026-08-09
 
 ### Adicionado
 
-- **Qualidade**: cobertura automatizada com limites mínimos de 60% para linhas, funções e statements e 50% para branches.
-- **Segurança no CI**: audit de dependências críticas, Semgrep SAST, detecção de segredos e atualizações semanais pelo Dependabot.
-- **Documentação**: README operacional com produto, arquitetura, ambiente, scripts, testes, migrações e regras de segurança.
-
-## 2026-08-05
+- Fundação do Finly com Next.js, Tailwind CSS e componentes de interface.
+- Autenticação, isolamento por usuário e proteção da conta de demonstração contra escritas.
+- Dashboard financeiro com gráficos, resumo mensal e métricas detalhadas.
+- CRUD de categorias, transações, orçamentos, contas bancárias, cartões e lançamentos fixos.
+- Fechamento mensal responsivo com receitas, despesas, faturas e lançamentos recorrentes.
+- Importação de transações por CSV e importação de faturas por PDF com categorização.
+- Backup e restauração de dados com exportação e importação.
+- Pagamento e estorno de faturas e lançamentos fixos com movimentação bancária vinculada.
+- Transferências entre contas, limite de cheque especial e exclusão lógica.
+- Notificações de vencimento com dias restantes e status calculado.
+- Recuperação de senha por link seguro enviado por e-mail.
+- Totalizadores e ordenação na tela de cartões e faturas.
+- Landing page, onboarding e temas claro e escuro.
+- Migração do banco de desenvolvimento SQLite para PostgreSQL em produção.
 
 ### Corrigido
 
-- **Lançamentos Fixos**: tabela agora atualiza ao salvar edição de um lançamento (antes era necessário F5 pra ver alterações de nome, categoria, etc.)
-- **Transferência entre contas**: dropdown de seleção de conta agora aparece posicionado corretamente abaixo do select (antes aparecia desacoplado no canto inferior da tela)
-- **Teste monthly-closing**: corrigido teste "sincroniza custos fixos inclusos no cartão" que falhava porque `startDate` não era definido, impedindo a geração de ocorrências para o mês de referência
+- Valores monetários armazenados com precisão decimal no PostgreSQL e SQLite.
+- Recorrências diárias e semanais identificadas por data, sem perdas ou duplicidades.
+- Pagamento de lançamentos fixos idempotente contra requisições concorrentes.
+- Estorno de lançamento fixo remove somente o movimento bancário vinculado.
+- Tabela de lançamentos fixos atualiza imediatamente após uma edição.
+- Seleção de conta em transferências permanece posicionada junto ao campo.
+- Navegação por âncoras da página inicial funciona após retornar de outra rota.
+- Datas de notificações respeitam o fuso local sem deslocamento de um dia.
+- Formulários de edição carregam corretamente os valores existentes.
+- Tabelas ordenáveis comunicam coluna e direção para tecnologias assistivas.
 
-### Adicionado
+### Segurança
 
-- **Cartões e Faturas**: cards de totalizador (Total do mês, Pago, A pagar) acima da tabela de faturas, seguindo o padrão da tela de Lançamentos Fixos
-- **Cartões e Faturas**: linha de totais no rodapé da tabela com valor total e contagem de pagos/pendentes
-- **Cartões e Faturas**: ordenação nas colunas da tabela (Cartão, Vencimento, Valor, Status) com clique no header para alternar asc/desc
+- Tentativas inválidas de login têm limite persistente por conta e IP, resposta uniforme e bloqueio temporário.
+- Dependências principais atualizadas e CI protegido por auditoria, SAST, detecção de segredos e Dependabot.
+
+### Documentação
+
+- Guias operacionais de ambiente, migrations, deploy, testes e segurança.
+
+### Manutenção
+
+- Cobertura automatizada com limites mínimos e pipeline de integração contínua.
