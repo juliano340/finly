@@ -25,6 +25,7 @@ export const releases = [
       { type: "security", description: "Restauração de backup limita o tamanho de cada coleção de dados aceita." },
       { type: "security", description: "Listagem de transações limita a paginação a 100 itens por página." },
       { type: "chore", description: "Rota interna de debug removida da árvore de produção." },
+      { type: "chore", description: "Limites de cadastro e redefinição de senha ativos apenas em produção, mantendo os testes automatizados estáveis." },
       { type: "chore", description: "Teste automatizado garante que todas as rotas de API retornam 401 sem sessão." },
     ],
   },

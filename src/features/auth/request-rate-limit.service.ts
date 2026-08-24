@@ -19,6 +19,8 @@ export async function consumeIpRateLimit(
   client?: PrismaClient,
   now = new Date(),
 ): Promise<boolean> {
+  if (process.env.NODE_ENV !== "production") return false
+
   const db = client ?? defaultPrisma
   const address = clientAddress(request)
   if (!address) return false

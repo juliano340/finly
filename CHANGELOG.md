@@ -16,6 +16,7 @@ Todas as mudanças relevantes do Finly são registradas neste arquivo.
 ### Manutenção
 
 - Rota interna de debug removida da árvore de produção.
+- Limites de cadastro e redefinição de senha ativos apenas em produção, mantendo os testes automatizados estáveis.
 - Teste automatizado garante que todas as rotas de API retornam 401 sem sessão.
 
 ## [0.2.0] - 2026-08-22
