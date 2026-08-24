@@ -10,4 +10,6 @@ export const categorySchema = z.object({
   type: z.enum(["INCOME", "EXPENSE"]),
 })
 
+export const updateCategorySchema = categorySchema.partial()
+
 export type CategoryInput = z.infer<typeof categorySchema>

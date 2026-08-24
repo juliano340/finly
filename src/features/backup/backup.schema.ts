@@ -19,12 +19,12 @@ export const backupSchema = z.object({
       icon: z.string().default("wallet"),
       color: z.string().default("#0EA882"),
       type: z.enum(["INCOME", "EXPENSE"]).default("EXPENSE"),
-    })),
+    })).max(1000),
     financialMonths: z.array(z.object({
       id: z.string(),
       month: z.string(),
       status: z.enum(["OPEN", "CLOSED"]).default("OPEN"),
-    })),
+    })).max(240),
     bankAccounts: z.array(z.object({
       id: z.string(),
       name: z.string(),
@@ -35,7 +35,7 @@ export const backupSchema = z.object({
       overdraftLimit: z.number().default(0),
       benefitDailyRate: z.number().positive().nullable().optional(),
       active: z.boolean().default(true),
-    })),
+    })).max(100),
     cards: z.array(z.object({
       id: z.string(),
       name: z.string(),
@@ -44,7 +44,7 @@ export const backupSchema = z.object({
       closingDay: z.number().int().nullable().optional(),
       dueDay: z.number().int().nullable().optional(),
       bankAccountId: z.string().nullable().optional(),
-    })),
+    })).max(100),
     transactions: z.array(z.object({
       id: z.string(),
       amount: z.number(),
@@ -52,13 +52,13 @@ export const backupSchema = z.object({
       description: z.string().nullable().optional(),
       date: isoDate,
       categoryId: z.string(),
-    })),
+    })).max(25000),
     budgets: z.array(z.object({
       id: z.string(),
       amount: z.number(),
       month: z.string(),
       categoryId: z.string(),
-    })),
+    })).max(20000),
     bankAccountMovements: z.array(z.object({
       id: z.string(),
       bankAccountId: z.string(),
@@ -86,7 +86,7 @@ export const backupSchema = z.object({
       endType: z.enum(["NONE", "DATE", "COUNT"]).optional(),
       endDate: isoDate.nullable().optional(),
       endAfterCount: z.number().int().nullable().optional(),
-    })),
+    })).max(2000),
     cardInvoices: z.array(z.object({
       id: z.string(),
       cardId: z.string(),
@@ -103,7 +103,7 @@ export const backupSchema = z.object({
       paymentMethod: z.string().nullable().optional(),
       paymentBankAccountId: z.string().nullable().optional(),
       bankAccountMovementId: z.string().nullable().optional(),
-    })),
+    })).max(5000),
     fixedCostOccurrences: z.array(z.object({
       id: z.string(),
       fixedCostId: z.string(),
@@ -113,7 +113,7 @@ export const backupSchema = z.object({
       amount: z.number(),
       status: z.enum(["PENDING", "PAID"]).default("PENDING"),
       paidAt: isoDate.nullable().optional(),
-    })),
+    })).max(50000),
     cardInvoiceItems: z.array(z.object({
       id: z.string(),
       invoiceId: z.string(),
@@ -126,7 +126,7 @@ export const backupSchema = z.object({
       installmentGroupId: z.string().nullable().optional(),
       installmentNumber: z.number().int().nullable().optional(),
       installmentCount: z.number().int().nullable().optional(),
-    })).default([]),
+    })).max(100000).default([]),
   }),
 })
 

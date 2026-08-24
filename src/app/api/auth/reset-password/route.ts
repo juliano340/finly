@@ -6,9 +6,20 @@ import {
   TokenExpiredError,
   TokenInvalidError,
 } from "@/features/auth/password-reset.service"
+import { consumeIpRateLimit } from "@/features/auth/request-rate-limit.service"
+
+const RESET_RATE_LIMIT = { max: 20, windowMs: 60 * 60 * 1000 }
 
 export async function POST(request: Request) {
   try {
+    const limited = await consumeIpRateLimit(request, "reset-password", RESET_RATE_LIMIT)
+    if (limited) {
+      return NextResponse.json(
+        { error: "Muitas tentativas. Tente novamente mais tarde." },
+        { status: 429 }
+      )
+    }
+
     const body = await request.json()
     const parsed = resetPasswordSchema.safeParse(body)
 

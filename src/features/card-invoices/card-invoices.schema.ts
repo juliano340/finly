@@ -12,6 +12,12 @@ export const cardInvoiceSchema = z.object({
   paidAt: z.coerce.date().optional().nullable(),
 })
 
+export const copyCardInvoicesSchema = z.object({
+  fromMonth: z.string().regex(/^\d{4}-\d{2}$/, "Mês deve estar no formato YYYY-MM"),
+  toMonth: z.string().regex(/^\d{4}-\d{2}$/, "Mês deve estar no formato YYYY-MM"),
+  invoiceIds: z.array(z.string()).max(100).optional(),
+})
+
 export const cardInvoiceItemSchema = z.object({
   kind: z.enum(["MANUAL", "INSTALLMENT", "FIXED_COST", "IMPORTED", "FORECAST"]).default("MANUAL"),
   postingStatus: z.enum(["PROJECTED", "POSTED"]).default("POSTED"),

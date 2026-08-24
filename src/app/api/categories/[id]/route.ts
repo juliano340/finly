@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { updateCategory, deleteCategory } from "@/features/categories/categories.service"
+import { updateCategorySchema } from "@/features/categories/categories.schema"
 
 export async function PUT(
   request: Request,
@@ -13,7 +14,12 @@ export async function PUT(
 
   const { id } = await params
   const body = await request.json()
-  const updated = await updateCategory(id, session.user.id, body)
+  const parsed = updateCategorySchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Dados inválidos" }, { status: 400 })
+  }
+
+  const updated = await updateCategory(id, session.user.id, parsed.data)
 
   if (!updated) {
     return NextResponse.json({ error: "Categoria não encontrada" }, { status: 404 })

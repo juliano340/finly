@@ -2,6 +2,22 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.1] - 2026-08-23
+
+### Segurança
+
+- Auditoria completa das rotas de API confirma proteção por sessão em todos os endpoints privados.
+- Cadastro e redefinição de senha com limite de tentativas por IP e resposta 429 ao exceder.
+- Edição de categorias valida o corpo da requisição com schema, bloqueando alteração de campos protegidos.
+- Cópia de faturas valida formato dos meses e limita a quantidade de faturas por requisição.
+- Restauração de backup limita o tamanho de cada coleção de dados aceita.
+- Listagem de transações limita a paginação a 100 itens por página.
+
+### Manutenção
+
+- Rota interna de debug removida da árvore de produção.
+- Teste automatizado garante que todas as rotas de API retornam 401 sem sessão.
+
 ## [0.2.0] - 2026-08-22
 
 ### Adicionado

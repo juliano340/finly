@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { hash } from "bcryptjs"
 import { z } from "zod"
+import { consumeIpRateLimit } from "@/features/auth/request-rate-limit.service"
 
 const registerSchema = z.object({
   name: z.string().min(1),
@@ -9,8 +10,18 @@ const registerSchema = z.object({
   password: z.string().min(8),
 })
 
+const REGISTER_RATE_LIMIT = { max: 10, windowMs: 60 * 60 * 1000 }
+
 export async function POST(request: Request) {
   try {
+    const limited = await consumeIpRateLimit(request, "register", REGISTER_RATE_LIMIT)
+    if (limited) {
+      return NextResponse.json(
+        { error: "Muitas tentativas. Tente novamente mais tarde." },
+        { status: 429 }
+      )
+    }
+
     const body = await request.json()
     const parsed = registerSchema.safeParse(body)
 

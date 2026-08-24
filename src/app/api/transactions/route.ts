@@ -15,8 +15,8 @@ export async function GET(request: Request) {
     type: url.searchParams.get("type") as "INCOME" | "EXPENSE" | undefined,
     categoryId: url.searchParams.get("categoryId") ?? undefined,
     month: url.searchParams.get("month") ?? undefined,
-    page: parseInt(url.searchParams.get("page") ?? "1"),
-    limit: parseInt(url.searchParams.get("limit") ?? "20"),
+    page: Math.max(parseInt(url.searchParams.get("page") ?? "1") || 1, 1),
+    limit: Math.min(Math.max(parseInt(url.searchParams.get("limit") ?? "20") || 20, 1), 100),
   }
 
   const result = await getTransactions(session.user.id, filters)

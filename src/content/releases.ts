@@ -11,9 +11,23 @@ export interface Release {
   changes: readonly ReleaseChange[]
 }
 
-export const CURRENT_VERSION = "0.2.0"
+export const CURRENT_VERSION = "0.2.1"
 
 export const releases = [
+  {
+    version: "0.2.1",
+    date: "2026-08-23",
+    changes: [
+      { type: "security", description: "Auditoria completa das rotas de API confirma proteção por sessão em todos os endpoints privados." },
+      { type: "security", description: "Cadastro e redefinição de senha com limite de tentativas por IP e resposta 429 ao exceder." },
+      { type: "security", description: "Edição de categorias valida o corpo da requisição com schema, bloqueando alteração de campos protegidos." },
+      { type: "security", description: "Cópia de faturas valida formato dos meses e limita a quantidade de faturas por requisição." },
+      { type: "security", description: "Restauração de backup limita o tamanho de cada coleção de dados aceita." },
+      { type: "security", description: "Listagem de transações limita a paginação a 100 itens por página." },
+      { type: "chore", description: "Rota interna de debug removida da árvore de produção." },
+      { type: "chore", description: "Teste automatizado garante que todas as rotas de API retornam 401 sem sessão." },
+    ],
+  },
   {
     version: "0.2.0",
     date: "2026-08-22",
