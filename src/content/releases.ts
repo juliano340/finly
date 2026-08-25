@@ -11,9 +11,17 @@ export interface Release {
   changes: readonly ReleaseChange[]
 }
 
-export const CURRENT_VERSION = "0.2.4"
+export const CURRENT_VERSION = "0.2.5"
 
 export const releases = [
+  {
+    version: "0.2.5",
+    date: "2026-08-25",
+    changes: [
+      { type: "feat", description: "Imagem de compartilhamento social (Open Graph) gerada como PNG 1200x630 e ligada ao metadata do site." },
+      { type: "feat", description: "Script de geração de OG image e script de screenshots adicionados aos atalhos do package.json." },
+    ],
+  },
   {
     version: "0.2.4",
     date: "2026-08-25",

@@ -2,17 +2,24 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
-## [0.2.4] - 2026-08-25
-
-### Documentação
-
-- 6 ADRs documentando decisões de arquitetura: dual schema SQLite/PostgreSQL, auth por rota sem middleware, JWT com invalidação por `passwordChangedAt`, precisão monetária com Prisma.Decimal, changelog como código tipado, rate limiting restrito a produção.
-- `docs/ARCHITECTURE.md` com visão geral de camadas, pirâmide de testes e convenções feature-based.
-- README premium com badges, lista completa de funcionalidades, diagrama Mermaid da arquitetura e tabela de ADRs.
+## [0.2.5] - 2026-08-25
 
 ### Adicionado
 
-- Script Playwright para screenshots automatizadas (light/dark) em `docs/screenshots/`.
+- Imagem de compartilhamento social (Open Graph) gerada como PNG 1200x630 e ligada ao metadata do site.
+- Script de geração de OG image e script de screenshots adicionados aos atalhos do package.json.
+
+## [0.2.4] - 2026-08-25
+
+### Adicionado
+
+- Script Playwright para screenshots automatizadas (light/dark) em docs/screenshots/.
+
+### Documentação
+
+- 6 ADRs documentando decisões de arquitetura: dual schema, auth por rota, JWT, precisão monetária, changelog-as-code, rate limiting.
+- ARCHITECTURE.md com visão geral de camadas, pirâmide de testes e convenções feature-based.
+- README premium com badges, lista de funcionalidades, diagrama Mermaid e referências aos ADRs.
 
 ## [0.2.3] - 2026-08-24
 

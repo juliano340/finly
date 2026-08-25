@@ -1,6 +1,6 @@
 {
   "name": "finly",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -22,6 +22,8 @@
     "seed:accounts": "tsx scripts/seed-accounts.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
     "seed:demo:reset": "tsx scripts/seed-demo.ts --reset",
+    "screenshots": "tsx scripts/take-screenshots.ts",
+    "og:image": "tsx scripts/generate-og-image.ts",
     "prisma:generate": "prisma generate && prisma generate --schema prisma/schema.sqlite.prisma",
     "db:push:sqlite": "prisma db push --schema prisma/schema.sqlite.prisma",
     "postinstall": "npm run prisma:generate"

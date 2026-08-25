@@ -18,6 +18,21 @@ export const metadata: Metadata = {
   title: "Finly — Controle Financeiro",
   description:
     "Gerencie suas finanças pessoais de forma simples e inteligente.",
+  openGraph: {
+    title: "Finly — Controle Financeiro",
+    description:
+      "Gerencie suas finanças pessoais de forma simples e inteligente.",
+    type: "website",
+    locale: "pt_BR",
+    images: [{ url: "/og.png", width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Finly — Controle Financeiro",
+    description:
+      "Gerencie suas finanças pessoais de forma simples e inteligente.",
+    images: ["/og.png"],
+  },
 }
 
 const themeBootstrap = `(function(){try{var t=localStorage.getItem('cinema-theme');var theme=(t==='light'||t==='dark')?t:'light';document.documentElement.setAttribute('data-theme',theme);}catch(e){}})();`
