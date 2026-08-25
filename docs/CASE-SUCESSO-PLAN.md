@@ -49,7 +49,7 @@
 - [x] Fase 3.1 — 6 ADRs em `docs/adr/`
 - [x] Fase 3.2 — `docs/ARCHITECTURE.md` com camadas, piramide de testes, convencoes
 - [x] Fase 3.3 — README linkando todos os ADRs
-- [ ] Fase 2.1 — Script Playwright de screenshots (precisa dev server rodando)
+- [x] Fase 2.1 — Script Playwright de screenshots (`scripts/take-screenshots.ts`)
 - [ ] Fase 2.4 — Demo publica Vercel (precisa credenciais Vercel)
 - [ ] Fase 2.5 — Social preview image
 - [ ] Fase 4 — Polimento opcional (Lighthouse, GIF, PWA)
