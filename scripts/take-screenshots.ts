@@ -1,4 +1,4 @@
-import { chromium } from "@playwright/test"
+import { chromium, type Page } from "@playwright/test"
 import { execSync } from "child_process"
 import { mkdirSync } from "fs"
 import { join } from "path"
@@ -26,7 +26,7 @@ const PUBLIC_PAGES = [
   { path: "/", name: "landing" },
 ]
 
-async function login(page: any) {
+async function login(page: Page) {
   await page.goto(`${BASE}/login`)
   await page.waitForLoadState("networkidle")
   await page.fill('input[name="email"], input[type="email"]', EMAIL)
@@ -35,7 +35,7 @@ async function login(page: any) {
   await page.waitForURL("**/dashboard", { timeout: 15000 })
 }
 
-async function screenshot(page: any, name: string, theme: "light" | "dark") {
+async function screenshot(page: Page, name: string, theme: "light" | "dark") {
   const file = join(OUT, `${name}-${theme}.png`)
   if (theme === "dark") {
     await page.evaluate(() => document.documentElement.classList.add("dark"))
