@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1200, height=630">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1200px;
+    height: 630px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+    color: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .container {
+    display: flex;
+    align-items: center;
+    gap: 60px;
+    padding: 0 80px;
+    width: 100%;
+  }
+  .left { flex: 1; }
+  .badge {
+    display: inline-block;
+    background: #3b82f6;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 6px 16px;
+    border-radius: 20px;
+    margin-bottom: 24px;
+    letter-spacing: 0.5px;
+  }
+  h1 {
+    font-size: 56px;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 16px;
+    background: linear-gradient(90deg, #60a5fa, #a78bfa, #f472b6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  p {
+    font-size: 22px;
+    color: #94a3b8;
+    line-height: 1.5;
+    max-width: 500px;
+  }
+  .right {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 320px;
+  }
+  .card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 16px 20px;
+    font-size: 15px;
+    color: #cbd5e1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .card .icon {
+    font-size: 20px;
+    width: 28px;
+    text-align: center;
+  }
+  .stack {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .stack span {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #94a3b8;
+    font-weight: 500;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="left">
+      <div class="badge">PORTFOLIO PROJECT</div>
+      <h1>Finly</h1>
+      <p>Aplicação web de finanças pessoais com arquitetura feature-based, dual database e testes automatizados.</p>
+      <div class="stack">
+        <span>Next.js 16</span>
+        <span>TypeScript</span>
+        <span>Prisma</span>
+        <span>PostgreSQL</span>
+        <span>Vitest</span>
+        <span>Playwright</span>
+      </div>
+    </div>
+    <div class="right">
+      <div class="card"><span class="icon">🔒</span> Auth JWT com invalidação por senha</div>
+      <div class="card"><span class="icon">💰</span> Precisão monetária com Decimal(19,2)</div>
+      <div class="card"><span class="icon">🧪</span> 424+ testes automatizados</div>
+      <div class="card"><span class="icon">📊</span> 18 módulos feature-based</div>
+      <div class="card"><span class="icon">🔄</span> 9 frequências de recorrência</div>
+    </div>
+  </div>
+</body>
+</html>
