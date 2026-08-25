@@ -2,6 +2,21 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.3] - 2026-08-24
+
+### Corrigido
+
+- Verificação de tipos do projeto totalmente limpa, com script dedicado e verificação obrigatória no pipeline de integração contínua.
+
+### Segurança
+
+- Cobertura de testes elevada para as bibliotecas de recorrência, categorização de importação de PDF e limitador de tentativas por IP.
+
+### Manutenção
+
+- Limites mínimos de cobertura subiram de 60% para até 75%, com portas de segurança no CI.
+- Avisos residuais de lint eliminados e hooks de seleção de tabelas com dependências corretas.
+
 ## [0.2.2] - 2026-08-24
 
 ### Alterado

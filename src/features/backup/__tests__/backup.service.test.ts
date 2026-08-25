@@ -25,14 +25,15 @@ function fullBackup(): BackupData {
     data: {
       categories: [{ id: CAT_ID, name: "Alimentação", icon: "shopping-cart", color: "#FF0000", type: "EXPENSE" }],
       financialMonths: [{ id: FM_ID, month: "2026-06", status: "OPEN" }],
-      bankAccounts: [{ id: BA_ID, name: "Conta Principal", institution: "Nubank", type: "CHECKING", color: "#22C55E", initialBalance: 1000, active: true }],
+      bankAccounts: [{ id: BA_ID, name: "Conta Principal", institution: "Nubank", type: "CHECKING", color: "#22C55E", initialBalance: 1000, overdraftLimit: 0, active: true }],
       cards: [{ id: CARD_ID, name: "Cartão Teste", brand: null, color: "#0000FF", closingDay: null, dueDay: null, bankAccountId: BA_ID }],
       transactions: [{ id: TX_ID, amount: 150, type: "EXPENSE", description: "Mercado", date: new Date("2026-06-01T12:00:00.000Z"), categoryId: CAT_ID }],
       budgets: [{ id: BGT_ID, amount: 1000, month: "2026-06", categoryId: CAT_ID }],
       bankAccountMovements: [{ id: BAM_ID, bankAccountId: BA_ID, amount: 500, type: "INCOME", description: "Depósito", date: new Date("2026-06-01T12:00:00.000Z") }],
       fixedCosts: [{ id: FC_ID, name: "Internet", type: "EXPENSE", defaultAmount: 200, categoryId: CAT_ID, paymentMethod: "PIX", dueDay: null, paidInsideCard: false, cardId: null, bankAccountId: BA_ID, active: true }],
-      cardInvoices: [{ id: CI_ID, cardId: CARD_ID, financialMonthId: FM_ID, month: "2026-06", dueDate: new Date("2026-06-15T12:00:00.000Z"), amount: 300, status: "PENDING", paidAt: null, paymentMethod: null, paymentBankAccountId: null, bankAccountMovementId: null }],
+      cardInvoices: [{ id: CI_ID, cardId: CARD_ID, financialMonthId: FM_ID, month: "2026-06", dueDate: new Date("2026-06-15T12:00:00.000Z"), amount: 300, status: "PENDING", calculationMode: "ENTERED_TOTAL", lifecycleStatus: "OPEN", paidAt: null, paymentMethod: null, paymentBankAccountId: null, bankAccountMovementId: null }],
       fixedCostOccurrences: [{ id: FCO_ID, fixedCostId: FC_ID, financialMonthId: FM_ID, month: "2026-06", amount: 200, status: "PENDING", paidAt: null }],
+      cardInvoiceItems: [],
     },
   }
 }
@@ -194,7 +195,7 @@ describe("Backup Service", () => {
         { id: "cat_a", name: "Alimentação", icon: "default", color: "#000", type: "EXPENSE" },
       ]
       backup.data.financialMonths = [{ id: "fm_a", month: "2026-07", status: "OPEN" }]
-      backup.data.bankAccounts = [{ id: "ba_a", name: "Conta Nova", institution: null, type: "CHECKING", color: "#FFF", initialBalance: 0, active: true }]
+      backup.data.bankAccounts = [{ id: "ba_a", name: "Conta Nova", institution: null, type: "CHECKING", color: "#FFF", initialBalance: 0, overdraftLimit: 0, active: true }]
 
       const result = await importData(userId, backup, "merge", testPrisma)
       expect(result.imported.categories).toBe(1)

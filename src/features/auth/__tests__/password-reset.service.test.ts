@@ -164,7 +164,7 @@ describe("password-reset.service", () => {
     )
 
     // segundo valida
-    const emailValid = await validatePasswordResetToken(second, testPrisma)
+    const emailValid = await validatePasswordResetToken(second!, testPrisma)
     expect(emailValid).toBe(email)
   })
 

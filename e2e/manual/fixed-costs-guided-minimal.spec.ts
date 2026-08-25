@@ -1,9 +1,15 @@
-import { test, expect } from "@playwright/test"
+import { test, expect, type Page } from "@playwright/test"
 
 const email = process.env.E2E_EMAIL
 const password = process.env.E2E_PASSWORD
 
-async function showGuide(page, step, total, titulo, descricao) {
+async function showGuide(
+  page: Page,
+  step: number,
+  total: number,
+  titulo: string,
+  descricao: string
+) {
   // injeta overlay e aguarda usuário clicar "Continuar"
   await page.evaluate(
     ({ step, total, titulo, descricao }) => {
@@ -20,7 +26,8 @@ async function showGuide(page, step, total, titulo, descricao) {
           <div style="margin:0 0 28px;font-size:15px;color:#64748b;line-height:1.6">${descricao}</div>
           <button id="g-go" style="background:#6366f1;color:#fff;border:none;padding:12px 36px;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer">Continuar</button>
         </div>`
-      o.querySelector("#g-go").onclick = () => o.remove()
+      ;
+      (o.querySelector("#g-go") as HTMLElement).onclick = () => o.remove()
       document.body.appendChild(o)
     },
     { step, total, titulo, descricao }
@@ -72,7 +79,7 @@ test("Mini guia: login → validação Claro Net", async ({ page }) => {
   )
 })
 
-function parseCurrency(value) {
+function parseCurrency(value: string) {
   const n = value.replace(/[^\d,.-]/g, "")
   if (n.includes(",")) return Number(n.replace(".", "").replace(",", "."))
   return Number(n)

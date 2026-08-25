@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest"
 import { getTestClient } from "@/__tests__/prisma"
 import { registerUser } from "@/features/auth/auth.service"
-import { createFixedCost, ProtectedFixedCostOccurrenceError, resetExpenseFixedCosts, StaleFixedCostOccurrenceError, updateFixedCost, updateFixedCostOccurrenceAmount } from "../fixed-costs.service"
+import { createFixedCost, resetExpenseFixedCosts, StaleFixedCostOccurrenceError, updateFixedCost, updateFixedCostOccurrenceAmount } from "../fixed-costs.service"
 import { ensureFinancialMonth } from "@/features/financial-months/financial-months.service"
 import { ensureFixedCostOccurrences } from "@/features/monthly-closing/monthly-closing.service"
 
@@ -312,7 +312,7 @@ describe("fixed-costs.service - update amount propagation", () => {
       scope: "THIS_MONTH",
       amount: 999,
       expectedUpdatedAt: occurrence.updatedAt.toISOString(),
-    }, prisma)).rejects.toMatchObject<ProtectedFixedCostOccurrenceError>({ reason })
+    }, prisma)).rejects.toMatchObject({ reason })
     expect((await prisma.fixedCostOccurrence.findUniqueOrThrow({ where: { id: occurrence.id } })).amount.toNumber()).toBe(100)
     expect((await prisma.fixedCost.findUniqueOrThrow({ where: { id: fixedCost.id } })).defaultAmount.toNumber()).toBe(100)
     expect(await prisma.fixedCostAmountRevision.count({ where: { fixedCostId: fixedCost.id } })).toBe(0)

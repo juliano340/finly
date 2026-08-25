@@ -9,4 +9,4 @@ export const cardSchema = z.object({
   bankAccountId: z.string().optional().nullable(),
 })
 
-export type CardInput = z.infer<typeof cardSchema>
+export type CardInput = Omit<z.infer<typeof cardSchema>, "color"> & { color?: string }

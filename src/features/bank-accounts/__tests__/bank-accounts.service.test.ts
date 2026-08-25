@@ -26,7 +26,7 @@ describe("bank-accounts.service", () => {
   it("calcula saldo por saldo inicial mais movimentos", async () => {
     const account = await createBankAccount(
       userId,
-      { name: `Mercado Pago ${Date.now()}`, institution: "Mercado Pago", type: "DIGITAL", color: "#22C55E", initialBalance: 1000, active: true },
+      { name: `Mercado Pago ${Date.now()}`, institution: "Mercado Pago", type: "DIGITAL", color: "#22C55E", initialBalance: 1000, active: true, overdraftLimit: 0 },
       prisma
     )
 
@@ -40,7 +40,7 @@ describe("bank-accounts.service", () => {
   it("cria movimento de ajuste para atingir saldo informado", async () => {
     const account = await createBankAccount(
       userId,
-      { name: `Ajuste ${Date.now()}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 1000, active: true },
+      { name: `Ajuste ${Date.now()}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 1000, active: true, overdraftLimit: 0 },
       prisma
     )
 
@@ -101,12 +101,12 @@ describe("bank-accounts.service", () => {
     const suffix = Date.now()
     const from = await createBankAccount(
       userId,
-      { name: `Origem ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 1000, active: true },
+      { name: `Origem ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 1000, active: true, overdraftLimit: 0 },
       prisma
     )
     const to = await createBankAccount(
       userId,
-      { name: `Destino ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 200, active: true },
+      { name: `Destino ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 200, active: true, overdraftLimit: 0 },
       prisma
     )
 
@@ -125,7 +125,7 @@ describe("bank-accounts.service", () => {
   it("bloqueia transferência para a mesma conta", async () => {
     const account = await createBankAccount(
       userId,
-      { name: `Mesma ${Date.now()}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 100, active: true },
+      { name: `Mesma ${Date.now()}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 100, active: true, overdraftLimit: 0 },
       prisma
     )
 
@@ -147,12 +147,12 @@ describe("bank-accounts.service", () => {
     const otherUserId = ("user" in otherResult ? otherResult.user : null)?.id ?? ""
     const from = await createBankAccount(
       userId,
-      { name: `Origem outro ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 1000, active: true },
+      { name: `Origem outro ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 1000, active: true, overdraftLimit: 0 },
       prisma
     )
     const to = await createBankAccount(
       otherUserId,
-      { name: `Destino outro ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 200, active: true },
+      { name: `Destino outro ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 200, active: true, overdraftLimit: 0 },
       prisma
     )
 
@@ -172,7 +172,7 @@ describe("bank-accounts.service", () => {
   it("permite despesa quando saldo cobre (sem overdraft)", async () => {
     const account = await createBankAccount(
       userId,
-      { name: `Cobertura ${Date.now()}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 500, active: true },
+      { name: `Cobertura ${Date.now()}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 500, active: true, overdraftLimit: 0 },
       prisma
     )
     const movement = await createBankAccountMovement(account.id, userId, { amount: 200, type: "EXPENSE", description: "teste", date: new Date() }, prisma)
@@ -231,7 +231,7 @@ describe("bank-accounts.service", () => {
     )
     const to = await createBankAccount(
       userId,
-      { name: `TransfDestinoCheque ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 50, active: true },
+      { name: `TransfDestinoCheque ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 50, active: true, overdraftLimit: 0 },
       prisma
     )
 
@@ -256,7 +256,7 @@ describe("bank-accounts.service", () => {
     )
     const to = await createBankAccount(
       userId,
-      { name: `TransfDestinoEst ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 50, active: true },
+      { name: `TransfDestinoEst ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 50, active: true, overdraftLimit: 0 },
       prisma
     )
 

@@ -28,6 +28,8 @@ jobs:
         env:
           DATABASE_URL: "file:./test.db"
 
+      - run: npm run typecheck
+
       - run: npm run lint
 
       - run: npm run test:coverage

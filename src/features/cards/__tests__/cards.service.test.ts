@@ -28,13 +28,13 @@ describe("Cards Service", () => {
 
     bankAId = (await createBankAccount(
       userAId,
-      { name: `Banco A ${suffix}`, institution: "Banco A", type: "DIGITAL", color: "#FF5733", initialBalance: 0, active: true },
+      { name: `Banco A ${suffix}`, institution: "Banco A", type: "DIGITAL", color: "#FF5733", initialBalance: 0, active: true, overdraftLimit: 0 },
       testPrisma
     )).id
 
     bankBId = (await createBankAccount(
       userBId,
-      { name: `Banco B ${suffix}`, institution: "Banco B", type: "DIGITAL", color: "#3357FF", initialBalance: 0, active: true },
+      { name: `Banco B ${suffix}`, institution: "Banco B", type: "DIGITAL", color: "#3357FF", initialBalance: 0, active: true, overdraftLimit: 0 },
       testPrisma
     )).id
   })
@@ -52,8 +52,8 @@ describe("Cards Service", () => {
     })
 
     it("retorna cartões em ordem alfabética com bankAccount", async () => {
-      await createCard(userAId, { name: "Z Card" }, testPrisma)
-      await createCard(userAId, { name: "A Card" }, testPrisma)
+      await createCard(userAId, { name: "Z Card", color: "#6366F1" }, testPrisma)
+      await createCard(userAId, { name: "A Card", color: "#6366F1" }, testPrisma)
       const cards = await getCards(userAId, testPrisma)
       expect(cards.length).toBe(2)
       expect(cards[0].name).toBe("A Card")
@@ -92,12 +92,12 @@ describe("Cards Service", () => {
     })
 
     it("rejeita bankAccountId de outro usuário", async () => {
-      const card = await createCard(userAId, { name: "Inválido", bankAccountId: bankBId }, testPrisma)
+      const card = await createCard(userAId, { name: "Inválido", color: "#6366F1", bankAccountId: bankBId }, testPrisma)
       expect(card).toBeNull()
     })
 
     it("retorna null para bankAccountId inexistente", async () => {
-      const card = await createCard(userAId, { name: "Inexistente", bankAccountId: "fake-id" }, testPrisma)
+      const card = await createCard(userAId, { name: "Inexistente", color: "#6366F1", bankAccountId: "fake-id" }, testPrisma)
       expect(card).toBeNull()
     })
 
@@ -118,19 +118,19 @@ describe("Cards Service", () => {
     let cardId: string
 
     beforeAll(async () => {
-      const card = await createCard(userAId, { name: "Update Test", bankAccountId: bankAId }, testPrisma)
+      const card = await createCard(userAId, { name: "Update Test", color: "#6366F1", bankAccountId: bankAId }, testPrisma)
       cardId = card!.id
     })
 
     it("atualiza nome parcialmente", async () => {
-      const updated = await updateCard(cardId, userAId, { name: "Update Renomeado" }, testPrisma)
+      const updated = await updateCard(cardId, userAId, { name: "Update Renomeado", color: "#6366F1" }, testPrisma)
       expect(updated?.name).toBe("Update Renomeado")
     })
 
     it("troca bankAccount e herda cor", async () => {
       const newBank = await createBankAccount(
         userAId,
-        { name: `Novo Banco ${suffix}`, institution: "Novo", type: "DIGITAL", color: "#00FF00", initialBalance: 0, active: true },
+        { name: `Novo Banco ${suffix}`, institution: "Novo", type: "DIGITAL", color: "#00FF00", initialBalance: 0, active: true, overdraftLimit: 0 },
         testPrisma
       )
       const updated = await updateCard(cardId, userAId, { bankAccountId: newBank.id }, testPrisma)
@@ -139,10 +139,11 @@ describe("Cards Service", () => {
     })
 
     it("troca bankAccount sem herdar cor quando explícita", async () => {
-      const card = await createCard(userAId, { name: "Cor Explícita" }, testPrisma)
+      const card = await createCard(userAId, { name: "Cor Explícita", color: "#6366F1" }, testPrisma)
+      if (!card) throw new Error("card não criado")
       const newBank = await createBankAccount(
         userAId,
-        { name: `Outro Banco ${suffix}`, institution: "Outro", type: "DIGITAL", color: "#FF0000", initialBalance: 0, active: true },
+        { name: `Outro Banco ${suffix}`, institution: "Outro", type: "DIGITAL", color: "#FF0000", initialBalance: 0, active: true, overdraftLimit: 0 },
         testPrisma
       )
       const updated = await updateCard(card.id, userAId, { bankAccountId: newBank.id, color: "#AA00AA" }, testPrisma)
@@ -152,19 +153,19 @@ describe("Cards Service", () => {
     })
 
     it("retorna null para cartão de outro usuário", async () => {
-      const result = await updateCard(cardId, userBId, { name: "Hack" }, testPrisma)
+      const result = await updateCard(cardId, userBId, { name: "Hack", color: "#6366F1" }, testPrisma)
       expect(result).toBeNull()
     })
 
     it("retorna null para cartão inexistente", async () => {
-      const result = await updateCard("fake-id", userAId, { name: "X" }, testPrisma)
+      const result = await updateCard("fake-id", userAId, { name: "X", color: "#6366F1" }, testPrisma)
       expect(result).toBeNull()
     })
   })
 
   describe("deleteCard", () => {
     it("deleta cartão com sucesso", async () => {
-      const card = await createCard(userAId, { name: "Delete Me" }, testPrisma)
+      const card = await createCard(userAId, { name: "Delete Me", color: "#6366F1" }, testPrisma)
       const result = await deleteCard(card!.id, userAId, testPrisma)
       expect(result).toBe(true)
       const exists = await testPrisma.card.findUnique({ where: { id: card!.id } })
@@ -172,7 +173,7 @@ describe("Cards Service", () => {
     })
 
     it("retorna false para cartão de outro usuário", async () => {
-      const card = await createCard(userAId, { name: "Not Yours" }, testPrisma)
+      const card = await createCard(userAId, { name: "Not Yours", color: "#6366F1" }, testPrisma)
       const result = await deleteCard(card!.id, userBId, testPrisma)
       expect(result).toBe(false)
       await testPrisma.card.delete({ where: { id: card!.id } })

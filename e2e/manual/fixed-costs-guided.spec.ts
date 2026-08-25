@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test"
+import { test, expect, type Page } from "@playwright/test"
 
 const email = process.env.E2E_EMAIL
 const password = process.env.E2E_PASSWORD
@@ -13,7 +13,14 @@ function uniqueName(prefix = "E2E Demo") {
   return `${prefix} ${Date.now()}`
 }
 
-async function guidedStep(page, step, total, titulo, descricao, action?) {
+async function guidedStep(
+  page: Page,
+  step: number,
+  total: number,
+  titulo: string,
+  descricao: string,
+  action?: () => unknown
+) {
   await page.evaluate(
     ({ step, total, titulo, descricao }) => {
       const existing = document.getElementById("guided-overlay")
@@ -69,7 +76,7 @@ test("Demonstração guiada: Lançamentos Fixos", async ({ page }) => {
   }
 
   const name = uniqueName()
-  let createdId
+  let createdId: string | undefined
 
   // ── PROCESS 2: LOGIN ──
   await guidedStep(page, 1, 10,
@@ -157,7 +164,7 @@ test("Demonstração guiada: Lançamentos Fixos", async ({ page }) => {
       createdId = await page.evaluate(async (itemName) => {
         const catRes = await fetch("/api/categories")
         const cats = await catRes.json()
-        const expenseCat = cats.find((c) => c.type === "EXPENSE")
+        const expenseCat = cats.find((c: { type: string; id: string }) => c.type === "EXPENSE")
         if (!expenseCat) throw new Error("Nenhuma categoria de despesa")
 
         const res = await fetch("/api/fixed-costs", {

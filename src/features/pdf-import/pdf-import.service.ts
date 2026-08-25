@@ -289,7 +289,7 @@ const autoCategoryRules: AutoCategoryRule[] = [
   { keywords: ["cinema", "ingresso", "teatro", "show", "balada", "pub", "patrimonio", "milonga", "zig"], categoryName: "Lazer", color: "#8B5CF6" },
 ]
 
-function matchAutoCategory(
+export function matchAutoCategory(
   description: string
 ): { categoryName: string; color: string } | null {
   const lower = description.toLowerCase()
@@ -395,7 +395,7 @@ export async function autoCategorizeTransactions(
   return { categorized, created }
 }
 
-function suggestCategoryId(
+export function suggestCategoryId(
   description: string,
   allMappings: { normalizedDesc: string; categoryId: string }[]
 ): string | null {

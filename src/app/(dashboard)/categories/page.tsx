@@ -1,9 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { ArrowDown, ArrowUp, Plus, Wallet } from "lucide-react"
+import { ArrowDown, ArrowUp, Wallet } from "lucide-react"
 import { AddButton } from "@/components/ui/add-button"
-import { Button } from "@/components/ui/button"
 import { useCategories } from "@/hooks/use-categories"
 import { CategoryCard } from "./_components/category-card"
 import { CategoryTable } from "./_components/category-table"

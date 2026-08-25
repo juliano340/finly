@@ -122,9 +122,11 @@ describe("Dashboard Service", () => {
     if (!incomeCategory) return
     const fixedCost = await createFixedCost(
       userId,
-      { name: `Salário fixo ${Date.now()}`, type: "INCOME" as const, defaultAmount: 3000, categoryId: incomeCategory.id, paymentMethod: "PIX", dueDay: 5, paidInsideCard: false, cardId: null, bankAccountId: null, active: true, startDate: "2026-01-01" },
+      { name: `Salário fixo ${Date.now()}`, type: "INCOME" as const, defaultAmount: 3000, categoryId: incomeCategory.id, paymentMethod: "PIX", dueDay: 5, paidInsideCard: false, cardId: null, bankAccountId: null, active: true, startDate: "2026-01-01", frequency: "MONTHLY", endType: "NONE" },
       prisma
     )
+    expect(fixedCost).not.toBeNull()
+    if (!fixedCost) return
 
     const stats = await getDashboardStats(userId, "2026-06", prisma)
 
@@ -167,7 +169,7 @@ describe("Dashboard Service", () => {
     )
     await createFixedCost(
       userId,
-      { name: `Internet evolução ${Date.now()}`, type: "EXPENSE" as const, defaultAmount: 120, categoryId: expenseCategoryId, paymentMethod: "PIX", dueDay: 10, paidInsideCard: false, cardId: null, bankAccountId: null, active: true, startDate: "2026-01-01" },
+      { name: `Internet evolução ${Date.now()}`, type: "EXPENSE" as const, defaultAmount: 120, categoryId: expenseCategoryId, paymentMethod: "PIX", dueDay: 10, paidInsideCard: false, cardId: null, bankAccountId: null, active: true, startDate: "2026-01-01", frequency: "MONTHLY", endType: "NONE" },
       prisma
     )
 

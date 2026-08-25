@@ -21,7 +21,7 @@ function offsetMonth(base: Date, offset: number) {
   }
 }
 
-function dueDateFor(month: { year: number; monthZero: number }, day: number) {
+function dueDateFor(month: { year: number; monthZero: number; lastDay: number }, day: number) {
   return new Date(Date.UTC(month.year, month.monthZero, Math.min(day, month.lastDay)))
 }
 

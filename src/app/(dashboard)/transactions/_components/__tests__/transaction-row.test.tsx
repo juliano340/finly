@@ -2,16 +2,20 @@ import { describe, it, expect } from "vitest"
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { TransactionRow } from "@/app/(dashboard)/transactions/_components/transaction-row"
+import type { TransactionWithRelations } from "@/features/transactions/transactions.types"
 
-const mockTx = {
+const mockTx: TransactionWithRelations = {
   id: "tx_1",
   amount: 150.5,
   type: "EXPENSE" as const,
   description: "Supermercado",
   date: new Date("2026-06-04T12:00:00"),
   categoryId: "cat_1",
+  bankAccountId: null,
   userId: "user_1",
   category: { id: "cat_1", name: "Alimentação", color: "#E85D5D", icon: "utensils" },
+  bankAccount: null,
+  invoiceItem: null,
 }
 
 describe("TransactionRow", () => {

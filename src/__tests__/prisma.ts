@@ -1,13 +1,16 @@
-import { PrismaClient } from "@/generated/prisma-sqlite/client"
+import { PrismaClient as PrismaPostgresClient } from "@/generated/prisma/client"
+import { PrismaClient as PrismaSqliteClient } from "@/generated/prisma-sqlite/client"
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3"
 
-let testClient: PrismaClient | null = null
+type AppPrismaClient = PrismaPostgresClient
 
-export function getTestClient(): PrismaClient {
+let testClient: AppPrismaClient | null = null
+
+export function getTestClient(): AppPrismaClient {
   if (!testClient) {
-    testClient = new PrismaClient({
+    testClient = new PrismaSqliteClient({
       adapter: new PrismaBetterSqlite3({ url: "file:./test.db" }),
-    })
+    }) as unknown as AppPrismaClient
   }
   return testClient
 }

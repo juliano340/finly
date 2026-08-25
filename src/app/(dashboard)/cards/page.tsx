@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { CreditCard, Loader2, Plus, Settings, Trash2 } from "lucide-react"
+import { CreditCard, Loader2, Settings, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { AddButton } from "@/components/ui/add-button"
 import { Button } from "@/components/ui/button"

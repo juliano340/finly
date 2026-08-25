@@ -48,11 +48,10 @@ export function useTableSelection<T extends { id: string }>(
       hydratedKeyRef.current = storageKey
       itemsLoadedRef.current = false
       isHydratedRef.current = false
-      // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
       setSelectedIds(readStoredSelection(storageKey, items))
       if (storageKey && items.length > 0) isHydratedRef.current = true
     }
-  }, [storageKey])
+  }, [storageKey, items])
 
   useEffect(() => {
     // Quando items chega (após fetch), re-hidrata se ainda não o fizemos para esta chave.
@@ -61,10 +60,9 @@ export function useTableSelection<T extends { id: string }>(
       const restored = readStoredSelection(storageKey, items)
       itemsLoadedRef.current = true
       isHydratedRef.current = true
-      // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
       setSelectedIds(restored)
     }
-  }, [items.length, storageKey])
+  }, [items, storageKey])
 
   useEffect(() => {
     // Só persiste depois de hidratar; antes disso selectedIds é vazio e não deve

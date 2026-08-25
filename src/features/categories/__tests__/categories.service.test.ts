@@ -45,7 +45,7 @@ describe("Categories Service (API integration)", () => {
   it("cria categoria com sucesso", async () => {
     const cat = await createCategory(
       userAId,
-      { name: "Alimentação", type: "EXPENSE" },
+      { name: "Alimentação", type: "EXPENSE", icon: "wallet", color: "#0EA882" },
       testPrisma
     )
     expect(cat.name).toBe("Alimentação")
@@ -56,7 +56,7 @@ describe("Categories Service (API integration)", () => {
   it("retorna categorias criadas", async () => {
     await createCategory(
       userAId,
-      { name: "Transporte", type: "EXPENSE", icon: "car" },
+      { name: "Transporte", type: "EXPENSE", icon: "car", color: "#0EA882" },
       testPrisma
     )
     const cats = await getCategories(userAId, testPrisma)
@@ -107,7 +107,7 @@ describe("Categories Service (API integration)", () => {
   it("deleta categoria sem transações", async () => {
     const cat = await createCategory(
       userAId,
-      { name: "Temporária", type: "INCOME" },
+      { name: "Temporária", type: "INCOME", icon: "wallet", color: "#0EA882" },
       testPrisma
     )
     const result = await deleteCategory(cat.id, userAId, testPrisma)

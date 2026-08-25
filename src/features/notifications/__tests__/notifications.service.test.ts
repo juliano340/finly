@@ -58,7 +58,7 @@ describe("notifications.service", () => {
   it("lista custo fixo pendente com dia de vencimento", async () => {
     const created = await createFixedCost(
       userId,
-      { name: `Internet Notify ${Date.now()}`, defaultAmount: 150, categoryId, paymentMethod: "PIX", dueDay: 5, paidInsideCard: false, cardId: null, bankAccountId: null, active: true, startDate: "2026-01-01" },
+      { type: "EXPENSE" as const, name: `Internet Notify ${Date.now()}`, defaultAmount: 150, categoryId, paymentMethod: "PIX", dueDay: 5, paidInsideCard: false, cardId: null, bankAccountId: null, active: true, startDate: "2026-01-01", frequency: "MONTHLY", endType: "NONE" },
       prisma
     )
     if (!created) return
@@ -80,7 +80,7 @@ describe("notifications.service", () => {
   it("ajusta vencimento dia 31 para último dia de mês curto", async () => {
     const created = await createFixedCost(
       userId,
-      { name: `Fevereiro Notify ${Date.now()}`, defaultAmount: 90, categoryId, paymentMethod: "BANK_SLIP", dueDay: 31, paidInsideCard: false, cardId: null, bankAccountId: null, active: true, startDate: "2026-01-01", frequency: "MONTHLY", endType: "NONE" },
+      { type: "EXPENSE" as const, name: `Fevereiro Notify ${Date.now()}`, defaultAmount: 90, categoryId, paymentMethod: "BANK_SLIP", dueDay: 31, paidInsideCard: false, cardId: null, bankAccountId: null, active: true, startDate: "2026-01-01", frequency: "MONTHLY", endType: "NONE" },
       prisma
     )
     if (!created) return

@@ -22,7 +22,7 @@ describe("registerUser", () => {
     )
 
     expect("user" in result).toBe(true)
-    if ("user" in result) {
+    if ("user" in result && result.user) {
       expect(result.user.email).toBe("maria@test-auth.com")
       expect(result.user.name).toBe("Maria Teste")
     }
@@ -39,7 +39,7 @@ describe("registerUser", () => {
     )
 
     expect("user" in result).toBe(true)
-    if ("user" in result) {
+    if ("user" in result && result.user) {
       const dbUser = await testPrisma.user.findUnique({
         where: { id: result.user.id },
       })

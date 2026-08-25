@@ -11,12 +11,12 @@ vi.mock("node:child_process", () => ({
 const mockedSpawnSync = vi.mocked(spawnSync)
 const successfulRun = { error: undefined, status: 0 } as ReturnType<typeof spawnSync>
 
-function productionEnv(migrateUrl?: string) {
+function productionEnv(migrateUrl?: string): NodeJS.ProcessEnv {
   return {
     VERCEL_ENV: "production",
     MIGRATE_DATABASE_URL: arguments.length === 0 ? "postgresql://secret" : migrateUrl,
     npm_execpath: "C:/npm/npm-cli.js",
-  }
+  } as unknown as NodeJS.ProcessEnv
 }
 
 describe("Vercel production build", () => {
@@ -66,7 +66,7 @@ describe("Vercel production build", () => {
   })
 
   it("keeps non-production builds migration-free", () => {
-    runVercelBuild({ VERCEL_ENV: "preview" })
+    runVercelBuild({ VERCEL_ENV: "preview" } as unknown as NodeJS.ProcessEnv)
 
     expect(mockedSpawnSync).toHaveBeenCalledOnce()
     expect(mockedSpawnSync.mock.calls[0]?.[1]).toEqual([

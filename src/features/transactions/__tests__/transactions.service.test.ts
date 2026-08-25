@@ -36,12 +36,12 @@ describe("Transactions Service", () => {
 
     const catExp = await createCategory(
       userAId,
-      { name: "Alimentação", type: "EXPENSE" },
+      { name: "Alimentação", type: "EXPENSE", icon: "wallet", color: "#0EA882" },
       testPrisma
     )
     const catInc = await createCategory(
       userAId,
-      { name: "Salário", type: "INCOME" },
+      { name: "Salário", type: "INCOME", icon: "wallet", color: "#0EA882" },
       testPrisma
     )
     catExpenseId = catExp.id
@@ -567,6 +567,7 @@ describe("Transactions Service", () => {
   describe("Card invoice integration", () => {
     it("lança despesa prevista na fatura sem criar movimento bancário", async () => {
       const card = await createCard(userAId, { name: "Cartão previsto", color: "#6366F1" }, testPrisma)
+      if (!card) throw new Error("card não criado")
       const invoice = await createCardInvoice(userAId, {
         cardId: card.id,
         month: "2026-09",

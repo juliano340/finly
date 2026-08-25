@@ -11,9 +11,19 @@ export interface Release {
   changes: readonly ReleaseChange[]
 }
 
-export const CURRENT_VERSION = "0.2.2"
+export const CURRENT_VERSION = "0.2.3"
 
 export const releases = [
+  {
+    version: "0.2.3",
+    date: "2026-08-24",
+    changes: [
+      { type: "fix", description: "Verificação de tipos do projeto totalmente limpa, com script dedicado e verificação obrigatória no pipeline de integração contínua." },
+      { type: "security", description: "Cobertura de testes elevada para as bibliotecas de recorrência, categorização de importação de PDF e limitador de tentativas por IP." },
+      { type: "chore", description: "Limites mínimos de cobertura subiram de 60% para até 75%, com portas de segurança no CI." },
+      { type: "chore", description: "Avisos residuais de lint eliminados e hooks de seleção de tabelas com dependências corretas." },
+    ],
+  },
   {
     version: "0.2.2",
     date: "2026-08-24",
