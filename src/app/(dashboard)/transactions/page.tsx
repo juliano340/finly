@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useSearchParams } from "next/navigation"
-import { ArrowDown, ArrowUp, Plus, Wallet } from "lucide-react"
+import { ArrowDown, ArrowUp, Wallet } from "lucide-react"
+import { AddButton } from "@/components/ui/add-button"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -142,16 +143,13 @@ export default function TransactionsPage() {
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
           <MonthNavigator month={month} todayMonth={getCurrentMonth()} onMonthChange={setMonth} />
-          <Button
+          <AddButton
+            label="Novo lançamento avulso"
             onClick={() => {
               setEditing(null)
               setFormOpen(true)
             }}
-            className="w-full gap-2 sm:w-auto"
-          >
-            <Plus className="h-4 w-4" />
-            Novo lançamento avulso
-          </Button>
+          />
         </div>
       </div>
 

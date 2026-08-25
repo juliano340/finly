@@ -4,6 +4,7 @@ import { Suspense, useEffect, useRef, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { CreditCard, Loader2, Plus, Settings, Trash2 } from "lucide-react"
 import { toast } from "sonner"
+import { AddButton } from "@/components/ui/add-button"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -171,7 +172,7 @@ export default function CardsPage() {
       ) : activeTab === "cards" && (
         <div className="space-y-6">
           <div className="flex items-center justify-end">
-            <Button onClick={() => setCreating(true)}><Plus className="mr-2 h-4 w-4" />Novo cartão</Button>
+            <AddButton label="Novo cartão" onClick={() => setCreating(true)} />
           </div>
 
       <div className="hidden overflow-hidden rounded-lg border md:block">

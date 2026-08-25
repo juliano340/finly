@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, Suspense, type ReactNode } from "react"
 import { CalendarClock, CheckCircle2, Clock3, CreditCard, Loader2, RotateCcw, Settings, Trash2 } from "lucide-react"
 import { toast } from "sonner"
+import { AddButton } from "@/components/ui/add-button"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -462,18 +463,21 @@ function FixedCostsPageInner() {
         <div><h1 className="text-2xl font-bold tracking-tight">Lançamentos Fixos</h1><p className="text-muted-foreground">Entradas e saídas recorrentes.</p></div>
         <div className="flex flex-wrap items-center gap-2">
           <MonthNavigator month={month} onMonthChange={setMonth} />
-          <Button onClick={() => {
-            setInsideCard(false)
-            setCreating(true)
-            setRecStartDate(new Date().toISOString().split("T")[0])
-            setRecFrequency("MONTHLY")
-            setRecFrequencyType("standard")
-            setRecCustomInterval("")
-            setRecCustomUnit("MONTHS")
-            setRecEndType("NONE")
-            setRecEndDate("")
-            setRecEndAfterCount("")
-          }}>Novo {activeTab === "EXPENSE" ? "custo fixo" : "receita fixa"}</Button>
+          <AddButton
+            label={`Novo ${activeTab === "EXPENSE" ? "custo fixo" : "receita fixa"}`}
+            onClick={() => {
+              setInsideCard(false)
+              setCreating(true)
+              setRecStartDate(new Date().toISOString().split("T")[0])
+              setRecFrequency("MONTHLY")
+              setRecFrequencyType("standard")
+              setRecCustomInterval("")
+              setRecCustomUnit("MONTHS")
+              setRecEndType("NONE")
+              setRecEndDate("")
+              setRecEndAfterCount("")
+            }}
+          />
         </div>
       </div>
 

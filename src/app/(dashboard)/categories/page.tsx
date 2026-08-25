@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { ArrowDown, ArrowUp, Plus, Wallet } from "lucide-react"
+import { AddButton } from "@/components/ui/add-button"
 import { Button } from "@/components/ui/button"
 import { useCategories } from "@/hooks/use-categories"
 import { CategoryCard } from "./_components/category-card"
@@ -63,16 +64,13 @@ export default function CategoriesPage() {
             Organize receitas e despesas · {categories.length} {categories.length === 1 ? "categoria" : "categorias"}
           </p>
         </div>
-        <Button
+        <AddButton
+          label="Nova categoria"
           onClick={() => {
             setEditing(null)
             setFormOpen(true)
           }}
-          className="w-full gap-2 sm:w-auto"
-        >
-          <Plus className="h-4 w-4" />
-          Nova categoria
-        </Button>
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:hidden">

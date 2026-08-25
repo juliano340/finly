@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react"
 import { useFormStatus } from "react-dom"
 import { ArrowLeftRight, ArrowUpDown, Eye, Gift, Info, Loader2, Pencil, Plus, Settings, SlidersHorizontal, Trash2 } from "lucide-react"
 import { toast } from "sonner"
+import { AddButton } from "@/components/ui/add-button"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -245,7 +246,7 @@ export default function BankAccountsPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" disabled={accounts.filter((account) => account.type !== "BENEFIT").length < 2} onClick={() => setTransferOpen(true)}><ArrowLeftRight className="mr-2 h-4 w-4" />Transferir</Button>
-          <Button size="sm" onClick={() => setCreating(true)}><Plus className="mr-2 h-4 w-4" />Nova conta</Button>
+          <AddButton label="Nova conta" onClick={() => setCreating(true)} />
         </div>
       </div>
 

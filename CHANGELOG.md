@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.2] - 2026-08-24
+
+### Alterado
+
+- Botões de criação das telas de transações, categorias, orçamentos, cartões, contas e lançamentos fixos unificados em um único componente padronizado.
+
 ## [0.2.1] - 2026-08-23
 
 ### Segurança
