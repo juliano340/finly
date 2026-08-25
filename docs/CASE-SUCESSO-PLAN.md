@@ -44,6 +44,12 @@
 ## Progresso
 
 - [x] Fase 1 — release 0.2.3 (typecheck 0 erros, lint 0/0, thresholds de cobertura 72/57/72/75)
-- [ ] Fase 2
-- [ ] Fase 3
-- [ ] Fase 4
+- [x] Fase 2.2 — README premium PT-BR com badges, features, stack visual, quickstart
+- [x] Fase 2.3 — Diagrama Mermaid da arquitetura no README
+- [x] Fase 3.1 — 6 ADRs em `docs/adr/`
+- [x] Fase 3.2 — `docs/ARCHITECTURE.md` com camadas, piramide de testes, convencoes
+- [x] Fase 3.3 — README linkando todos os ADRs
+- [ ] Fase 2.1 — Script Playwright de screenshots (precisa dev server rodando)
+- [ ] Fase 2.4 — Demo publica Vercel (precisa credenciais Vercel)
+- [ ] Fase 2.5 — Social preview image
+- [ ] Fase 4 — Polimento opcional (Lighthouse, GIF, PWA)
