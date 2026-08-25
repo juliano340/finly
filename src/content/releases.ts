@@ -11,9 +11,19 @@ export interface Release {
   changes: readonly ReleaseChange[]
 }
 
-export const CURRENT_VERSION = "0.2.3"
+export const CURRENT_VERSION = "0.2.4"
 
 export const releases = [
+  {
+    version: "0.2.4",
+    date: "2026-08-25",
+    changes: [
+      { type: "docs", description: "6 ADRs documentando decisões de arquitetura: dual schema, auth por rota, JWT, precisão monetária, changelog-as-code, rate limiting." },
+      { type: "docs", description: "ARCHITECTURE.md com visão geral de camadas, pirâmide de testes e convenções feature-based." },
+      { type: "docs", description: "README premium com badges, lista de funcionalidades, diagrama Mermaid e referências aos ADRs." },
+      { type: "feat", description: "Script Playwright para screenshots automatizadas (light/dark) em docs/screenshots/." },
+    ],
+  },
   {
     version: "0.2.3",
     date: "2026-08-24",
