@@ -98,4 +98,27 @@ describe("notifications.service", () => {
 
     expect(notifications.some((item) => item.type === "FIXED_COST" && item.amount === 90 && item.dueDate.startsWith("2026-02-28"))).toBe(true)
   })
+
+  it("usa o vencimento da ocorrência quando diferente do dia padrão do série", async () => {
+    const created = await createFixedCost(
+      userId,
+      { type: "EXPENSE" as const, name: `Opencode Notify ${Date.now()}`, defaultAmount: 55, categoryId, paymentMethod: "PIX", dueDay: 1, paidInsideCard: false, cardId: null, bankAccountId: null, active: true, startDate: "2026-01-01", frequency: "MONTHLY", endType: "NONE" },
+      prisma
+    )
+    if (!created) return
+
+    const sepFM = await prisma.financialMonth.upsert({
+      where: { month_userId: { month: "2026-09", userId } },
+      create: { month: "2026-09", userId },
+      update: {},
+    })
+    await prisma.fixedCostOccurrence.create({
+      data: { fixedCostId: created.id, financialMonthId: sepFM.id, month: "2026-09", dueDate: new Date("2026-09-16T12:00:00"), amount: 55, status: "PENDING", userId },
+    })
+
+    const notifications = await getDueSoonNotifications(userId, 7, prisma, new Date("2026-09-10T12:00:00"))
+
+    expect(notifications.some((item) => item.type === "FIXED_COST" && item.amount === 55 && item.dueDate.startsWith("2026-09-16"))).toBe(true)
+    expect(notifications.some((item) => item.type === "FIXED_COST" && item.amount === 55 && item.dueDate.startsWith("2026-09-01"))).toBe(false)
+  })
 })

@@ -56,7 +56,9 @@ export async function getDueSoonNotifications(
 
   const fixedCostNotifications = occurrences.flatMap((occurrence) => {
     if (!isValidMonth(occurrence.month) || !occurrence.fixedCost.dueDay) return []
-    const dueDate = fixedCostDueDate(occurrence.month, occurrence.fixedCost.dueDay)
+    const dueDate = occurrence.dueDate
+      ? normalizeDate(occurrence.dueDate)
+      : fixedCostDueDate(occurrence.month, occurrence.fixedCost.dueDay)
     if (dueDate.getTime() > endOfDay(endDate).getTime()) return []
     if (dueDate.getTime() < startOfDay(startDate).getTime()) return []
     return [{
@@ -83,15 +85,15 @@ function normalizeDate(date: Date) {
 }
 
 function startOfDay(date: Date) {
-  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0))
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 0, 0, 0, 0))
 }
 
 function endOfDay(date: Date) {
-  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999))
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 23, 59, 59, 999))
 }
 
 function addDays(date: Date, days: number) {
-  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate() + days))
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + days))
 }
 
 function monthsBetween(start: Date, end: Date) {
