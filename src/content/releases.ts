@@ -11,9 +11,17 @@ export interface Release {
   changes: readonly ReleaseChange[]
 }
 
-export const CURRENT_VERSION = "0.2.5"
+export const CURRENT_VERSION = "0.2.6"
 
 export const releases = [
+  {
+    version: "0.2.6",
+    date: "2026-08-26",
+    changes: [
+      { type: "fix", description: "Lembrete de vencimento de custos fixos agora exibe a data editada da ocorrência (dueDate) em vez de recalcular a partir do dia padrão do série (dueDay), evitando datas desatualizadas no sino de notificações." },
+      { type: "fix", description: "Janela de dias do lembrete corrigida — usava getters locais em datas UTC-midnight, deslocando a janela em 1 dia em fusos como UTC-3." },
+    ],
+  },
   {
     version: "0.2.5",
     date: "2026-08-25",

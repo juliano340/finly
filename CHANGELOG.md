@@ -6,7 +6,7 @@ Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
 ### Corrigido
 
-- Lembrete de vencimento de custos fixos agora exibe a data editada da ocorrência (`dueDate`) em vez de recalcular a partir do dia padrão do série (`dueDay`), evitando datas desatualizadas no sino de notificações.
+- Lembrete de vencimento de custos fixos agora exibe a data editada da ocorrência (dueDate) em vez de recalcular a partir do dia padrão do série (dueDay), evitando datas desatualizadas no sino de notificações.
 - Janela de dias do lembrete corrigida — usava getters locais em datas UTC-midnight, deslocando a janela em 1 dia em fusos como UTC-3.
 
 ## [0.2.5] - 2026-08-25
