@@ -331,3 +331,33 @@ export async function deleteTransaction(
   if (tx.invoiceItem) await syncCalculatedInvoiceAmount(tx.invoiceItem.invoiceId, userId, db)
   return true
 }
+
+export async function batchDeleteTransactions(
+  ids: string[],
+  userId: string,
+  client?: PrismaClient
+) {
+  const db = client ?? defaultPrisma
+  const transactions = await db.transaction.findMany({
+    where: { id: { in: ids }, userId },
+    include: { invoiceItem: true },
+  })
+
+  const invoiceIds = new Set<string>()
+  for (const tx of transactions) {
+    if (tx.invoiceItem) invoiceIds.add(tx.invoiceItem.invoiceId)
+  }
+
+  await db.$transaction(async (prismaTx) => {
+    const txIds = transactions.map((t) => t.id)
+    await prismaTx.bankAccountMovement.deleteMany({ where: { transactionId: { in: txIds } } })
+    await prismaTx.cardInvoiceItem.deleteMany({ where: { transactionId: { in: txIds } } })
+    await prismaTx.transaction.deleteMany({ where: { id: { in: txIds } } })
+  })
+
+  for (const invoiceId of invoiceIds) {
+    await syncCalculatedInvoiceAmount(invoiceId, userId, db)
+  }
+
+  return transactions.length
+}

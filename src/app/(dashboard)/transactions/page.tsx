@@ -14,12 +14,14 @@ import {
 } from "@/components/ui/select"
 import { useTransactions } from "@/hooks/use-transactions"
 import { useCategories } from "@/hooks/use-categories"
+import { useTableSelection } from "@/components/data-table/use-table-selection"
 import { MonthNavigator, getCurrentMonth } from "@/components/month-navigator"
 import { useMonthParam } from "@/hooks/use-month-param"
 import { TransactionRow } from "./_components/transaction-row"
 import { TransactionTable } from "./_components/transaction-table"
 import { TransactionForm } from "./_components/transaction-form"
 import { DeleteDialog } from "./_components/delete-dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { toast } from "sonner"
 import { formatCurrency } from "@/lib/utils"
 import type { TransactionWithRelations } from "@/features/transactions/transactions.types"
@@ -57,6 +59,21 @@ export default function TransactionsPage() {
     updateTransaction,
     deleteTransaction,
   } = useTransactions({ month })
+
+  const {
+    selectedIds,
+    toggleSelect,
+    selectAll,
+    clearSelection,
+    allSelected,
+    totalSelected,
+    confirmBatchDelete,
+    setConfirmBatchDelete,
+    batchDeleting,
+    setBatchDeleting,
+  } = useTableSelection(transactions, (tx) => tx.amount, {
+    storageKey: `transactions:selection:${month}:${filters.type ?? "all"}:${filters.categoryId ?? "all"}`,
+  })
 
   useEffect(() => {
     setFilters((prev) => (prev.month === month ? prev : { ...prev, month }))
@@ -129,6 +146,23 @@ export default function TransactionsPage() {
       toast.error(err instanceof Error ? err.message : "Erro ao remover")
     } finally {
       setActionLoading(false)
+    }
+  }
+
+  async function handleBatchDelete() {
+    setBatchDeleting(true)
+    const ids = Array.from(selectedIds)
+    const res = await fetch("/api/transactions/batch-delete", {
+      method: "POST",
+      body: JSON.stringify({ ids }),
+    })
+    setBatchDeleting(false)
+    setConfirmBatchDelete(false)
+    if (res.ok) {
+      toast.success(`${ids.length} transaç${ids.length !== 1 ? "ões" : "ão"} exclu${ids.length !== 1 ? "ídas" : "ída"}.`)
+      clearSelection()
+    } else {
+      toast.error("Não foi possível excluir as transações.")
     }
   }
 
@@ -231,6 +265,13 @@ export default function TransactionsPage() {
           setEditing(tx)
           setFormOpen(true)
         }}
+        selectedIds={selectedIds}
+        allSelected={allSelected}
+        totalSelected={totalSelected}
+        onToggleSelect={toggleSelect}
+        onSelectAll={selectAll}
+        onConfirmBatchDelete={() => setConfirmBatchDelete(true)}
+        onClearSelection={clearSelection}
       />
 
       {/* Cards — Mobile */}
@@ -325,6 +366,16 @@ export default function TransactionsPage() {
           `${deleting?.category.name} - ${formatCurrency(deleting?.amount ?? 0)}`
         }
         loading={actionLoading}
+      />
+
+      <ConfirmDialog
+        open={confirmBatchDelete}
+        onOpenChange={setConfirmBatchDelete}
+        title={`Excluir transaç${selectedIds.size !== 1 ? "ões" : "ão"} selecionada${selectedIds.size !== 1 ? "s" : ""}`}
+        description={`Tem certeza? ${selectedIds.size} transaç${selectedIds.size !== 1 ? "ões" : "ão"} será${selectedIds.size !== 1 ? "o" : ""} exclu${selectedIds.size !== 1 ? "ídas" : "ída"}.`}
+        confirmText="Excluir"
+        loading={batchDeleting}
+        onConfirm={handleBatchDelete}
       />
     </div>
   )

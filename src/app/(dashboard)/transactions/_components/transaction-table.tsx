@@ -4,6 +4,8 @@ import { Loader2, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency, formatDate } from "@/lib/utils"
+import { DataTableContainer } from "@/components/data-table/data-table-container"
+import { DataTableToolbar } from "@/components/data-table/data-table-toolbar"
 import type { TransactionWithRelations } from "@/features/transactions/transactions.types"
 
 interface TransactionTableProps {
@@ -14,6 +16,13 @@ interface TransactionTableProps {
   totalPages: number
   onPageChange: (page: number) => void
   onEdit: (transaction: TransactionWithRelations) => void
+  selectedIds: Set<string>
+  allSelected: boolean
+  totalSelected: number
+  onToggleSelect: (id: string) => void
+  onSelectAll: () => void
+  onConfirmBatchDelete: () => void
+  onClearSelection: () => void
 }
 
 function CategoryIcon({ icon }: { icon: string }) {
@@ -40,14 +49,33 @@ export function TransactionTable({
   totalPages,
   onPageChange,
   onEdit,
+  selectedIds,
+  allSelected,
+  totalSelected,
+  onToggleSelect,
+  onSelectAll,
+  onConfirmBatchDelete,
+  onClearSelection,
 }: TransactionTableProps) {
   const isEmpty = !loading && transactions.length === 0
+  const totalAll = transactions.reduce((sum, tx) => sum + tx.amount, 0)
 
   return (
-    <div className="hidden overflow-hidden rounded-lg border md:block">
+    <DataTableContainer>
+      <DataTableToolbar
+        selectedCount={selectedIds.size}
+        totalSelected={totalSelected}
+        itemLabel="transação"
+        onConfirmDelete={onConfirmBatchDelete}
+        onClearSelection={onClearSelection}
+        defaultContent={<span className="text-sm text-muted-foreground">{total} {total === 1 ? "item" : "itens"}</span>}
+      />
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b bg-muted/50">
+            <th className="w-10 px-3 py-3 text-center">
+              <input type="checkbox" className="h-4 w-4" checked={allSelected} onChange={onSelectAll} />
+            </th>
             <th className="px-4 py-3 text-left font-medium text-muted-foreground">Categoria</th>
             <th className="px-4 py-3 text-left font-medium text-muted-foreground">Descrição</th>
             <th className="px-4 py-3 text-left font-medium text-muted-foreground">Destino</th>
@@ -61,7 +89,7 @@ export function TransactionTable({
           {loading && !isEmpty ? (
             Array.from({ length: 5 }).map((_, i) => (
               <tr key={`skeleton-${i}`} className="border-b">
-                {Array.from({ length: 7 }).map((_, j) => (
+                {Array.from({ length: 8 }).map((_, j) => (
                   <td key={j} className="px-4 py-3">
                     <div className="h-4 w-full animate-pulse rounded bg-muted" />
                   </td>
@@ -70,7 +98,7 @@ export function TransactionTable({
             ))
           ) : isEmpty ? (
             <tr>
-              <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+              <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
                 {loading ? (
                   <span className="inline-flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" /> Carregando...
@@ -88,6 +116,9 @@ export function TransactionTable({
                   key={tx.id}
                   className={`border-b transition-colors hover:bg-muted/50 ${index === transactions.length - 1 ? "border-b-0" : ""}`}
                 >
+                  <td className="w-10 px-3 py-3 text-center">
+                    <input type="checkbox" className="h-4 w-4" checked={selectedIds.has(tx.id)} onChange={() => onToggleSelect(tx.id)} />
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div
@@ -150,11 +181,30 @@ export function TransactionTable({
               )
             })
           )}
+          {!isEmpty && transactions.length > 0 && (
+            <tr className="bg-muted/50 font-medium">
+              <td className="w-10 px-3 py-3" />
+              <td className="px-4 py-3" />
+              <td className="px-4 py-3" />
+              <td className="px-4 py-3" />
+              <td className="px-4 py-3">Total</td>
+              <td className="px-4 py-3 text-right">
+                {formatCurrency(totalAll)}
+                {selectedIds.size > 0 && (
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">
+                    (selec: {formatCurrency(totalSelected)})
+                  </span>
+                )}
+              </td>
+              <td className="px-4 py-3" />
+              <td className="px-4 py-3" />
+            </tr>
+          )}
         </tbody>
         {totalPages > 1 && (
           <tfoot>
             <tr>
-              <td colSpan={7} className="px-4 py-3">
+              <td colSpan={8} className="px-4 py-3">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs text-muted-foreground">
                     {total} {total === 1 ? "item" : "itens"} · Página {page} de {totalPages}
@@ -183,6 +233,6 @@ export function TransactionTable({
           </tfoot>
         )}
       </table>
-    </div>
+    </DataTableContainer>
   )
 }
