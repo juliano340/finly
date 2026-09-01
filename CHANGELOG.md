@@ -2,6 +2,13 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.8] - 2026-08-31
+
+### Manutenção
+
+- Testes de lançamentos fixos calculam o mês atual no fuso local, eliminando falha no fim do mês em fusos negativos.
+- Suíte de testes limpa usuários órfãos antes de rodar, evitando falhas após execuções interrompidas.
+
 ## [0.2.7] - 2026-08-31
 
 ### Adicionado

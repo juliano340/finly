@@ -11,9 +11,17 @@ export interface Release {
   changes: readonly ReleaseChange[]
 }
 
-export const CURRENT_VERSION = "0.2.7"
+export const CURRENT_VERSION = "0.2.8"
 
 export const releases = [
+  {
+    version: "0.2.8",
+    date: "2026-08-31",
+    changes: [
+      { type: "chore", description: "Testes de lançamentos fixos calculam o mês atual no fuso local, eliminando falha no fim do mês em fusos negativos." },
+      { type: "chore", description: "Suíte de testes limpa usuários órfãos antes de rodar, evitando falhas após execuções interrompidas." },
+    ],
+  },
   {
     version: "0.2.7",
     date: "2026-08-31",
