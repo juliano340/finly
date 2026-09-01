@@ -12,7 +12,10 @@ describe("fixed-costs.service - update amount propagation", () => {
   let userId = ""
   let categoryId = ""
   let bankAccountId = ""
-  const month = new Date().toISOString().slice(0, 7)
+  const monthOf = (date: Date) =>
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
+  const current = new Date()
+  const month = monthOf(current)
   const uniqueName = () => `CustoTeste${Date.now()}-${Math.random()}`
 
   beforeAll(async () => {
@@ -64,7 +67,7 @@ describe("fixed-costs.service - update amount propagation", () => {
     if (!created) return
 
     // Create occurrence for previous month (createFixedCost already created current month's)
-    const prevMonth = new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().slice(0, 7)
+    const prevMonth = monthOf(new Date(current.getFullYear(), current.getMonth() - 1, 1))
     const financialMonthPrev = await ensureFinancialMonth(userId, prevMonth, prisma)
     
     await prisma.fixedCostOccurrence.create({

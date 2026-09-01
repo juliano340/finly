@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, afterAll } from "vitest"
+import { describe, it, expect, afterAll, beforeAll } from "vitest"
 import { getTestClient } from "@/__tests__/prisma"
 import { registerUser } from "@/features/auth/auth.service"
 import { compare } from "bcryptjs"
@@ -7,6 +7,10 @@ import { compare } from "bcryptjs"
 const testPrisma = getTestClient()
 
 describe("registerUser", () => {
+  beforeAll(async () => {
+    await testPrisma.user.deleteMany({ where: { email: { contains: "@test-auth." } } })
+  })
+
   afterAll(async () => {
     await testPrisma.user.deleteMany({ where: { email: { contains: "@test-auth." } } })
   })
