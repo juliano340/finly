@@ -134,6 +134,7 @@ async function main() {
   // 1. Usuário
   const existingUser = await db.user.findUnique({ where: { id: DEMO_USER_ID } })
   if (existingUser) {
+    await db.user.update({ where: { id: DEMO_USER_ID }, data: { emailVerified: new Date() } })
     console.log(`⏭  Usuário demo já existe (${DEMO_EMAIL}).`)
   } else {
     const passwordHash = await hash(DEMO_PASSWORD, 12)
@@ -143,6 +144,7 @@ async function main() {
         name: DEMO_NAME,
         email: DEMO_EMAIL,
         passwordHash,
+        emailVerified: new Date(),
         plan: "PRO",
       },
     })

@@ -90,8 +90,8 @@ export default function RegisterPage() {
       return
     }
 
-    toast.success("Conta criada com sucesso!")
-    router.push("/login?registered=true")
+    toast.success("Conta criada. Confirme seu e-mail para entrar.")
+    router.push(`/verify-email?email=${encodeURIComponent(email.trim().toLowerCase())}`)
   }
 
   return (

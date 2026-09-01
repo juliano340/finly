@@ -43,7 +43,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const user = await prisma.user.findUnique({ where: { email } })
         const valid = await compare(password, user?.passwordHash ?? DUMMY_PASSWORD_HASH)
-        if (!user?.passwordHash || !valid) {
+        if (!user?.passwordHash || !valid || !user.emailVerified) {
           await recordLoginFailure(rateLimitKeys)
           return null
         }

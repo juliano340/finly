@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Stepper } from "@/components/ui/stepper"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 interface MeResponse {
   id: string
@@ -260,6 +261,15 @@ export default function SettingsPage() {
               <SignOutButton />
             </CardContent>
           </Card>
+          <Card className="border-destructive/30 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base text-destructive">Excluir conta</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">Apaga permanentemente seu perfil e todos os dados financeiros.</p>
+              <DeleteAccountButton />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="data" className="w-full space-y-4">
@@ -502,5 +512,69 @@ function SignOutButton() {
         onConfirm={handleSignOut}
       />
     </>
+  )
+}
+
+function DeleteAccountButton() {
+  const [open, setOpen] = useState(false)
+  const [password, setPassword] = useState("")
+  const [loading, setLoading] = useState(false)
+
+  async function handleDelete(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setLoading(true)
+    const response = await fetch("/api/me", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    })
+    setLoading(false)
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      toast.error(data.error ?? "Não foi possível excluir a conta.")
+      return
+    }
+
+    const { signOut } = await import("next-auth/react")
+    await signOut({ redirect: false })
+    window.location.href = "/login?accountDeleted=1"
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(nextOpen) => {
+      setOpen(nextOpen)
+      if (!nextOpen) setPassword("")
+    }}>
+      <Button variant="destructive" onClick={() => setOpen(true)}>
+        <Trash2 className="mr-2 h-4 w-4" /> Excluir conta
+      </Button>
+      <DialogContent showCloseButton={!loading}>
+        <DialogHeader>
+          <DialogTitle>Excluir conta permanentemente?</DialogTitle>
+          <DialogDescription>Esta ação não pode ser desfeita. Digite sua senha para confirmar.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleDelete} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="delete-account-password">Senha atual</Label>
+            <Input
+              id="delete-account-password"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              autoComplete="current-password"
+              required
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" disabled={loading} onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button type="submit" variant="destructive" disabled={loading || !password}>
+              {loading ? "Excluindo..." : "Excluir permanentemente"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }

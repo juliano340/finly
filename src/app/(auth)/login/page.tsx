@@ -194,6 +194,10 @@ export default function LoginPage() {
               </Link>
             </div>
 
+            <Link href="/verify-email" className="block text-center text-sm text-primary hover:underline">
+              Reenviar confirmação de e-mail
+            </Link>
+
             <Button
               type="submit"
               disabled={loading}

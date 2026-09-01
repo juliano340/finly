@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { compare } from "bcryptjs"
 
 const updateProfileSchema = z.object({
   name: z.string().min(1).max(80).optional(),
@@ -57,4 +58,29 @@ export async function PATCH(request: Request) {
   })
 
   return NextResponse.json(updated)
+}
+
+const deleteAccountSchema = z.object({ password: z.string().min(1) })
+
+export async function DELETE(request: Request) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+  }
+
+  const parsed = deleteAccountSchema.safeParse(await request.json().catch(() => null))
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Informe sua senha para excluir a conta." }, { status: 400 })
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { passwordHash: true },
+  })
+  if (!user?.passwordHash || !(await compare(parsed.data.password, user.passwordHash))) {
+    return NextResponse.json({ error: "Senha incorreta." }, { status: 400 })
+  }
+
+  await prisma.user.delete({ where: { id: session.user.id } })
+  return NextResponse.json({ message: "Conta excluída com sucesso." })
 }

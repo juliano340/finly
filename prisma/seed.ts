@@ -8,12 +8,13 @@ const prisma = new PrismaClient({
 async function main() {
   const user = await prisma.user.upsert({
     where: { email: "demo@finly.app" },
-    update: {},
+    update: { emailVerified: new Date() },
     create: {
       id: "user_demo_01",
       email: "demo@finly.app",
       name: "Usuário Demo",
       passwordHash: "demo_hash_placeholder",
+      emailVerified: new Date(),
     },
   })
 

@@ -72,7 +72,7 @@ export default function ChangelogPage() {
   const groups = getReleaseGroups(page)
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8 py-8">
+    <div className="mx-auto max-w-3xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
       <div>
         <Link href="/" className={buttonVariants({ variant: "ghost", size: "sm", className: "mb-4 -ml-2" })}>
           <ArrowLeft className="mr-1.5 h-4 w-4" />Voltar
