@@ -2,6 +2,18 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.7] - 2026-08-31
+
+### Adicionado
+
+- Cadastro agora exige confirmação por link enviado ao e-mail, com token de uso único, expiração e reenvio limitado.
+- Configurações ganhou exclusão permanente de conta, protegida pela senha atual e com encerramento da sessão.
+- Tela de transações permite excluir vários lançamentos selecionados de uma vez.
+
+### Corrigido
+
+- Notificações de custos fixos priorizam o vencimento ajustado quando há uma ocorrência automática duplicada no mesmo mês.
+
 ## [0.2.6] - 2026-08-26
 
 ### Corrigido

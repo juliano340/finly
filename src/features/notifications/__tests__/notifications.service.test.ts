@@ -115,6 +115,9 @@ describe("notifications.service", () => {
     await prisma.fixedCostOccurrence.create({
       data: { fixedCostId: created.id, financialMonthId: sepFM.id, month: "2026-09", dueDate: new Date("2026-09-16T12:00:00"), amount: 55, status: "PENDING", userId },
     })
+    await prisma.fixedCostOccurrence.create({
+      data: { fixedCostId: created.id, financialMonthId: sepFM.id, month: "2026-09", scheduledDate: new Date("2026-09-01T12:00:00"), dueDate: new Date("2026-09-01T12:00:00"), amount: 55, status: "PENDING", userId },
+    })
 
     const notifications = await getDueSoonNotifications(userId, 7, prisma, new Date("2026-09-10T12:00:00"))
 

@@ -11,9 +11,19 @@ export interface Release {
   changes: readonly ReleaseChange[]
 }
 
-export const CURRENT_VERSION = "0.2.6"
+export const CURRENT_VERSION = "0.2.7"
 
 export const releases = [
+  {
+    version: "0.2.7",
+    date: "2026-08-31",
+    changes: [
+      { type: "feat", description: "Cadastro agora exige confirmação por link enviado ao e-mail, com token de uso único, expiração e reenvio limitado." },
+      { type: "feat", description: "Configurações ganhou exclusão permanente de conta, protegida pela senha atual e com encerramento da sessão." },
+      { type: "feat", description: "Tela de transações permite excluir vários lançamentos selecionados de uma vez." },
+      { type: "fix", description: "Notificações de custos fixos priorizam o vencimento ajustado quando há uma ocorrência automática duplicada no mesmo mês." },
+    ],
+  },
   {
     version: "0.2.6",
     date: "2026-08-26",

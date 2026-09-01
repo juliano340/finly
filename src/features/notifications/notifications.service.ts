@@ -54,7 +54,7 @@ export async function getDueSoonNotifications(
     href: "/invoices",
   }))
 
-  const fixedCostNotifications = occurrences.flatMap((occurrence) => {
+  const fixedCostNotifications = deduplicateMonthlyOccurrences(occurrences).flatMap((occurrence) => {
     if (!isValidMonth(occurrence.month) || !occurrence.fixedCost.dueDay) return []
     const dueDate = occurrence.dueDate
       ? normalizeDate(occurrence.dueDate)
@@ -72,6 +72,39 @@ export async function getDueSoonNotifications(
   })
 
   return [...invoiceNotifications, ...fixedCostNotifications]
+}
+
+function deduplicateMonthlyOccurrences<T extends {
+  fixedCostId: string
+  month: string
+  scheduledDate: Date | null
+  fixedCost: { frequency: string; customUnit: string | null }
+}>(occurrences: T[]): T[] {
+  const grouped = new Map<string, T[]>()
+
+  for (const occurrence of occurrences) {
+    if (!hasAtMostOneOccurrencePerMonth(occurrence.fixedCost)) continue
+    const key = `${occurrence.fixedCostId}:${occurrence.month}`
+    const group = grouped.get(key) ?? []
+    group.push(occurrence)
+    grouped.set(key, group)
+  }
+
+  const preferredIds = new Set<T>()
+  for (const group of grouped.values()) {
+    preferredIds.add(group.find((occurrence) => !occurrence.scheduledDate) ?? group[0])
+  }
+
+  return occurrences.filter((occurrence) =>
+    !hasAtMostOneOccurrencePerMonth(occurrence.fixedCost) || preferredIds.has(occurrence)
+  )
+}
+
+function hasAtMostOneOccurrencePerMonth(fixedCost: { frequency: string; customUnit: string | null }) {
+  return fixedCost.frequency !== "DAILY" &&
+    fixedCost.frequency !== "WEEKLY" &&
+    fixedCost.frequency !== "BIWEEKLY" &&
+    !(fixedCost.frequency === "CUSTOM" && ["DAYS", "WEEKS"].includes(fixedCost.customUnit ?? ""))
 }
 
 function fixedCostDueDate(month: string, dueDay: number) {
