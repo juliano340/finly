@@ -11,9 +11,17 @@ export interface Release {
   changes: readonly ReleaseChange[]
 }
 
-export const CURRENT_VERSION = "0.2.8"
+export const CURRENT_VERSION = "0.2.9"
 
 export const releases = [
+  {
+    version: "0.2.9",
+    date: "2026-09-01",
+    changes: [
+      { type: "fix", description: "Cadastro volta a funcionar sem SMTP configurado fora de produção: o envio é ignorado com aviso em vez de apagar a conta criada." },
+      { type: "chore", description: "Testes end-to-end seguem a tela de confirmação de e-mail e confirmam a conta antes de entrar." },
+    ],
+  },
   {
     version: "0.2.8",
     date: "2026-08-31",

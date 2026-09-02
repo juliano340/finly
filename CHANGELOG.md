@@ -2,6 +2,16 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.9] - 2026-09-01
+
+### Corrigido
+
+- Cadastro volta a funcionar sem SMTP configurado fora de produção: o envio é ignorado com aviso em vez de apagar a conta criada.
+
+### Manutenção
+
+- Testes end-to-end seguem a tela de confirmação de e-mail e confirmam a conta antes de entrar.
+
 ## [0.2.8] - 2026-08-31
 
 ### Manutenção
