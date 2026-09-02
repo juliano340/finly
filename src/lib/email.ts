@@ -10,12 +10,7 @@ function getTransporter(): nodemailer.Transporter {
   const user = process.env.SMTP_USER
   const pass = process.env.SMTP_PASS
 
-  if (!user || !pass) {
-    if (process.env.NODE_ENV !== "test") {
-      console.warn("[email] SMTP_USER/SMTP_PASS nao configurados — emails nao serao enviados")
-    }
-    throw new Error("SMTP credentials missing")
-  }
+  if (!user || !pass) throw new Error("SMTP credentials missing")
 
   transporter = nodemailer.createTransport({
     host,
@@ -35,6 +30,12 @@ export interface SendEmailInput {
 
 export async function sendEmail({ to, subject, html }: SendEmailInput): Promise<void> {
   if (process.env.NODE_ENV === "test") return
+
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.warn("[email] SMTP_USER/SMTP_PASS nao configurados — emails nao serao enviados")
+    if (process.env.NODE_ENV === "production") throw new Error("SMTP credentials missing")
+    return
+  }
 
   const from = process.env.EMAIL_FROM ?? process.env.SMTP_USER ?? "no-reply@finly.app"
   const transport = getTransporter()
