@@ -11,14 +11,15 @@ export interface Release {
   changes: readonly ReleaseChange[]
 }
 
-export const CURRENT_VERSION = "0.2.9"
+export const CURRENT_VERSION = "0.2.10"
 
 export const releases = [
   {
-    version: "0.2.9",
+    version: "0.2.10",
     date: "2026-09-01",
     changes: [
-      { type: "fix", description: "Cadastro volta a funcionar sem SMTP configurado fora de produção: o envio é ignorado com aviso em vez de apagar a conta criada." },
+      { type: "fix", description: "Cadastro volta a funcionar sem SMTP configurado fora da produção: o envio é ignorado com aviso em vez de apagar a conta criada." },
+      { type: "fix", description: "Previews da Vercel sem SMTP configurado deixam de bloquear o cadastro; somente o ambiente de produção exige credencial." },
       { type: "chore", description: "Testes end-to-end seguem a tela de confirmação de e-mail e confirmam a conta antes de entrar." },
     ],
   },

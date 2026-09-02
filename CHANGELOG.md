@@ -2,11 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
-## [0.2.9] - 2026-09-01
+## [0.2.10] - 2026-09-01
 
 ### Corrigido
 
-- Cadastro volta a funcionar sem SMTP configurado fora de produção: o envio é ignorado com aviso em vez de apagar a conta criada.
+- Cadastro volta a funcionar sem SMTP configurado fora da produção: o envio é ignorado com aviso em vez de apagar a conta criada.
+- Previews da Vercel sem SMTP configurado deixam de bloquear o cadastro; somente o ambiente de produção exige credencial.
 
 ### Manutenção
 
