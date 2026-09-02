@@ -33,7 +33,9 @@ export async function sendEmail({ to, subject, html }: SendEmailInput): Promise<
 
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
     console.warn("[email] SMTP_USER/SMTP_PASS nao configurados — emails nao serao enviados")
-    if (process.env.NODE_ENV === "production") throw new Error("SMTP credentials missing")
+    if (process.env.NODE_ENV === "production" && process.env.VERCEL_ENV !== "preview") {
+      throw new Error("SMTP credentials missing")
+    }
     return
   }
 
