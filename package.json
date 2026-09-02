@@ -1,6 +1,6 @@
 {
   "name": "finly",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -63,6 +63,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
+    "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.1",
     "@types/papaparse": "^5.5.2",

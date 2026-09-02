@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type Page } from "@playwright/test"
+import { markEmailVerified } from "./utils/db"
 
 const PASSWORD = "Finly123"
 const FIXTURE_MONTH = "2026-08"
@@ -247,7 +248,8 @@ async function register(page: Page, email: string, name: string) {
   await expect(page.getByRole("checkbox")).toBeVisible()
   await page.getByRole("checkbox").check()
   await page.getByRole("button", { name: "Criar minha conta" }).click()
-  await page.waitForURL("**/login?registered=true")
+  await page.waitForURL("**/verify-email**")
+  await markEmailVerified(email)
 }
 
 async function registerApi(page: Page, email: string, name: string) {
@@ -255,6 +257,7 @@ async function registerApi(page: Page, email: string, name: string) {
     data: { name, email, password: PASSWORD },
   })
   expect(response.status(), `cadastro de ${email}`).toBe(201)
+  await markEmailVerified(email)
 }
 
 async function login(page: Page, email: string) {

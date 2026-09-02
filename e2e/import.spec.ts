@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test"
+import { markEmailVerified } from "./utils/db"
 
 test.describe("Importação", () => {
   const seedEmail = `import-e2e-${Date.now()}@finly.app`
@@ -18,7 +19,8 @@ test.describe("Importação", () => {
     await page.click('input[type="checkbox"]')
     await page.waitForTimeout(500)
     await page.click('button:has-text("Criar minha conta")')
-    await page.waitForURL("**/login**", { timeout: 20000 })
+    await page.waitForURL("**/verify-email**", { timeout: 20000 })
+    await markEmailVerified(seedEmail)
     await page.close()
   })
 

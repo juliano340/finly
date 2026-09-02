@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test"
+import { markEmailVerified } from "./utils/db"
 
 test.describe("Autenticação", () => {
   const testEmail = `test-${Date.now()}@finly.app`
@@ -25,8 +26,10 @@ test.describe("Autenticação", () => {
     await page.waitForTimeout(500)
     await page.click('button:has-text("Criar minha conta")')
 
-    await page.waitForURL("**/login**", { timeout: 20000 })
+    await page.waitForURL("**/verify-email**", { timeout: 20000 })
+    await markEmailVerified(testEmail)
 
+    await page.goto("/login")
     await page.fill('input[id="email"]', testEmail)
     await page.fill('input[id="password"]', testPassword)
     await page.click('button[type="submit"]')
