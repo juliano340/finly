@@ -2,6 +2,13 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.13] - 2026-09-04
+
+### Corrigido
+
+- Login com senha correta e conta não confirmada leva direto para a tela de confirmação de e-mail; o link de reenvio saiu da página de login.
+- Tela de confirmação passa a mostrar o e-mail como texto e o botão de reenvio com contador regressivo, no mesmo padrão da recuperação de senha.
+
 ## [0.2.12] - 2026-09-04
 
 ### Corrigido

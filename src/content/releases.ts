@@ -11,9 +11,17 @@ export interface Release {
   changes: readonly ReleaseChange[]
 }
 
-export const CURRENT_VERSION = "0.2.12"
+export const CURRENT_VERSION = "0.2.13"
 
 export const releases = [
+  {
+    version: "0.2.13",
+    date: "2026-09-04",
+    changes: [
+      { type: "fix", description: "Login com senha correta e conta não confirmada leva direto para a tela de confirmação de e-mail; o link de reenvio saiu da página de login." },
+      { type: "fix", description: "Tela de confirmação passa a mostrar o e-mail como texto e o botão de reenvio com contador regressivo, no mesmo padrão da recuperação de senha." },
+    ],
+  },
   {
     version: "0.2.12",
     date: "2026-09-04",
