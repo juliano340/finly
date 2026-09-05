@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "crypto"
 import type { PrismaClient } from "@/generated/prisma/client"
 
-const TOKEN_TTL_MS = 24 * 60 * 60 * 1000
+const TOKEN_TTL_MS = 60 * 60 * 1000
 const RESEND_COOLDOWN_MS = 10 * 60 * 1000
 const IDENTIFIER_PREFIX = "email-verification:"
 
