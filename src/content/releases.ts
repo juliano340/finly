@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.16"
+export const CURRENT_VERSION = "0.2.17"
 
 export const releases = [
+  {
+    version: "0.2.17",
+    date: "auto",
+    changes: [
+      { type: "fix", description: "Custos fixos exibem a mensagem real da API ao falhar pagamento ou estorno, como saldo insuficiente, em vez de erro genérico." },
+    ],
+  },
   {
     version: "0.2.16",
     date: "auto",

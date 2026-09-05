@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.17] - 2026-09-05
+
+### Corrigido
+
+- Custos fixos exibem a mensagem real da API ao falhar pagamento ou estorno, como saldo insuficiente, em vez de erro genérico.
+
 ## [0.2.16] - 2026-09-05
 
 ### Corrigido

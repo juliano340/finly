@@ -190,7 +190,14 @@ function FixedCostsPageInner() {
         toast.success(activeTab === "INCOME" ? "Receita marcada como recebida." : "Custo fixo marcado como pago.")
         fetchData()
       } else {
-        toast.error(activeTab === "INCOME" ? "Não foi possível marcar como recebida." : "Não foi possível marcar como pago.")
+        const data = await res.json().catch(() => ({}))
+        toast.error(
+          typeof data.error === "string"
+            ? data.error
+            : activeTab === "INCOME"
+              ? "Não foi possível marcar como recebida."
+              : "Não foi possível marcar como pago."
+        )
       }
     } finally {
       setPayingId(null)
@@ -205,7 +212,14 @@ function FixedCostsPageInner() {
         toast.info(activeTab === "INCOME" ? "Recebimento cancelado." : "Pagamento estornado.")
         fetchData()
       } else {
-        toast.error(activeTab === "INCOME" ? "Não foi possível cancelar o recebimento." : "Não foi possível estornar o pagamento.")
+        const data = await res.json().catch(() => ({}))
+        toast.error(
+          typeof data.error === "string"
+            ? data.error
+            : activeTab === "INCOME"
+              ? "Não foi possível cancelar o recebimento."
+              : "Não foi possível estornar o pagamento."
+        )
       }
     } finally {
       setUnpayingId(null)
@@ -220,7 +234,8 @@ function FixedCostsPageInner() {
         toast.success("Marcado como pago no cartão.")
         fetchData()
       } else {
-        toast.error("Não foi possível marcar como pago no cartão.")
+        const data = await res.json().catch(() => ({}))
+        toast.error(typeof data.error === "string" ? data.error : "Não foi possível marcar como pago no cartão.")
       }
     } finally {
       setPayingCardId(null)
