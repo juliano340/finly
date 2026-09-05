@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { toast } from "sonner"
+import { getPasswordStrength, PASSWORD_STRENGTH_COLORS, PASSWORD_STRENGTH_LABELS } from "@/lib/password-strength"
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -31,17 +32,7 @@ export default function RegisterPage() {
   const [terms, setTerms] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  const passwordStrength = (() => {
-    let score = 0
-    if (password.length >= 8) score++
-    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++
-    if (/\d/.test(password)) score++
-    if (/[^a-zA-Z0-9]/.test(password)) score++
-    return score
-  })()
-
-  const strengthLabels = ["", "Fraca", "Razoável", "Boa", "Forte"]
-  const strengthColors = ["bg-border", "bg-destructive", "bg-warning", "bg-primary", "bg-primary"]
+  const passwordStrength = getPasswordStrength(password)
 
   function nextStep() {
     if (step === 1) {
@@ -197,7 +188,7 @@ export default function RegisterPage() {
                       <div
                         key={i}
                         className={`h-1 flex-1 rounded-full transition-colors ${
-                          i <= passwordStrength ? strengthColors[passwordStrength] : "bg-border"
+                          i <= passwordStrength ? PASSWORD_STRENGTH_COLORS[passwordStrength] : "bg-border"
                         }`}
                       />
                     ))}
@@ -205,7 +196,7 @@ export default function RegisterPage() {
                   <p className="mt-1 text-xs text-muted-foreground">
                     {password.length === 0
                       ? "Use 8+ caracteres com letras e números"
-                      : strengthLabels[passwordStrength]}
+                      : PASSWORD_STRENGTH_LABELS[passwordStrength]}
                   </p>
                 </div>
 
