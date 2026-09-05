@@ -1,0 +1,16 @@
+# Extende a configuração padrão do gitleaks com allowlist para fixtures de teste.
+# Testes contêm senhas/credenciais falsas por natureza (ex.: "SenhaAntiga123"),
+# que disparam a regra generic-api-key. Segredos reais não pertencem a esses arquivos.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Fixtures de teste e e2e nao contem segredos reais"
+paths = [
+  '''(^|/)__tests__/''',
+  '''\.test\.[tj]sx?$''',
+  '''\.spec\.[tj]sx?$''',
+  '''(^|/)e2e/''',
+  '''(^|/)test-results/''',
+]
