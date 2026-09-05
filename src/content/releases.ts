@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.15"
+export const CURRENT_VERSION = "0.2.16"
 
 export const releases = [
+  {
+    version: "0.2.16",
+    date: "auto",
+    changes: [
+      { type: "fix", description: "Pagamento de custo fixo sem saldo explica o motivo: a recusa por cheque especial agora informa saldo e limite disponível em vez de 'Erro ao pagar'." },
+    ],
+  },
   {
     version: "0.2.15",
     date: "auto",

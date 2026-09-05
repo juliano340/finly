@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.16] - 2026-09-05
+
+### Corrigido
+
+- Pagamento de custo fixo sem saldo explica o motivo: a recusa por cheque especial agora informa saldo e limite disponível em vez de 'Erro ao pagar'.
+
 ## [0.2.15] - 2026-09-05
 
 ### Adicionado
