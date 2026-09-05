@@ -2,7 +2,7 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
-## [0.2.13] - 2026-09-04
+## [0.2.13] - 2026-09-05
 
 ### Corrigido
 
