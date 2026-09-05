@@ -10,6 +10,15 @@ export interface EmailVerificationEmailInput {
   expiresInMinutes: number
 }
 
+export function formatExpiration(minutes: number) {
+  if (minutes >= 60 && minutes % 60 === 0) {
+    const hours = minutes / 60
+    return `${hours} ${hours === 1 ? "hora" : "horas"}`
+  }
+
+  return `${minutes} ${minutes === 1 ? "minuto" : "minutos"}`
+}
+
 export function emailVerificationTemplate({
   userName,
   verificationUrl,
@@ -30,7 +39,7 @@ export function emailVerificationTemplate({
         <p style="font-size:15px;line-height:1.6;color:#3f3f46;margin:0 0 24px">Para ativar sua conta Finly, confirme que este e-mail é seu.</p>
         <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px"><tr><td align="center"><a href="${verificationUrl}" style="display:inline-block;background:#134E4A;color:#fff;font-size:15px;font-weight:600;text-decoration:none;padding:12px 32px;border-radius:8px">Confirmar meu e-mail</a></td></tr></table>
         <p style="font-size:13px;line-height:1.6;color:#71717a;margin:0 0 16px">Ou copie e cole este link no navegador:<br><span style="word-break:break-all;color:#134E4A">${verificationUrl}</span></p>
-        <p style="font-size:13px;line-height:1.6;color:#71717a;margin:0 0 32px">Este link expira em <strong>${expiresInMinutes} minutos</strong>.</p>
+        <p style="font-size:13px;line-height:1.6;color:#71717a;margin:0 0 32px">Este link expira em <strong>${formatExpiration(expiresInMinutes)}</strong>.</p>
         <hr style="border:0;border-top:1px solid #e4e4e7;margin:0 0 24px">
         <p style="font-size:13px;line-height:1.6;color:#a1a1aa;margin:0">Se você não criou uma conta Finly, pode ignorar este e-mail.</p>
       </td></tr>
@@ -76,7 +85,7 @@ export function passwordResetTemplate({
               <span style="word-break:break-all;color:#134E4A">${resetUrl}</span>
             </p>
             <p style="font-size:13px;line-height:1.6;color:#71717a;margin:0 0 32px">
-              ⏳ Este link expira em <strong>${expiresInMinutes} minutos</strong>.
+              ⏳ Este link expira em <strong>${formatExpiration(expiresInMinutes)}</strong>.
             </p>
             <hr style="border:0;border-top:1px solid #e4e4e7;margin:0 0 24px">
             <p style="font-size:13px;line-height:1.6;color:#a1a1aa;margin:0">

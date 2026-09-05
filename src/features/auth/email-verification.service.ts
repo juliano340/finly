@@ -6,7 +6,7 @@ const RESEND_COOLDOWN_MS = 10 * 60 * 1000
 const IDENTIFIER_PREFIX = "email-verification:"
 
 export class EmailVerificationRateLimitError extends Error {
-  constructor() {
+  constructor(public readonly retryAt: Date) {
     super("EMAIL_VERIFICATION_RATE_LIMIT")
     this.name = "EmailVerificationRateLimitError"
   }
@@ -48,10 +48,13 @@ export async function createEmailVerificationToken(email: string, db: PrismaClie
       identifier,
       expires: { gt: new Date(Date.now() + TOKEN_TTL_MS - RESEND_COOLDOWN_MS) },
     },
-    select: { token: true },
+    select: { expires: true },
   })
 
-  if (recent) throw new EmailVerificationRateLimitError()
+  if (recent) {
+    const retryAt = new Date(recent.expires.getTime() - TOKEN_TTL_MS + RESEND_COOLDOWN_MS)
+    throw new EmailVerificationRateLimitError(retryAt)
+  }
 
   await db.verificationToken.deleteMany({ where: { identifier } })
 
@@ -91,3 +94,12 @@ export async function verifyEmail(token: string, db: PrismaClient): Promise<void
 }
 
 export const EMAIL_VERIFICATION_TTL_MINUTES = TOKEN_TTL_MS / 60 / 1000
+
+export async function isEmailVerified(email: string, db: PrismaClient): Promise<boolean> {
+  const user = await db.user.findUnique({
+    where: { email },
+    select: { emailVerified: true },
+  })
+
+  return Boolean(user?.emailVerified)
+}

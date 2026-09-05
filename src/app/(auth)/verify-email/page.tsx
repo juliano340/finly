@@ -22,7 +22,7 @@ export default function VerifyEmailPage() {
 function VerifyEmailContent() {
   const searchParams = useSearchParams()
   const token = searchParams.get("token")
-  const [email, setEmail] = useState(searchParams.get("email") ?? "")
+  const accountEmail = searchParams.get("email") ?? ""
   const [status, setStatus] = useState<Status>(token ? "verifying" : "waiting")
   const [message, setMessage] = useState("")
   const [resending, setResending] = useState(false)
@@ -54,17 +54,26 @@ function VerifyEmailContent() {
     const response = await fetch("/api/auth/resend-verification", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    })
-    const data = await response.json().catch(() => ({}))
-    setResending(false)
+    body: JSON.stringify({ email: accountEmail }),
+  })
+  const data = await response.json().catch(() => ({}))
+  setResending(false)
 
-    if (!response.ok) {
-      setMessage(data.error ?? "Não foi possível reenviar o e-mail.")
-      return
-    }
-    setMessage("Enviamos um novo link. Verifique também sua caixa de spam.")
+  if (data.alreadyVerified) {
+    setStatus("verified")
+    return
   }
+
+  if (!response.ok) {
+    const isCooldown = typeof data.retryAfterMinutes === "number"
+    setStatus(isCooldown ? "waiting" : "error")
+    setMessage(data.error ?? "Não foi possível reenviar o e-mail.")
+    return
+  }
+
+  setStatus("waiting")
+  setMessage(data.message ?? "Enviamos um novo link. Verifique também sua caixa de spam.")
+}
 
   return (
     <div className="grid min-h-screen place-items-center p-6">
@@ -101,10 +110,10 @@ function VerifyEmailContent() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">E-mail</Label>
-              <Input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="seu@email.com" required />
+              <Input id="email" type="email" value={accountEmail} readOnly placeholder="seu@email.com" />
             </div>
             {message && <p className={status === "error" ? "text-sm text-destructive" : "text-sm text-muted-foreground"}>{message}</p>}
-            <Button type="button" className="w-full" variant="outline" size="lg" disabled={resending || !email} onClick={resend}>
+            <Button type="button" className="w-full" variant="outline" size="lg" disabled={resending || !accountEmail} onClick={resend}>
               <Send className="h-4 w-4" /> {resending ? "Enviando..." : "Reenviar link"}
             </Button>
             <Link href="/login" className="block"><Button type="button" variant="ghost" className="w-full">Voltar ao login</Button></Link>

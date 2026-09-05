@@ -7,6 +7,7 @@ import {
   createEmailVerificationToken,
   EmailVerificationRateLimitError,
   EMAIL_VERIFICATION_TTL_MINUTES,
+  isEmailVerified,
 } from "@/features/auth/email-verification.service"
 import { consumeIpRateLimit } from "@/features/auth/request-rate-limit.service"
 
@@ -24,6 +25,11 @@ export async function POST(request: Request) {
     if (!parsed.success) return NextResponse.json({ error: "E-mail inválido." }, { status: 400 })
 
     const email = parsed.data.email.trim().toLowerCase()
+
+    if (await isEmailVerified(email, prisma)) {
+      return NextResponse.json({ alreadyVerified: true })
+    }
+
     try {
       const token = await createEmailVerificationToken(email, prisma)
       if (!token) return NextResponse.json(RESPONSE)
@@ -41,7 +47,17 @@ export async function POST(request: Request) {
       })
     } catch (error) {
       if (error instanceof EmailVerificationRateLimitError) {
-        return NextResponse.json({ error: "Aguarde alguns minutos antes de solicitar outro link." }, { status: 429 })
+        const retryAfterMinutes = Math.max(
+          1,
+          Math.ceil((error.retryAt.getTime() - Date.now()) / 60_000)
+        )
+        return NextResponse.json(
+          {
+            error: `Aguarde ${retryAfterMinutes} ${retryAfterMinutes === 1 ? "minuto" : "minutos"} antes de solicitar outro link.`,
+            retryAfterMinutes,
+          },
+          { status: 429 }
+        )
       }
       await prisma.verificationToken.deleteMany({ where: { identifier: `email-verification:${email}` } })
       console.error("[resend-verification]", error)
