@@ -24,9 +24,18 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.14"
+export const CURRENT_VERSION = "0.2.15"
 
 export const releases = [
+  {
+    version: "0.2.15",
+    date: "auto",
+    changes: [
+      { type: "feat", description: "Configurações reorganizada: aba Conta em duas colunas com perfil e segurança lado a lado, troca de senha em diálogo com regras visíveis e excluir conta movida para a aba Conta." },
+      { type: "feat", description: "Edição do perfil agora é explícita: nome fica somente leitura até ativar Editar, e salvar só habilita quando houver mudança." },
+      { type: "refactor", description: "Medidor de força de senha extraído para biblioteca compartilhada entre cadastro e troca de senha." },
+    ],
+  },
   {
     version: "0.2.14",
     date: "auto",

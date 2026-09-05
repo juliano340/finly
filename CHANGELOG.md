@@ -2,6 +2,17 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.15] - 2026-09-05
+
+### Adicionado
+
+- Configurações reorganizada: aba Conta em duas colunas com perfil e segurança lado a lado, troca de senha em diálogo com regras visíveis e excluir conta movida para a aba Conta.
+- Edição do perfil agora é explícita: nome fica somente leitura até ativar Editar, e salvar só habilita quando houver mudança.
+
+### Alterado
+
+- Medidor de força de senha extraído para biblioteca compartilhada entre cadastro e troca de senha.
+
 ## [0.2.14] - 2026-09-05
 
 ### Adicionado
