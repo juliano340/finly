@@ -34,10 +34,12 @@ test.describe("Troca de senha", () => {
     await page.waitForURL("**/dashboard**", { timeout: 20000 })
 
     await page.goto("/settings")
+    await page.click('button:has-text("Alterar senha")')
+    await page.waitForSelector('input[id="current-password"]', { timeout: 5000 })
     await page.fill('input[id="current-password"]', password)
     await page.fill('input[id="new-password"]', newPassword)
     await page.fill('input[id="confirm-password"]', newPassword)
-    await page.click('button:has-text("Alterar senha")')
+    await page.click('button:has-text("Salvar nova senha")')
     await expect(page.getByText("Senha alterada com sucesso.")).toBeVisible({ timeout: 15000 })
 
     await context.clearCookies()

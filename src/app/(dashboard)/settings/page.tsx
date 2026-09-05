@@ -3,16 +3,18 @@
 import { useEffect, useRef, useState } from "react"
 import { signIn, signOut, useSession } from "next-auth/react"
 import { useTheme } from "next-themes"
-import { Download, KeyRound, Loader2, LogOut, Moon, Save, Sun, Trash2, Upload } from "lucide-react"
+import { Download, Check, Eye, EyeOff, KeyRound, Loader2, LogOut, Moon, Pencil, Save, Sun, Trash2, Upload } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Separator } from "@/components/ui/separator"
 import { Stepper } from "@/components/ui/stepper"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { getPasswordStrength, PASSWORD_STRENGTH_COLORS, PASSWORD_STRENGTH_LABELS } from "@/lib/password-strength"
 
 interface MeResponse {
   id: string
@@ -30,10 +32,15 @@ export default function SettingsPage() {
   const [name, setName] = useState("")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [editingProfile, setEditingProfile] = useState(false)
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [changingPassword, setChangingPassword] = useState(false)
+  const [passwordOpen, setPasswordOpen] = useState(false)
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [importMode, setImportMode] = useState<"replace" | "merge">("replace")
   const [restoreFile, setRestoreFile] = useState<File | null>(null)
   const [restoring, setRestoring] = useState(false)
@@ -60,28 +67,56 @@ export default function SettingsPage() {
     }
   }, [])
 
+  const profileDirty = name.trim() !== "" && name.trim() !== (me?.name ?? "")
+
   const handleSaveProfile = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!name.trim()) {
-      toast.error("O nome não pode ficar em branco.")
-      return
-    }
+    if (saving || !profileDirty) return
     setSaving(true)
-    const res = await fetch("/api/me", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim() }),
-    })
-    setSaving(false)
-    if (res.ok) {
-      const updated: MeResponse = await res.json()
-      setMe(updated)
-      await update({ name: updated.name })
-      toast.success("Perfil atualizado.")
-    } else {
-      const err = await res.json().catch(() => ({}))
-      toast.error(err.error ?? "Não foi possível atualizar o perfil.")
+    try {
+      const res = await fetch("/api/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim() }),
+      })
+      if (res.ok) {
+        const updated: MeResponse = await res.json()
+        setMe(updated)
+        await update({ name: updated.name })
+        setEditingProfile(false)
+        toast.success("Perfil atualizado.")
+      } else {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.error ?? "Não foi possível atualizar o perfil.")
+      }
+    } finally {
+      setSaving(false)
     }
+  }
+
+  function startEditingProfile() {
+    setName(me?.name ?? "")
+    setEditingProfile(true)
+  }
+
+  function cancelEditingProfile() {
+    setName(me?.name ?? "")
+    setEditingProfile(false)
+  }
+
+  const newPasswordRules = {
+    minLength: newPassword.length >= 8,
+    matches: confirmPassword.length > 0 && newPassword === confirmPassword,
+  }
+  const passwordStrength = getPasswordStrength(newPassword)
+
+  function resetPasswordFields() {
+    setCurrentPassword("")
+    setNewPassword("")
+    setConfirmPassword("")
+    setShowCurrentPassword(false)
+    setShowNewPassword(false)
+    setShowConfirmPassword(false)
   }
 
   const handleChangePassword = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -117,9 +152,7 @@ export default function SettingsPage() {
     }
 
     setChangingPassword(false)
-    setCurrentPassword("")
-    setNewPassword("")
-    setConfirmPassword("")
+    setPasswordOpen(false)
     toast.success("Senha alterada com sucesso.")
   }
 
@@ -217,8 +250,9 @@ export default function SettingsPage() {
           <TabsTrigger value="data">Dados</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="account" className="w-full space-y-4">
-          <Card className="border-0 shadow-sm">
+        <TabsContent value="account" className="w-full">
+          <div className="grid gap-4 lg:grid-cols-2">
+          <Card className="h-full border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="text-base">Meu perfil</CardTitle>
             </CardHeader>
@@ -230,93 +264,187 @@ export default function SettingsPage() {
               ) : (
                 <form onSubmit={handleSaveProfile} className="space-y-5">
                   <div className="flex items-center gap-4">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-xl font-semibold text-primary-foreground">
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary text-xl font-semibold text-primary-foreground">
                       {initials}
                     </div>
-                    <div>
-                      <p className="text-base font-medium">{me?.name ?? "Sem nome"}</p>
-                      <p className="text-xs text-muted-foreground">{me?.email}</p>
+                    <div className="min-w-0 flex-1">
+                      {editingProfile ? (
+                        <Input
+                          id="name"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          maxLength={80}
+                          autoComplete="name"
+                          autoFocus
+                          required
+                        />
+                      ) : (
+                        <p className="truncate text-base font-medium">{me?.name ?? "Sem nome"}</p>
+                      )}
+                      <p className="truncate text-xs text-muted-foreground">{me?.email}</p>
+                      <p className="text-xs text-muted-foreground">Plano {me?.plan ?? "FREE"}</p>
                     </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="name">Nome</Label>
-                    <Input
-                      id="name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      maxLength={80}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>E-mail</Label>
-                    <Input value={me?.email ?? ""} disabled />
-                    <p className="text-xs text-muted-foreground">O e-mail não pode ser alterado nesta versão.</p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Plano</Label>
-                    <Input value={me?.plan ?? "FREE"} disabled />
-                  </div>
-                  <Button type="submit" disabled={saving}>
-                    {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Salvar alterações
-                  </Button>
+                  {editingProfile ? (
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="outline" disabled={saving} onClick={cancelEditingProfile}>
+                        Cancelar
+                      </Button>
+                      <Button type="submit" disabled={saving || !profileDirty}>
+                        {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                        Salvar alterações
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex justify-end">
+                      <Button type="button" variant="outline" onClick={startEditingProfile}>
+                        <Pencil className="mr-2 h-4 w-4" /> Editar
+                      </Button>
+                    </div>
+                  )}
                 </form>
               )}
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-sm">
+          <Card className="h-full border-0 shadow-sm">
             <CardHeader>
-              <CardTitle className="text-base">Alterar senha</CardTitle>
+              <CardTitle className="text-base">Segurança</CardTitle>
             </CardHeader>
-            <CardContent>
-              <form onSubmit={handleChangePassword} className="space-y-5">
+            <CardContent className="space-y-6">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium">Alterar senha</p>
+                  <p className="text-sm text-muted-foreground">Use 8+ caracteres com letras e números.</p>
+                </div>
+                <Button variant="outline" onClick={() => setPasswordOpen(true)}>
+                  <KeyRound className="mr-2 h-4 w-4" /> Alterar senha
+                </Button>
+              </div>
+              <Separator />
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium text-destructive">Excluir conta</p>
+                  <p className="text-sm text-muted-foreground">Apaga permanentemente seu perfil e todos os dados financeiros.</p>
+                </div>
+                <DeleteAccountButton />
+              </div>
+            </CardContent>
+          </Card>
+          </div>
+
+          <Dialog open={passwordOpen} onOpenChange={(open) => {
+            setPasswordOpen(open)
+            if (!open) resetPasswordFields()
+          }}>
+            <DialogContent showCloseButton={!changingPassword}>
+              <DialogHeader>
+                <DialogTitle>Alterar senha</DialogTitle>
+                <DialogDescription>Ao alterar a senha, as outras sessões ativas são encerradas.</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleChangePassword} className="space-y-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="current-password">Senha atual</Label>
-                  <Input
-                    id="current-password"
-                    type="password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    autoComplete="current-password"
-                    required
-                  />
+                  <div className="relative">
+                    <Input
+                      id="current-password"
+                      type={showCurrentPassword ? "text" : "password"}
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      autoComplete="current-password"
+                      className="pr-10"
+                      required
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      tabIndex={-1}
+                    >
+                      {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="new-password">Nova senha</Label>
-                  <Input
-                    id="new-password"
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    autoComplete="new-password"
-                    minLength={8}
-                    required
-                  />
+                  <div className="relative">
+                    <Input
+                      id="new-password"
+                      type={showNewPassword ? "text" : "password"}
+                      placeholder="Mínimo 8 caracteres"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      autoComplete="new-password"
+                      className="pr-10"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      tabIndex={-1}
+                    >
+                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div
+                        key={i}
+                        className={`h-1 flex-1 rounded-full transition-colors ${
+                          i <= passwordStrength ? PASSWORD_STRENGTH_COLORS[passwordStrength] : "bg-border"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {newPassword.length === 0
+                      ? "Use 8+ caracteres com letras e números"
+                      : PASSWORD_STRENGTH_LABELS[passwordStrength]}
+                  </p>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="confirm-password">Confirmar nova senha</Label>
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    autoComplete="new-password"
-                    minLength={8}
-                    required
-                  />
+                  <div className="relative">
+                    <Input
+                      id="confirm-password"
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      autoComplete="new-password"
+                      className="pr-10"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      tabIndex={-1}
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Ao alterar a senha, as outras sessões ativas são encerradas.
-                </p>
-                <Button type="submit" disabled={changingPassword}>
-                  {changingPassword ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
-                  Alterar senha
-                </Button>
+                <ul className="space-y-1">
+                  <PasswordRule ok={newPasswordRules.minLength}>Mínimo de 8 caracteres</PasswordRule>
+                  <PasswordRule ok={newPasswordRules.matches}>Confirmação igual à nova senha</PasswordRule>
+                </ul>
+                <DialogFooter>
+                  <Button type="button" variant="outline" disabled={changingPassword} onClick={() => setPasswordOpen(false)}>Cancelar</Button>
+                  <Button type="submit" disabled={changingPassword || !currentPassword || !newPasswordRules.minLength || !newPasswordRules.matches}>
+                    {changingPassword ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...
+                      </>
+                    ) : (
+                      "Salvar nova senha"
+                    )}
+                  </Button>
+                </DialogFooter>
               </form>
-            </CardContent>
-          </Card>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         <TabsContent value="appearance" className="w-full space-y-4">
@@ -354,15 +482,6 @@ export default function SettingsPage() {
                 Você está logado como <span className="font-medium">{session?.user?.email}</span>.
               </p>
               <SignOutButton />
-            </CardContent>
-          </Card>
-          <Card className="border-destructive/30 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-base text-destructive">Excluir conta</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-muted-foreground">Apaga permanentemente seu perfil e todos os dados financeiros.</p>
-              <DeleteAccountButton />
             </CardContent>
           </Card>
         </TabsContent>
@@ -578,6 +697,14 @@ export default function SettingsPage() {
         onConfirm={handleResetFixedExpenses}
       />
     </div>
+  )
+}
+
+function PasswordRule({ ok, children }: { ok: boolean; children: React.ReactNode }) {
+  return (
+    <li className={`flex items-center gap-1.5 text-xs ${ok ? "text-primary" : "text-muted-foreground"}`}>
+      <Check className="h-3.5 w-3.5" /> {children}
+    </li>
   )
 }
 
