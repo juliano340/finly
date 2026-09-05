@@ -12,6 +12,13 @@ type FixedCostOccurrenceClient = Pick<PrismaClient, "fixedCost" | "fixedCostOccu
 
 class AmbiguousLegacyMovementError extends Error {}
 
+export class FixedCostExpenseLimitError extends Error {
+  constructor(public readonly reason: string) {
+    super(reason)
+    this.name = "FixedCostExpenseLimitError"
+  }
+}
+
 interface CardInvoiceFixedCostSyncInput {
   cardId: string
   financialMonthId: string
@@ -264,7 +271,7 @@ export async function payFixedCostOccurrence(
       moneyToNumber(occurrence.amount),
       client
     )
-    if (!check.allowed) return null
+    if (!check.allowed) throw new FixedCostExpenseLimitError(check.reason)
   }
 
   return db.$transaction(async (tx) => {

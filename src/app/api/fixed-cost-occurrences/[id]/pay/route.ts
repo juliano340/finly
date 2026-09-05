@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { payFixedCostOccurrence } from "@/features/monthly-closing/monthly-closing.service"
+import { payFixedCostOccurrence, FixedCostExpenseLimitError } from "@/features/monthly-closing/monthly-closing.service"
 
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -9,7 +9,15 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   }
 
   const { id } = await params
-  const occurrence = await payFixedCostOccurrence(id, session.user.id)
+  let occurrence
+  try {
+    occurrence = await payFixedCostOccurrence(id, session.user.id)
+  } catch (error) {
+    if (error instanceof FixedCostExpenseLimitError) {
+      return NextResponse.json({ error: error.reason }, { status: 400 })
+    }
+    throw error
+  }
   if (!occurrence) {
     return NextResponse.json({ error: "Custo fixo do mês não encontrado" }, { status: 404 })
   }

@@ -129,8 +129,9 @@ describe("monthly-closing.service", () => {
       data: { fixedCostId: fixedCost.id, financialMonthId: financialMonth.id, month, amount: 301, dueDate: new Date(), status: "PENDING", userId },
     })
 
-    const result = await payFixedCostOccurrence(occurrence.id, userId, prisma)
-    expect(result).toBeNull()
+    await expect(payFixedCostOccurrence(occurrence.id, userId, prisma)).rejects.toThrow(
+      /Saldo insuficiente/
+    )
   })
 
   it("mantém pagamento idempotente e estorna somente o movimento vinculado", async () => {
