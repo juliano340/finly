@@ -2,6 +2,14 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.11] - 2026-09-04
+
+### Corrigido
+
+- Tela de confirmação de e-mail exibe o endereço somente leitura e avisa quando a conta já foi confirmada, oferecendo o acesso direto.
+- Reenvio de link de confirmação informa o tempo restante de espera em minutos em vez de mensagem vaga.
+- E-mails de confirmação e redefinição de senha passam a mostrar o prazo em horas (ex.: 24 horas) em vez de 1440 minutos.
+
 ## [0.2.10] - 2026-09-01
 
 ### Corrigido

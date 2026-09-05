@@ -11,9 +11,18 @@ export interface Release {
   changes: readonly ReleaseChange[]
 }
 
-export const CURRENT_VERSION = "0.2.10"
+export const CURRENT_VERSION = "0.2.11"
 
 export const releases = [
+  {
+    version: "0.2.11",
+    date: "2026-09-04",
+    changes: [
+      { type: "fix", description: "Tela de confirmação de e-mail exibe o endereço somente leitura e avisa quando a conta já foi confirmada, oferecendo o acesso direto." },
+      { type: "fix", description: "Reenvio de link de confirmação informa o tempo restante de espera em minutos em vez de mensagem vaga." },
+      { type: "fix", description: "E-mails de confirmação e redefinição de senha passam a mostrar o prazo em horas (ex.: 24 horas) em vez de 1440 minutos." },
+    ],
+  },
   {
     version: "0.2.10",
     date: "2026-09-01",
