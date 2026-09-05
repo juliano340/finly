@@ -91,7 +91,7 @@ export default function RegisterPage() {
     }
 
     toast.success("Conta criada. Confirme seu e-mail para entrar.")
-    router.push(`/verify-email?email=${encodeURIComponent(email.trim().toLowerCase())}`)
+    router.push(`/verify-email?email=${encodeURIComponent(email.trim().toLowerCase())}&sent=1`)
   }
 
   return (
