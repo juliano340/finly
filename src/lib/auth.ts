@@ -1,4 +1,4 @@
-import NextAuth from "next-auth"
+import NextAuth, { CredentialsSignin } from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { compare } from "bcryptjs"
 import { prisma } from "@/lib/prisma"
@@ -13,13 +13,17 @@ import {
 // Public dummy hash used only to keep failed-login timing consistent; it is not a credential.
 const DUMMY_PASSWORD_HASH = "$2b$12$AFX1qqGxoGwG6.wcRv2GoOPr1r4vsEfaPdCjHY/rdZof1Zkc0Os4e" // nosemgrep: generic.secrets.security.detected-bcrypt-hash.detected-bcrypt-hash
 
+class EmailNotVerifiedError extends CredentialsSignin {
+  code = "email_not_verified"
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   secret: AUTH_SECRET,
   pages: { signIn: "/login" },
   logger: {
     error(error) {
-      if (error?.name === "CredentialsSignin") return
+      if (error instanceof CredentialsSignin) return
       console.error("[auth]", error)
     },
   },
@@ -43,9 +47,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const user = await prisma.user.findUnique({ where: { email } })
         const valid = await compare(password, user?.passwordHash ?? DUMMY_PASSWORD_HASH)
-        if (!user?.passwordHash || !valid || !user.emailVerified) {
+        if (!user?.passwordHash || !valid) {
           await recordLoginFailure(rateLimitKeys)
           return null
+        }
+
+        if (!user.emailVerified) {
+          throw new EmailNotVerifiedError()
         }
 
         await clearLoginFailures(rateLimitKeys)

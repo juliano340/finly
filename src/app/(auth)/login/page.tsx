@@ -63,6 +63,11 @@ export default function LoginPage() {
     setLoading(false);
 
     if (result?.error) {
+      if (result.code === "email_not_verified") {
+        toast.error("Conta não confirmada. Verifique seu e-mail para ativar o acesso.");
+        router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+        return;
+      }
       toast.error("Email ou senha inválidos");
       setPassword("");
       passwordRef.current?.focus();
@@ -193,10 +198,6 @@ export default function LoginPage() {
                 Esqueci a senha
               </Link>
             </div>
-
-            <Link href="/verify-email" className="block text-center text-sm text-primary hover:underline">
-              Reenviar confirmação de e-mail
-            </Link>
 
             <Button
               type="submit"
