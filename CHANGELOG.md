@@ -2,6 +2,16 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.14] - 2026-09-05
+
+### Adicionado
+
+- Configurações ganhou troca de senha: confirma a senha atual, aplica a nova e encerra as demais sessões ativas.
+
+### Manutenção
+
+- Changelog passa a resolver automaticamente a data da versão em desenvolvimento, evitando datas atrasadas.
+
 ## [0.2.13] - 2026-09-05
 
 ### Corrigido

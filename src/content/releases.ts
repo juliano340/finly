@@ -11,9 +11,30 @@ export interface Release {
   changes: readonly ReleaseChange[]
 }
 
-export const CURRENT_VERSION = "0.2.13"
+/**
+ * Resolve a data da release. A release de topo pode usar "auto" para
+ * sempre refletir a data em que o build/changelog foi gerado.
+ */
+export function resolveReleaseDate(date: string, today = new Date()): string {
+  if (date !== "auto") return date
+
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, "0")
+  const day = String(today.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+export const CURRENT_VERSION = "0.2.14"
 
 export const releases = [
+  {
+    version: "0.2.14",
+    date: "auto",
+    changes: [
+      { type: "feat", description: "Configurações ganhou troca de senha: confirma a senha atual, aplica a nova e encerra as demais sessões ativas." },
+      { type: "chore", description: "Changelog passa a resolver automaticamente a data da versão em desenvolvimento, evitando datas atrasadas." },
+    ],
+  },
   {
     version: "0.2.13",
     date: "2026-09-05",

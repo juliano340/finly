@@ -1,7 +1,7 @@
 import { writeFile } from "node:fs/promises"
 import { pathToFileURL } from "node:url"
 
-import { releases, type ChangeType, type Release } from "../src/content/releases"
+import { releases, resolveReleaseDate, type ChangeType, type Release } from "../src/content/releases"
 
 const sections: readonly { type: ChangeType; heading: string }[] = [
   { type: "feat", heading: "Adicionado" },
@@ -21,7 +21,7 @@ export function renderChangelog(items: readonly Release[]) {
   ]
 
   for (const release of items) {
-    output.push(`## [${release.version}] - ${release.date}`, "")
+    output.push(`## [${release.version}] - ${resolveReleaseDate(release.date)}`, "")
 
     for (const section of sections) {
       const changes = release.changes.filter((change) => change.type === section.type)

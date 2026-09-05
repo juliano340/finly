@@ -7,6 +7,7 @@ import { buttonVariants } from "@/components/ui/button"
 import {
   CURRENT_VERSION,
   releases,
+  resolveReleaseDate,
   type ChangeType,
   type Release,
   type ReleaseChange,
@@ -92,7 +93,7 @@ export default function ChangelogPage() {
             <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               <span>v{group.release.version}</span>
               <span aria-hidden="true">·</span>
-              <time dateTime={group.release.date}>{formatReleaseDate(group.release.date)}</time>
+              <time dateTime={resolveReleaseDate(group.release.date)}>{formatReleaseDate(resolveReleaseDate(group.release.date))}</time>
             </h2>
             <div className="space-y-2">
               {group.changes.map((change) => (
