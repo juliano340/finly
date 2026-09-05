@@ -1,6 +1,6 @@
 import type { PrismaClient } from "@/generated/prisma/client"
 import { prisma as defaultPrisma } from "@/lib/prisma"
-import { hash } from "bcryptjs"
+import { compare, hash } from "bcryptjs"
 import { z } from "zod"
 
 const registerSchema = z.object({
@@ -10,6 +10,11 @@ const registerSchema = z.object({
 })
 
 export type RegisterInput = z.infer<typeof registerSchema>
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8, "Nova senha deve ter no mínimo 8 caracteres"),
+})
 
 export async function registerUser(input: RegisterInput, client?: PrismaClient) {
   const db = client ?? defaultPrisma
@@ -33,4 +38,40 @@ export async function registerUser(input: RegisterInput, client?: PrismaClient) 
   })
 
   return { user }
+}
+
+export async function changePassword(
+  userId: string,
+  input: { currentPassword: string; newPassword: string },
+  client?: PrismaClient
+) {
+  const db = client ?? defaultPrisma
+  const parsed = changePasswordSchema.safeParse(input)
+
+  if (!parsed.success) {
+    const firstError = Object.values(parsed.error.flatten().fieldErrors).flat()[0]
+    return { error: typeof firstError === "string" ? firstError : "Dados inválidos" }
+  }
+
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { passwordHash: true },
+  })
+  if (!user?.passwordHash) {
+    return { error: "Usuário não encontrado" }
+  }
+
+  const valid = await compare(parsed.data.currentPassword, user.passwordHash)
+  if (!valid) {
+    return { error: "Senha atual incorreta" }
+  }
+
+  const passwordHash = await hash(parsed.data.newPassword, 12)
+
+  await db.user.update({
+    where: { id: userId },
+    data: { passwordHash, passwordChangedAt: new Date() },
+  })
+
+  return { ok: true }
 }

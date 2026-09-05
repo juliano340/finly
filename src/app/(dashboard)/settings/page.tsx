@@ -1,9 +1,9 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { useSession } from "next-auth/react"
+import { signIn, signOut, useSession } from "next-auth/react"
 import { useTheme } from "next-themes"
-import { Download, Loader2, LogOut, Moon, Save, Sun, Trash2, Upload } from "lucide-react"
+import { Download, KeyRound, Loader2, LogOut, Moon, Save, Sun, Trash2, Upload } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -30,6 +30,10 @@ export default function SettingsPage() {
   const [name, setName] = useState("")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [changingPassword, setChangingPassword] = useState(false)
   const [importMode, setImportMode] = useState<"replace" | "merge">("replace")
   const [restoreFile, setRestoreFile] = useState<File | null>(null)
   const [restoring, setRestoring] = useState(false)
@@ -78,6 +82,45 @@ export default function SettingsPage() {
       const err = await res.json().catch(() => ({}))
       toast.error(err.error ?? "Não foi possível atualizar o perfil.")
     }
+  }
+
+  const handleChangePassword = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (newPassword.length < 8) {
+      toast.error("A nova senha deve ter no mínimo 8 caracteres.")
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("A confirmação não coincide com a nova senha.")
+      return
+    }
+    setChangingPassword(true)
+    const res = await fetch("/api/me/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    })
+    if (!res.ok) {
+      setChangingPassword(false)
+      const err = await res.json().catch(() => ({}))
+      toast.error(err.error ?? "Não foi possível alterar a senha.")
+      return
+    }
+
+    const email = me?.email ?? session?.user?.email
+    if (email) {
+      const relogin = await signIn("credentials", { email, password: newPassword, redirect: false })
+      if (relogin?.error) {
+        await signOut({ callbackUrl: "/login" })
+        return
+      }
+    }
+
+    setChangingPassword(false)
+    setCurrentPassword("")
+    setNewPassword("")
+    setConfirmPassword("")
+    toast.success("Senha alterada com sucesso.")
   }
 
   const initials = (me?.name ?? session?.user?.name ?? me?.email ?? session?.user?.email ?? "U")
@@ -220,6 +263,58 @@ export default function SettingsPage() {
                   </Button>
                 </form>
               )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base">Alterar senha</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleChangePassword} className="space-y-5">
+                <div className="space-y-1.5">
+                  <Label htmlFor="current-password">Senha atual</Label>
+                  <Input
+                    id="current-password"
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    autoComplete="current-password"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="new-password">Nova senha</Label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    autoComplete="new-password"
+                    minLength={8}
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="confirm-password">Confirmar nova senha</Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    autoComplete="new-password"
+                    minLength={8}
+                    required
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Ao alterar a senha, as outras sessões ativas são encerradas.
+                </p>
+                <Button type="submit" disabled={changingPassword}>
+                  {changingPassword ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
+                  Alterar senha
+                </Button>
+              </form>
             </CardContent>
           </Card>
         </TabsContent>
