@@ -11,9 +11,16 @@ export interface Release {
   changes: readonly ReleaseChange[]
 }
 
-export const CURRENT_VERSION = "0.2.11"
+export const CURRENT_VERSION = "0.2.12"
 
 export const releases = [
+  {
+    version: "0.2.12",
+    date: "2026-09-04",
+    changes: [
+      { type: "fix", description: "Link de confirmação de e-mail passa a expirar em 1 hora em vez de 24 horas." },
+    ],
+  },
   {
     version: "0.2.11",
     date: "2026-09-04",

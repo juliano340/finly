@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.12] - 2026-09-04
+
+### Corrigido
+
+- Link de confirmação de e-mail passa a expirar em 1 hora em vez de 24 horas.
+
 ## [0.2.11] - 2026-09-04
 
 ### Corrigido
