@@ -98,8 +98,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token.id) {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { passwordChangedAt: true },
+          select: { name: true, image: true, passwordChangedAt: true },
         })
+        if (dbUser) {
+          token.name = dbUser.name
+          if (dbUser.image) token.picture = dbUser.image
+        }
         if (dbUser?.passwordChangedAt) {
           const changedAtSec = Math.floor(dbUser.passwordChangedAt.getTime() / 1000)
           const issuedAtSec = (token.loginAt as number | undefined) ?? 0
