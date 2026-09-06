@@ -2,6 +2,18 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.21] - 2026-09-06
+
+### Adicionado
+
+- Contas criadas com Google podem definir uma senha depois, em Configurações > Conta, e passam a acessar também por e-mail e senha com recuperação de senha.
+
+### Corrigido
+
+- Nome e foto do menu do usuário passam a refletir o perfil salvo imediatamente após a edição, sem depender de novo login.
+- Lembretes de vencimento aparecem em ordem do mais próximo ao mais distante, sem misturar faturas e custos fixos.
+- Política de segurança passa a permitir a foto do perfil vinda do Google.
+
 ## [0.2.20] - 2026-09-06
 
 ### Adicionado

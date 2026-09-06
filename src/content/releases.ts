@@ -24,9 +24,19 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.20"
+export const CURRENT_VERSION = "0.2.21"
 
 export const releases = [
+  {
+    version: "0.2.21",
+    date: "2026-09-06",
+    changes: [
+      { type: "feat", description: "Contas criadas com Google podem definir uma senha depois, em Configurações > Conta, e passam a acessar também por e-mail e senha com recuperação de senha." },
+      { type: "fix", description: "Nome e foto do menu do usuário passam a refletir o perfil salvo imediatamente após a edição, sem depender de novo login." },
+      { type: "fix", description: "Lembretes de vencimento aparecem em ordem do mais próximo ao mais distante, sem misturar faturas e custos fixos." },
+      { type: "fix", description: "Política de segurança passa a permitir a foto do perfil vinda do Google." },
+    ],
+  },
   {
     version: "0.2.20",
     date: "2026-09-06",
