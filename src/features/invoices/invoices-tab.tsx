@@ -335,6 +335,18 @@ export function InvoicesTab() {
   const [importStandaloneOpen, setImportStandaloneOpen] = useState(false);
   const inFlightUpdateRef = useRef(false);
   const editFormRef = useRef<HTMLFormElement>(null);
+  const [editLifecycle, setEditLifecycle] = useState<string | null>(null);
+  const selectedInvoiceId = selectedInvoice?.id ?? null;
+  useEffect(() => {
+    setEditLifecycle(null);
+  }, [selectedInvoiceId]);
+  const selectedLocked =
+    !!selectedInvoice &&
+    (selectedInvoice.lifecycleStatus === "CLOSED" ||
+      selectedInvoice.lifecycleStatus === "PAID");
+  const editReopening =
+    editLifecycle === "OPEN" || editLifecycle === "ESTIMATED";
+  const editLocked = selectedLocked && !editReopening;
 
   function fetchData() {
     return Promise.all([
@@ -456,34 +468,40 @@ export function InvoicesTab() {
     inFlightUpdateRef.current = true;
     setUpdatingId(invoiceId);
     try {
-      const nextMode = String(formData.get("calculationMode"));
       const current = invoices.find((invoice) => invoice.id === invoiceId);
+      const nextModeRaw = formData.get("calculationMode");
+      const nextMode = String(nextModeRaw ?? current?.calculationMode ?? "");
       if (
         current &&
+        nextModeRaw !== null &&
         current.calculationMode !== nextMode &&
         !window.confirm(
           "Trocar o modo altera o total considerado, mas preserva itens e valor informado. Continuar?",
         )
       )
         return;
+      // Campos desabilitados não entram no FormData: envia só o que existe
+      // para que o service preserve os valores atuais dos ausentes.
+      const payload: Record<string, unknown> = {
+        lifecycleStatus: formData.get("lifecycleStatus"),
+      };
+      for (const key of ["cardId", "dueDate", "calculationMode", "amount"] as const) {
+        const value = formData.get(key);
+        if (value !== null) payload[key] = value;
+      }
+      if (payload.amount !== undefined) payload.enteredTotal = payload.amount;
       const res = await fetch(`/api/invoices/${invoiceId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          cardId: formData.get("cardId"),
-          dueDate: formData.get("dueDate"),
-          calculationMode: nextMode,
-          enteredTotal: formData.get("amount"),
-          amount: formData.get("amount"),
-          lifecycleStatus: formData.get("lifecycleStatus"),
-        }),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         toast.success("Fatura atualizada!");
         setSelectedInvoice(null);
         fetchData();
       } else {
-        toast.error("Erro ao atualizar fatura");
+        const err = await res.json().catch(() => null);
+        toast.error(err?.error ?? "Erro ao atualizar fatura");
       }
     } finally {
       setUpdatingId(null);
@@ -1496,64 +1514,68 @@ export function InvoicesTab() {
                     </p>
                   </div>
                   <form ref={editFormRef} className="space-y-4">
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium">Cartão</label>
-                      <select
-                        className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                        name="cardId"
-                        defaultValue={selectedInvoice.card.id}
-                      >
-                        {cards.map((card) => (
-                          <option key={card.id} value={card.id}>
-                            {card.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium">
-                        Data de vencimento
-                      </label>
-                      <Input
-                        name="dueDate"
-                        type="date"
-                        defaultValue={selectedInvoice.dueDate.slice(0, 10)}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium">
-                        Como calcular
-                      </label>
-                      <select
-                        className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                        name="calculationMode"
-                        defaultValue={selectedInvoice.calculationMode}
-                      >
-                        <option value="ENTERED_TOTAL">
-                          Informar valor total da fatura
-                        </option>
-                        <option value="CALCULATED">
-                          Calcular pelos lançamentos
-                        </option>
-                      </select>
-                      <p className="text-xs text-muted-foreground">
-                        Itens e valor informado são preservados ao trocar.
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium">
-                        Valor total informado
-                      </label>
-                      <Input
-                        name="amount"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        defaultValue={selectedInvoice.enteredTotal}
-                        required
-                      />
-                    </div>
+                    {!editLocked && (
+                      <>
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium">Cartão</label>
+                          <select
+                            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                            name="cardId"
+                            defaultValue={selectedInvoice.card.id}
+                          >
+                            {cards.map((card) => (
+                              <option key={card.id} value={card.id}>
+                                {card.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium">
+                            Data de vencimento
+                          </label>
+                          <Input
+                            name="dueDate"
+                            type="date"
+                            defaultValue={selectedInvoice.dueDate.slice(0, 10)}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium">
+                            Como calcular
+                          </label>
+                          <select
+                            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                            name="calculationMode"
+                            defaultValue={selectedInvoice.calculationMode}
+                          >
+                            <option value="ENTERED_TOTAL">
+                              Informar valor total da fatura
+                            </option>
+                            <option value="CALCULATED">
+                              Calcular pelos lançamentos
+                            </option>
+                          </select>
+                          <p className="text-xs text-muted-foreground">
+                            Itens e valor informado são preservados ao trocar.
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-sm font-medium">
+                            Valor total informado
+                          </label>
+                          <Input
+                            name="amount"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            defaultValue={selectedInvoice.enteredTotal}
+                            required
+                          />
+                        </div>
+                      </>
+                    )}
                     <div className="space-y-1">
                       <label className="text-sm font-medium">
                         Etapa da fatura
@@ -1563,12 +1585,18 @@ export function InvoicesTab() {
                         name="lifecycleStatus"
                         defaultValue={selectedInvoice.lifecycleStatus}
                         disabled={selectedInvoice.lifecycleStatus === "PAID"}
+                        onChange={(event) => setEditLifecycle(event.target.value)}
                       >
                         <option value="ESTIMATED">Estimada</option>
                         <option value="OPEN">Aberta</option>
                         <option value="CLOSED">Fechada</option>
                         <option value="PAID">Paga</option>
                       </select>
+                      {editLocked ? (
+                        <p className="text-xs text-muted-foreground">
+                          Fatura {selectedInvoice.lifecycleStatus === "PAID" ? "paga" : "fechada"}: escolha a etapa Aberta para reabri-la e editar vencimento e valores.
+                        </p>
+                      ) : null}
                     </div>
                     <div className="flex gap-2">
                       <Button

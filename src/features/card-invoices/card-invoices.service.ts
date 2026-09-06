@@ -4,6 +4,13 @@ import { ensureFinancialMonth } from "@/features/financial-months/financial-mont
 import type { CardInvoiceInput, CardInvoiceItemInput } from "./card-invoices.schema"
 import { calculateInvoiceTotals } from "./invoice-calculation"
 
+export class InvoiceLockedError extends Error {
+  constructor(message = "Fatura fechada ou paga: reabra-a antes de editar vencimento ou valores.") {
+    super(message)
+    this.name = "InvoiceLockedError"
+  }
+}
+
 export async function getCardInvoices(userId: string, month?: string, client?: PrismaClient) {
   const db = client ?? defaultPrisma
   const invoices = await db.cardInvoice.findMany({
@@ -57,7 +64,9 @@ export async function updateCardInvoice(
   const reopening = input.lifecycleStatus === "OPEN" || input.lifecycleStatus === "ESTIMATED"
   const changesFinancialData = input.cardId !== undefined || input.amount !== undefined ||
     input.enteredTotal !== undefined || input.calculationMode !== undefined || input.dueDate !== undefined
-  if (["CLOSED", "PAID"].includes(invoice.lifecycleStatus) && changesFinancialData && !reopening) return null
+  if (["CLOSED", "PAID"].includes(invoice.lifecycleStatus) && changesFinancialData && !reopening) {
+    throw new InvoiceLockedError()
+  }
 
   if (input.cardId) {
     const card = await db.card.findUnique({ where: { id: input.cardId } })

@@ -24,9 +24,19 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.22"
+export const CURRENT_VERSION = "0.2.23"
 
 export const releases = [
+  {
+    version: "0.2.23",
+    date: "2026-09-06",
+    changes: [
+      { type: "feat", description: "Contas do mês vira tabela profissional no computador: colunas ordenáveis por clique, caixas de seleção com soma dos itens marcados e total alinhado." },
+      { type: "feat", description: "Alterar o dia de vencimento do cartão atualiza automaticamente as faturas abertas ou estimadas do mês em diante; faturas fechadas e pagas mantêm a data histórica." },
+      { type: "fix", description: "Editar fatura fechada ou paga mostra aviso claro para reabri-la, em vez de erro genérico de fatura não encontrada." },
+      { type: "fix", description: "Salvar fatura com campos travados não falha mais com 'Dados inválidos': valores preservados e confirm de modo de cálculo só aparece quando ele muda de verdade." },
+    ],
+  },
   {
     version: "0.2.22",
     date: "2026-09-06",

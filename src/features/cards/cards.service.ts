@@ -68,8 +68,9 @@ export async function updateCard(
   if (bankAccount === false) return null
   const bankAccountChanged = input.bankAccountId !== undefined && input.bankAccountId !== card.bankAccountId
   const shouldUseBankColor = !!bankAccount && bankAccountChanged && (input.color === undefined || input.color === card.color)
+  const dueDayChanged = input.dueDay !== undefined && input.dueDay !== card.dueDay
 
-  return db.card.update({
+  const updatedCard = await db.card.update({
     where: { id },
     data: {
       ...(input.name !== undefined && { name: input.name }),
@@ -82,6 +83,31 @@ export async function updateCard(
     },
     include: { bankAccount: { select: { id: true, name: true, institution: true } } },
   })
+
+  // Novo dia de vencimento vale a partir do mês atual: faturas abertas/estimadas
+  // deste mês em diante passam a vencer no novo dia. Fechadas/pagas ficam intactas.
+  if (dueDayChanged && input.dueDay) {
+    const now = new Date()
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
+    const invoices = await db.cardInvoice.findMany({
+      where: { cardId: id, userId, month: { gte: currentMonth }, lifecycleStatus: { in: ["OPEN", "ESTIMATED"] } },
+      select: { id: true, month: true },
+    })
+    for (const invoice of invoices) {
+      await db.cardInvoice.update({
+        where: { id: invoice.id },
+        data: { dueDate: dueDateWithDay(invoice.month, input.dueDay) },
+      })
+    }
+  }
+
+  return updatedCard
+}
+
+function dueDateWithDay(month: string, day: number) {
+  const [year, m] = month.split("-").map(Number)
+  const lastDay = new Date(Date.UTC(year, m, 0)).getUTCDate()
+  return new Date(Date.UTC(year, m - 1, Math.min(day, lastDay)))
 }
 
 export async function deleteCard(

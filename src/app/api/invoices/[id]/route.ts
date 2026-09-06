@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { cardInvoiceSchema } from "@/features/card-invoices/card-invoices.schema"
-import { deleteCardInvoice, updateCardInvoice } from "@/features/card-invoices/card-invoices.service"
+import { InvoiceLockedError, deleteCardInvoice, updateCardInvoice } from "@/features/card-invoices/card-invoices.service"
 
 export async function PUT(
   request: Request,
@@ -18,12 +18,19 @@ export async function PUT(
   }
 
   const { id } = await params
-  const invoice = await updateCardInvoice(id, session.user.id, parsed.data)
-  if (!invoice) {
-    return NextResponse.json({ error: "Fatura não encontrada" }, { status: 404 })
+  try {
+    const invoice = await updateCardInvoice(id, session.user.id, parsed.data)
+    if (!invoice) {
+      return NextResponse.json({ error: "Fatura não encontrada" }, { status: 404 })
+    }
+    return NextResponse.json(invoice)
+  } catch (err) {
+    if (err instanceof InvoiceLockedError) {
+      return NextResponse.json({ error: err.message, conflict: "INVOICE_LOCKED" }, { status: 409 })
+    }
+    console.error("[PUT /api/invoices/:id] error:", err)
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 })
   }
-
-  return NextResponse.json(invoice)
 }
 
 export async function DELETE(

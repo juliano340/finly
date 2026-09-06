@@ -2,6 +2,18 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.23] - 2026-09-06
+
+### Adicionado
+
+- Contas do mês vira tabela profissional no computador: colunas ordenáveis por clique, caixas de seleção com soma dos itens marcados e total alinhado.
+- Alterar o dia de vencimento do cartão atualiza automaticamente as faturas abertas ou estimadas do mês em diante; faturas fechadas e pagas mantêm a data histórica.
+
+### Corrigido
+
+- Editar fatura fechada ou paga mostra aviso claro para reabri-la, em vez de erro genérico de fatura não encontrada.
+- Salvar fatura com campos travados não falha mais com 'Dados inválidos': valores preservados e confirm de modo de cálculo só aparece quando ele muda de verdade.
+
 ## [0.2.22] - 2026-09-06
 
 ### Adicionado

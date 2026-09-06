@@ -2,11 +2,13 @@
 
 import { Suspense, useEffect, useState } from "react"
 import Link from "next/link"
+import { ArrowUpDown, ChevronDown, ChevronUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { MonthNavigator, changeMonth, getCurrentMonth } from "@/components/month-navigator"
 import { useMonthParam } from "@/hooks/use-month-param"
+import { useTableSelection } from "@/components/data-table/use-table-selection"
 
   interface ClosingData {
     summary: {
@@ -442,6 +444,51 @@ function CardRows({ loading, invoices = [], estimates = [] }: {
   )
 }
 
+type BillSortField = "name" | "category" | "dueDate" | "method" | "status" | "amount"
+
+const billCollator = new Intl.Collator("pt-BR", { sensitivity: "base" })
+
+function statusRank(bill: BillRow, overdue: boolean): number {
+  if (bill.status === "PAID") return 0
+  return overdue ? 2 : 1
+}
+
+function SortHeader({ label, field, sortField, sortDir, onSort, className = "justify-start" }: {
+  label: string
+  field: BillSortField
+  sortField: BillSortField
+  sortDir: "asc" | "desc"
+  onSort: (field: BillSortField) => void
+  className?: string
+}) {
+  const active = sortField === field
+  const Icon = !active ? ArrowUpDown : sortDir === "asc" ? ChevronUp : ChevronDown
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(field)}
+      className={`inline-flex w-full items-center gap-1 rounded px-1 py-0.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${active ? "text-foreground" : ""} ${className}`}
+    >
+      {label}
+      <Icon className={`size-3 shrink-0 ${active ? "" : "opacity-40"}`} aria-hidden="true" />
+    </button>
+  )
+}
+
+function BillBadge({ status, overdue }: { status: "PENDING" | "PAID"; overdue: boolean }) {
+  const className = status === "PAID"
+    ? "bg-success/10 text-success"
+    : overdue
+      ? "bg-destructive/10 text-destructive"
+      : "bg-amber-500/10 text-amber-600 dark:text-amber-500"
+  const label = status === "PAID" ? "Pago" : overdue ? "Atrasada" : "Pendente"
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${className}`}>
+      {label}
+    </span>
+  )
+}
+
 function BillsList({ loading, bills = [], filter, month, onPayFixedCost }: {
   loading: boolean
   bills?: BillRow[]
@@ -450,28 +497,66 @@ function BillsList({ loading, bills = [], filter, month, onPayFixedCost }: {
   onPayFixedCost: (id: string) => void
 }) {
   const visible = bills.filter((bill) => filter === "ALL" || bill.status === filter)
+  const [sortField, setSortField] = useState<BillSortField>("dueDate")
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
+  const selection = useTableSelection(visible, (bill) => bill.amount, { storageKey: `bills:selection:${month}` })
   const paidCount = bills.filter((bill) => bill.status === "PAID").length
   const paidTotal = bills.filter((bill) => bill.status === "PAID").reduce((total, bill) => total + bill.amount, 0)
   const pendingTotal = bills.filter((bill) => bill.status === "PENDING").reduce((total, bill) => total + bill.amount, 0)
   const todayISO = new Date().toLocaleDateString("en-CA")
 
+  function toggleSort(field: BillSortField) {
+    if (field === sortField) {
+      setSortDir((dir) => (dir === "asc" ? "desc" : "asc"))
+    } else {
+      setSortField(field)
+      setSortDir(field === "amount" ? "desc" : "asc")
+    }
+  }
+
+  const sorted = [...visible].sort((a, b) => {
+    const aOverdue = a.status === "PENDING" && a.dueDate !== null && a.dueDate.slice(0, 10) < todayISO
+    const bOverdue = b.status === "PENDING" && b.dueDate !== null && b.dueDate.slice(0, 10) < todayISO
+    const dir = sortDir === "asc" ? 1 : -1
+    let result = 0
+    switch (sortField) {
+      case "amount":
+        result = a.amount - b.amount
+        break
+      case "status":
+        result = statusRank(a, aOverdue) - statusRank(b, bOverdue)
+        break
+      case "dueDate":
+        if (a.dueDate === null && b.dueDate === null) result = 0
+        else if (a.dueDate === null) return 1
+        else if (b.dueDate === null) return -1
+        else result = a.dueDate.localeCompare(b.dueDate)
+        break
+      case "name":
+        result = billCollator.compare(a.name, b.name)
+        break
+      case "category":
+        result = billCollator.compare(a.category, b.category)
+        break
+      case "method":
+        result = billCollator.compare(a.method, b.method)
+        break
+    }
+    return result * dir
+  })
+
   if (loading) return (
     <div className="space-y-3 py-4">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="grid grid-cols-[1.5fr_1fr_1.2fr_1.2fr_auto_auto] gap-4">
-          <div className="h-4 animate-pulse rounded bg-muted" />
-          <div className="h-4 animate-pulse rounded bg-muted" />
-          <div className="h-4 animate-pulse rounded bg-muted" />
-          <div className="h-4 animate-pulse rounded bg-muted" />
-          <div className="h-4 w-16 animate-pulse rounded bg-muted" />
-          <div className="h-4 w-20 animate-pulse rounded bg-muted" />
-        </div>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="h-10 animate-pulse rounded bg-muted" />
       ))}
     </div>
   )
 
   const emptyLabel = filter === "PENDING" ? "Nenhuma conta pendente neste mês." : filter === "PAID" ? "Nenhuma conta paga neste mês." : "Nenhuma conta neste mês."
   if (visible.length === 0) return <p className="py-4 text-sm text-muted-foreground">{emptyLabel}</p>
+
+  const monthTotal = bills.reduce((total, bill) => total + bill.amount, 0)
 
   return (
     <div>
@@ -480,57 +565,115 @@ function BillsList({ loading, bills = [], filter, month, onPayFixedCost }: {
         <span>Pago: <span className="font-medium text-foreground">{formatCurrency(paidTotal)}</span></span>
         <span>A pagar: <span className="font-medium text-foreground">{formatCurrency(pendingTotal)}</span></span>
       </div>
-      <div className="hidden grid-cols-[1.5fr_1fr_1.2fr_1.2fr_auto_auto] gap-4 border-b px-3 pb-2 text-xs font-medium text-muted-foreground sm:grid">
-        <span>Conta</span><span>Categoria</span><span>Vencimento</span><span>Pagamento</span><span>Status</span><span className="text-right">Valor</span>
-      </div>
-      <div className="space-y-3 sm:space-y-0">
-        {visible.map((bill) => {
+
+      {selection.selectedIds.size > 0 && (
+        <div className="mb-3 flex h-10 items-center rounded-md border bg-muted/50 px-3 text-sm">
+          <span className="font-medium">
+            {selection.selectedIds.size} selecionada{selection.selectedIds.size !== 1 ? "s" : ""}
+            <span className="ml-2 text-xs font-normal text-muted-foreground">({formatCurrency(selection.totalSelected)})</span>
+          </span>
+          <Button className="ml-auto" size="sm" variant="outline" onClick={selection.clearSelection}>Limpar</Button>
+        </div>
+      )}
+
+      {/* Desktop: tabela */}
+      <table className="hidden w-full text-sm sm:table">
+        <thead>
+          <tr className="border-b text-left text-xs font-medium text-muted-foreground">
+            <th className="w-10 px-3 py-2 text-center">
+              <input type="checkbox" className="h-4 w-4" aria-label="Selecionar todas" checked={selection.allSelected} onChange={selection.selectAll} />
+            </th>
+            <th className="px-3 py-2 font-medium" aria-sort={sortField === "name" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
+              <SortHeader label="Conta" field="name" sortField={sortField} sortDir={sortDir} onSort={toggleSort} />
+            </th>
+            <th className="px-3 py-2 font-medium" aria-sort={sortField === "category" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
+              <SortHeader label="Categoria" field="category" sortField={sortField} sortDir={sortDir} onSort={toggleSort} />
+            </th>
+            <th className="px-3 py-2 font-medium" aria-sort={sortField === "dueDate" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
+              <SortHeader label="Vencimento" field="dueDate" sortField={sortField} sortDir={sortDir} onSort={toggleSort} />
+            </th>
+            <th className="px-3 py-2 font-medium" aria-sort={sortField === "method" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
+              <SortHeader label="Pagamento" field="method" sortField={sortField} sortDir={sortDir} onSort={toggleSort} />
+            </th>
+            <th className="px-3 py-2 font-medium" aria-sort={sortField === "status" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
+              <SortHeader label="Status" field="status" sortField={sortField} sortDir={sortDir} onSort={toggleSort} />
+            </th>
+            <th className="px-3 py-2 text-right font-medium" aria-sort={sortField === "amount" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
+              <SortHeader label="Valor" field="amount" sortField={sortField} sortDir={sortDir} onSort={toggleSort} className="justify-end" />
+            </th>
+            <th className="w-px px-3 py-2 text-right font-medium"><span className="sr-only">Ações</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((bill) => {
+            const overdue = bill.status === "PENDING" && bill.dueDate !== null && bill.dueDate.slice(0, 10) < todayISO
+            const action = bill.status === "PENDING"
+              ? bill.kind === "FIXED_COST"
+                ? bill.payable
+                  ? <Button size="sm" variant="outline" onClick={() => onPayFixedCost(bill.id)}>Lançar</Button>
+                  : null
+                : <Link href={`/cards?tab=invoices&month=${month}`}><Button size="sm" variant="outline">Pagar</Button></Link>
+              : null
+            return (
+              <tr key={`${bill.kind}-${bill.id}`} className="border-b last:border-0 hover:bg-muted/40">
+                <td className="w-10 px-3 py-3 text-center">
+                  <input type="checkbox" className="h-4 w-4" aria-label={`Selecionar ${bill.name}`} checked={selection.selectedIds.has(bill.id)} onChange={() => selection.toggleSelect(bill.id)} />
+                </td>
+                <td className="max-w-[220px] truncate px-3 py-3 font-medium">{bill.name}</td>
+                <td className="px-3 py-3 text-muted-foreground">{bill.category}</td>
+                <td className="whitespace-nowrap px-3 py-3 text-muted-foreground">{bill.dueDate ? formatDate(bill.dueDate) : "—"}</td>
+                <td className="px-3 py-3 text-muted-foreground">{bill.method}</td>
+                <td className="px-3 py-3"><BillBadge status={bill.status} overdue={overdue} /></td>
+                <td className="whitespace-nowrap px-3 py-3 text-right font-semibold tabular-nums">{formatCurrency(bill.amount)}</td>
+                <td className="px-3 py-3 text-right">{action}</td>
+              </tr>
+            )
+          })}
+        </tbody>
+        <tfoot>
+          <tr className="border-t bg-muted/30 font-semibold">
+            <td className="px-3 py-3" colSpan={6}>Total do mês</td>
+            <td className="px-3 py-3 text-right tabular-nums">{formatCurrency(monthTotal)}</td>
+            <td />
+          </tr>
+        </tfoot>
+      </table>
+
+      {/* Mobile: cards */}
+      <div className="space-y-3 sm:hidden">
+        {sorted.map((bill) => {
           const overdue = bill.status === "PENDING" && bill.dueDate !== null && bill.dueDate.slice(0, 10) < todayISO
-          const badgeClass = bill.status === "PAID" ? "bg-success/10 text-success" : overdue ? "bg-destructive/10 text-destructive" : "bg-amber-500/10 text-amber-600"
-          const badgeLabel = bill.status === "PAID" ? "Pago" : overdue ? "Atrasada" : "Pendente"
           return (
-            <div key={`${bill.kind}-${bill.id}`} className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-lg border p-3 sm:grid-cols-[1.5fr_1fr_1.2fr_1.2fr_auto_auto] sm:items-center sm:gap-4 sm:rounded-none sm:border-0 sm:border-b sm:px-3">
-              <div className="min-w-0">
-                <p className="truncate font-semibold">{bill.name}</p>
-                <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-xs text-muted-foreground sm:hidden">
-                  <span>{bill.category}</span>
-                  <span aria-hidden="true">·</span>
-                  <span>{bill.method}</span>
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground sm:hidden">
-                  Vence em {bill.dueDate ? formatDate(bill.dueDate) : "sem data"} · Conta: {bill.account}
-                </p>
-                <span className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium sm:hidden ${badgeClass}`}>
-                  {badgeLabel}
-                </span>
+            <div key={`${bill.kind}-${bill.id}`} className="rounded-lg border p-3">
+              <div className="flex items-start justify-between gap-3">
+                <p className="min-w-0 truncate font-semibold">{bill.name}</p>
+                <BillBadge status={bill.status} overdue={overdue} />
               </div>
-              <div className="text-right sm:col-start-6">
-                <p className="whitespace-nowrap font-semibold tabular-nums">{formatCurrency(bill.amount)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {bill.category} · {bill.method}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Vence em {bill.dueDate ? formatDate(bill.dueDate) : "sem data"} · Conta: {bill.account}
+              </p>
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <p className="font-semibold tabular-nums">{formatCurrency(bill.amount)}</p>
                 {bill.status === "PENDING" && (bill.kind === "FIXED_COST" ? (
                   bill.payable && (
-                    <Button className="mt-2" size="sm" variant="outline" onClick={() => onPayFixedCost(bill.id)}>
-                      Lançar na conta
-                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => onPayFixedCost(bill.id)}>Lançar na conta</Button>
                   )
                 ) : (
-                  <Link href={`/cards?tab=invoices&month=${month}`} className="mt-2 block">
+                  <Link href={`/cards?tab=invoices&month=${month}`}>
                     <Button size="sm" variant="outline">Pagar fatura</Button>
                   </Link>
                 ))}
               </div>
-              <span className="hidden text-sm sm:col-start-2 sm:block">{bill.category}</span>
-              <span className="hidden text-sm text-muted-foreground sm:col-start-3 sm:block">{bill.dueDate ? formatDate(bill.dueDate) : "—"}</span>
-              <span className="hidden text-sm text-muted-foreground sm:col-start-4 sm:block">{bill.method}</span>
-              <span className="hidden sm:col-start-5 sm:block">
-                <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${badgeClass}`}>{badgeLabel}</span>
-              </span>
             </div>
           )
         })}
-      </div>
-      <div className="flex items-center justify-between border-t bg-muted/30 px-3 py-3 text-sm font-semibold">
-        <span>Total do mês</span>
-        <span className="tabular-nums">{formatCurrency(bills.reduce((total, bill) => total + bill.amount, 0))}</span>
+        <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-3 text-sm font-semibold">
+          <span>Total do mês</span>
+          <span className="tabular-nums">{formatCurrency(monthTotal)}</span>
+        </div>
       </div>
     </div>
   )
@@ -717,14 +860,7 @@ function ClosingSkeleton() {
         <div className="h-5 w-40 animate-pulse rounded bg-muted" />
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="grid grid-cols-[1.5fr_1fr_1.2fr_1.2fr_auto_auto] gap-4">
-              <div className="h-4 animate-pulse rounded bg-muted" />
-              <div className="h-4 animate-pulse rounded bg-muted" />
-              <div className="h-4 animate-pulse rounded bg-muted" />
-              <div className="h-4 animate-pulse rounded bg-muted" />
-              <div className="h-4 w-16 animate-pulse rounded bg-muted" />
-              <div className="h-4 w-20 animate-pulse rounded bg-muted" />
-            </div>
+            <div key={i} className="h-10 animate-pulse rounded bg-muted" />
           ))}
         </div>
       </div>

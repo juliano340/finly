@@ -346,6 +346,7 @@ export default function CardsPage() {
                       <div className="space-y-1">
                         <label className="text-sm font-medium">Dia vencimento</label>
                         <Input name="dueDay" type="number" min="1" max="31" defaultValue={selectedCard.dueDay ?? ""} placeholder="Ex: 10" />
+                        <p className="text-xs text-muted-foreground">Ao alterar, faturas abertas deste mês em diante passam a vencer no novo dia. Faturas fechadas/pagas não mudam.</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
