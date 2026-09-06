@@ -75,3 +75,36 @@ export async function changePassword(
 
   return { ok: true }
 }
+
+export interface GoogleUserInput {
+  email: string
+  name?: string | null
+  image?: string | null
+  emailVerified: boolean
+}
+
+export async function findOrCreateGoogleUser(input: GoogleUserInput, client?: PrismaClient) {
+  const db = client ?? defaultPrisma
+  const email = input.email?.trim().toLowerCase()
+  if (!email || !input.emailVerified) return null
+
+  const existing = await db.user.findUnique({ where: { email } })
+  if (existing) {
+    if (existing.image !== input.image) {
+      return db.user.update({
+        where: { id: existing.id },
+        data: { image: input.image },
+      })
+    }
+    return existing
+  }
+
+  return db.user.create({
+    data: {
+      email,
+      name: input.name?.trim() || null,
+      image: input.image ?? null,
+      emailVerified: new Date(),
+    },
+  })
+}

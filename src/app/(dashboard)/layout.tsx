@@ -23,7 +23,7 @@ import {
   User as UserIcon,
 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -365,6 +365,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             <AvatarMenu
               name={session?.user?.name ?? null}
               email={session?.user?.email ?? null}
+              image={session?.user?.image ?? null}
               onLogout={() => setLogoutOpen(true)}
             />
           </div>
@@ -396,7 +397,7 @@ function notificationLabel(item: DueNotification) {
   return item.daysUntilDue === 1 ? "Vence amanhã" : `Vence em ${item.daysUntilDue} dias`
 }
 
-function AvatarMenu({ name, email, onLogout }: { name: string | null; email: string | null; onLogout: () => void }) {
+function AvatarMenu({ name, email, image, onLogout }: { name: string | null; email: string | null; image: string | null; onLogout: () => void }) {
   const initials = (name ?? email ?? "U")
     .split(/\s+/)
     .map((part) => part[0])
@@ -409,6 +410,7 @@ function AvatarMenu({ name, email, onLogout }: { name: string | null; email: str
     <DropdownMenu>
       <DropdownMenuTrigger className="rounded-full focus:outline-none focus:ring-2 focus:ring-ring">
         <Avatar className="h-8 w-8 cursor-pointer">
+          {image && <AvatarImage src={image} alt={name ?? email ?? "Usuário"} />}
           <AvatarFallback className="bg-primary text-xs text-primary-foreground">
             {initials}
           </AvatarFallback>

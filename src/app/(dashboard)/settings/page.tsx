@@ -6,6 +6,7 @@ import { useTheme } from "next-themes"
 import { Download, Check, Eye, EyeOff, KeyRound, Loader2, LogOut, Moon, Pencil, Save, Sun, Trash2, Upload } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -23,6 +24,7 @@ interface MeResponse {
   image: string | null
   plan: string
   createdAt: string
+  hasPassword: boolean
 }
 
 export default function SettingsPage() {
@@ -264,9 +266,12 @@ export default function SettingsPage() {
               ) : (
                 <form onSubmit={handleSaveProfile} className="space-y-5">
                   <div className="flex items-center gap-4">
-                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary text-xl font-semibold text-primary-foreground">
-                      {initials}
-                    </div>
+                    <Avatar className="h-16 w-16 shrink-0">
+                      {me?.image && <AvatarImage src={me.image} alt={me?.name ?? me?.email ?? "Usuário"} />}
+                      <AvatarFallback className="bg-primary text-xl font-semibold text-primary-foreground">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="min-w-0 flex-1">
                       {editingProfile ? (
                         <Input
@@ -312,22 +317,26 @@ export default function SettingsPage() {
               <CardTitle className="text-base">Segurança</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="space-y-0.5">
-                  <p className="text-sm font-medium">Alterar senha</p>
-                  <p className="text-sm text-muted-foreground">Use 8+ caracteres com letras e números.</p>
-                </div>
-                <Button variant="outline" onClick={() => setPasswordOpen(true)}>
-                  <KeyRound className="mr-2 h-4 w-4" /> Alterar senha
-                </Button>
-              </div>
-              <Separator />
+              {me?.hasPassword && (
+                <>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-medium">Alterar senha</p>
+                      <p className="text-sm text-muted-foreground">Use 8+ caracteres com letras e números.</p>
+                    </div>
+                    <Button variant="outline" onClick={() => setPasswordOpen(true)}>
+                      <KeyRound className="mr-2 h-4 w-4" /> Alterar senha
+                    </Button>
+                  </div>
+                  <Separator />
+                </>
+              )}
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="space-y-0.5">
                   <p className="text-sm font-medium text-destructive">Excluir conta</p>
                   <p className="text-sm text-muted-foreground">Apaga permanentemente seu perfil e todos os dados financeiros.</p>
                 </div>
-                <DeleteAccountButton />
+                <DeleteAccountButton hasPassword={me?.hasPassword !== false} />
               </div>
             </CardContent>
           </Card>
@@ -737,7 +746,7 @@ function SignOutButton() {
   )
 }
 
-function DeleteAccountButton() {
+function DeleteAccountButton({ hasPassword }: { hasPassword: boolean }) {
   const [open, setOpen] = useState(false)
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
@@ -748,7 +757,7 @@ function DeleteAccountButton() {
     const response = await fetch("/api/me", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify(hasPassword ? { password } : {}),
     })
     setLoading(false)
 
@@ -774,24 +783,26 @@ function DeleteAccountButton() {
       <DialogContent showCloseButton={!loading}>
         <DialogHeader>
           <DialogTitle>Excluir conta permanentemente?</DialogTitle>
-          <DialogDescription>Esta ação não pode ser desfeita. Digite sua senha para confirmar.</DialogDescription>
+          <DialogDescription>Esta ação não pode ser desfeita.{hasPassword ? " Digite sua senha para confirmar." : ""}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleDelete} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="delete-account-password">Senha atual</Label>
-            <Input
-              id="delete-account-password"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              autoComplete="current-password"
-              required
-              autoFocus
-            />
-          </div>
+          {hasPassword && (
+            <div className="space-y-2">
+              <Label htmlFor="delete-account-password">Senha atual</Label>
+              <Input
+                id="delete-account-password"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                autoComplete="current-password"
+                required
+                autoFocus
+              />
+            </div>
+          )}
           <DialogFooter>
             <Button type="button" variant="outline" disabled={loading} onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button type="submit" variant="destructive" disabled={loading || !password}>
+            <Button type="submit" variant="destructive" disabled={loading || (hasPassword && !password)}>
               {loading ? "Excluindo..." : "Excluir permanentemente"}
             </Button>
           </DialogFooter>

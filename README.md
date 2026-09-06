@@ -109,6 +109,7 @@ Parta de `.env.example`. Valores sensiveis nunca devem ser commitados.
 | `DATABASE_URL` | SQLite local ou conexao PostgreSQL da aplicacao |
 | `AUTH_SECRET` | Assinatura de sessoes do Auth.js |
 | `AUTH_URL` | URL publica da aplicacao |
+| `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` | Login com Google (opcional); redirect `{AUTH_URL}/api/auth/callback/google` |
 | `SMTP_*` e `EMAIL_FROM` | Recuperacao de senha por e-mail |
 | `MIGRATE_DATABASE_URL` | Conexao privilegiada usada somente em migrations de producao |
 

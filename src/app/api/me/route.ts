@@ -23,6 +23,7 @@ export async function GET() {
       image: true,
       plan: true,
       createdAt: true,
+      passwordHash: true,
     },
   })
 
@@ -30,7 +31,7 @@ export async function GET() {
     return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })
   }
 
-  return NextResponse.json(user)
+  return NextResponse.json({ ...user, passwordHash: undefined, hasPassword: Boolean(user.passwordHash) })
 }
 
 export async function PATCH(request: Request) {
@@ -68,17 +69,23 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
 
-  const parsed = deleteAccountSchema.safeParse(await request.json().catch(() => null))
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Informe sua senha para excluir a conta." }, { status: 400 })
-  }
-
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: { passwordHash: true },
   })
-  if (!user?.passwordHash || !(await compare(parsed.data.password, user.passwordHash))) {
-    return NextResponse.json({ error: "Senha incorreta." }, { status: 400 })
+  if (!user) {
+    return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })
+  }
+
+  if (user.passwordHash) {
+    const parsed = deleteAccountSchema.safeParse(await request.json().catch(() => null))
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Informe sua senha para excluir a conta." }, { status: 400 })
+    }
+
+    if (!(await compare(parsed.data.password, user.passwordHash))) {
+      return NextResponse.json({ error: "Senha incorreta." }, { status: 400 })
+    }
   }
 
   await prisma.user.delete({ where: { id: session.user.id } })

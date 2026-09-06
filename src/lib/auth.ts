@@ -1,8 +1,10 @@
 import NextAuth, { CredentialsSignin } from "next-auth"
 import Credentials from "next-auth/providers/credentials"
+import Google from "next-auth/providers/google"
 import { compare } from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 import { AUTH_SECRET } from "@/lib/auth-secret"
+import { findOrCreateGoogleUser } from "@/features/auth/auth.service"
 import {
   clearLoginFailures,
   loginRateLimitKeys,
@@ -16,6 +18,12 @@ const DUMMY_PASSWORD_HASH = "$2b$12$AFX1qqGxoGwG6.wcRv2GoOPr1r4vsEfaPdCjHY/rdZof
 class EmailNotVerifiedError extends CredentialsSignin {
   code = "email_not_verified"
 }
+
+class OAuthAccountError extends CredentialsSignin {
+  code = "oauth_account"
+}
+
+const googleEnabled = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
@@ -46,6 +54,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         const user = await prisma.user.findUnique({ where: { email } })
+        if (user && !user.passwordHash) {
+          await compare(password, DUMMY_PASSWORD_HASH)
+          throw new OAuthAccountError()
+        }
+
         const valid = await compare(password, user?.passwordHash ?? DUMMY_PASSWORD_HASH)
         if (!user?.passwordHash || !valid) {
           await recordLoginFailure(rateLimitKeys)
@@ -61,10 +74,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return { id: user.id, email: user.email, name: user.name }
       },
     }),
+    ...(googleEnabled
+      ? [Google({ clientId: process.env.GOOGLE_CLIENT_ID!, clientSecret: process.env.GOOGLE_CLIENT_SECRET! })]
+      : []),
   ],
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
+    async jwt({ token, user, account, profile }) {
+      if (user && account?.provider === "google") {
+        const dbUser = await findOrCreateGoogleUser({
+          email: token.email ?? "",
+          name: user.name ?? null,
+          image: user.image ?? null,
+          emailVerified: Boolean((profile as { email_verified?: boolean | null } | null)?.email_verified),
+        })
+        if (!dbUser) return {}
+        token.id = dbUser.id
+        token.loginAt = Math.floor(Date.now() / 1000)
+      } else if (user) {
         token.id = user.id
         token.loginAt = Math.floor(Date.now() / 1000)
       }
