@@ -24,9 +24,20 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.19"
+export const CURRENT_VERSION = "0.2.20"
 
 export const releases = [
+  {
+    version: "0.2.20",
+    date: "2026-09-06",
+    changes: [
+      { type: "feat", description: "Login com Google: entrar ou criar conta pelo Google em /login e /register, com vinculação automática de conta existente por e-mail verificado." },
+      { type: "feat", description: "Foto do perfil do Google aparece no menu do usuário e nas configurações, com iniciais como alternativa." },
+      { type: "feat", description: "Usuário autenticado não acessa mais /register: redireciona para o dashboard, como já ocorre em /login." },
+      { type: "fix", description: "Contas criadas pelo Google não pedem senha para excluir a conta e não exibem o card de alterar senha." },
+      { type: "chore", description: "EMAILS_DISABLED impede envio real de e-mails durante testes end-to-end com SMTP configurado." },
+    ],
+  },
   {
     version: "0.2.19",
     date: "2026-09-05",

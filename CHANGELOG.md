@@ -2,6 +2,22 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.20] - 2026-09-06
+
+### Adicionado
+
+- Login com Google: entrar ou criar conta pelo Google em /login e /register, com vinculação automática de conta existente por e-mail verificado.
+- Foto do perfil do Google aparece no menu do usuário e nas configurações, com iniciais como alternativa.
+- Usuário autenticado não acessa mais /register: redireciona para o dashboard, como já ocorre em /login.
+
+### Corrigido
+
+- Contas criadas pelo Google não pedem senha para excluir a conta e não exibem o card de alterar senha.
+
+### Manutenção
+
+- EMAILS_DISABLED impede envio real de e-mails durante testes end-to-end com SMTP configurado.
+
 ## [0.2.19] - 2026-09-05
 
 ### Manutenção
