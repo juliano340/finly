@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.19] - 2026-09-05
+
+### Manutenção
+
+- Changelog fixa a data da versão no momento do release, eliminando divergência de datas entre local e CI.
+
 ## [0.2.18] - 2026-09-05
 
 ### Corrigido

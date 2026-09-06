@@ -24,33 +24,40 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.18"
+export const CURRENT_VERSION = "0.2.19"
 
 export const releases = [
   {
+    version: "0.2.19",
+    date: "2026-09-05",
+    changes: [
+      { type: "chore", description: "Changelog fixa a data da versão no momento do release, eliminando divergência de datas entre local e CI." },
+    ],
+  },
+  {
     version: "0.2.18",
-    date: "auto",
+    date: "2026-09-05",
     changes: [
       { type: "fix", description: "Fechamento mensal não lista mais receitas fixas (ex.: salário) no card de custos fixos do mês." },
     ],
   },
   {
     version: "0.2.17",
-    date: "auto",
+    date: "2026-09-05",
     changes: [
       { type: "fix", description: "Custos fixos exibem a mensagem real da API ao falhar pagamento ou estorno, como saldo insuficiente, em vez de erro genérico." },
     ],
   },
   {
     version: "0.2.16",
-    date: "auto",
+    date: "2026-09-05",
     changes: [
       { type: "fix", description: "Pagamento de custo fixo sem saldo explica o motivo: a recusa por cheque especial agora informa saldo e limite disponível em vez de 'Erro ao pagar'." },
     ],
   },
   {
     version: "0.2.15",
-    date: "auto",
+    date: "2026-09-05",
     changes: [
       { type: "feat", description: "Configurações reorganizada: aba Conta em duas colunas com perfil e segurança lado a lado, troca de senha em diálogo com regras visíveis e excluir conta movida para a aba Conta." },
       { type: "feat", description: "Edição do perfil agora é explícita: nome fica somente leitura até ativar Editar, e salvar só habilita quando houver mudança." },
@@ -59,7 +66,7 @@ export const releases = [
   },
   {
     version: "0.2.14",
-    date: "auto",
+    date: "2026-09-05",
     changes: [
       { type: "feat", description: "Configurações ganhou troca de senha: confirma a senha atual, aplica a nova e encerra as demais sessões ativas." },
       { type: "chore", description: "Changelog passa a resolver automaticamente a data da versão em desenvolvimento, evitando datas atrasadas." },
