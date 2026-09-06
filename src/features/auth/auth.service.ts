@@ -16,6 +16,10 @@ const changePasswordSchema = z.object({
   newPassword: z.string().min(8, "Nova senha deve ter no mínimo 8 caracteres"),
 })
 
+const initialPasswordSchema = z.object({
+  newPassword: z.string().min(8, "Senha deve ter no mínimo 8 caracteres"),
+})
+
 export async function registerUser(input: RegisterInput, client?: PrismaClient) {
   const db = client ?? defaultPrisma
   const parsed = registerSchema.safeParse(input)
@@ -71,6 +75,40 @@ export async function changePassword(
   await db.user.update({
     where: { id: userId },
     data: { passwordHash, passwordChangedAt: new Date() },
+  })
+
+  return { ok: true }
+}
+
+export async function setInitialPassword(
+  userId: string,
+  input: { newPassword: string },
+  client?: PrismaClient
+) {
+  const db = client ?? defaultPrisma
+  const parsed = initialPasswordSchema.safeParse(input)
+
+  if (!parsed.success) {
+    const firstError = Object.values(parsed.error.flatten().fieldErrors).flat()[0]
+    return { error: typeof firstError === "string" ? firstError : "Dados inválidos" }
+  }
+
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { passwordHash: true },
+  })
+  if (!user) {
+    return { error: "Usuário não encontrado" }
+  }
+  if (user.passwordHash) {
+    return { error: "Este usuário já possui senha" }
+  }
+
+  const passwordHash = await hash(parsed.data.newPassword, 12)
+
+  await db.user.update({
+    where: { id: userId },
+    data: { passwordHash },
   })
 
   return { ok: true }

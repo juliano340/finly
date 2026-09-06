@@ -106,6 +106,7 @@ export default function SettingsPage() {
     setEditingProfile(false)
   }
 
+  const isInitialPassword = me?.hasPassword === false
   const newPasswordRules = {
     minLength: newPassword.length >= 8,
     matches: confirmPassword.length > 0 && newPassword === confirmPassword,
@@ -121,6 +122,11 @@ export default function SettingsPage() {
     setShowConfirmPassword(false)
   }
 
+  const refreshMe = async () => {
+    const res = await fetch("/api/me")
+    if (res.ok) setMe(await res.json())
+  }
+
   const handleChangePassword = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (newPassword.length < 8) {
@@ -131,16 +137,28 @@ export default function SettingsPage() {
       toast.error("A confirmação não coincide com a nova senha.")
       return
     }
+    if (!isInitialPassword && !currentPassword) {
+      toast.error("Informe sua senha atual.")
+      return
+    }
     setChangingPassword(true)
     const res = await fetch("/api/me/password", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentPassword, newPassword }),
+      body: JSON.stringify(isInitialPassword ? { newPassword } : { currentPassword, newPassword }),
     })
     if (!res.ok) {
       setChangingPassword(false)
       const err = await res.json().catch(() => ({}))
-      toast.error(err.error ?? "Não foi possível alterar a senha.")
+      toast.error(err.error ?? "Não foi possível definir a senha.")
+      return
+    }
+
+    if (isInitialPassword) {
+      setChangingPassword(false)
+      setPasswordOpen(false)
+      await refreshMe()
+      toast.success("Senha definida. Agora você também pode entrar com e-mail e senha.")
       return
     }
 
@@ -317,20 +335,20 @@ export default function SettingsPage() {
               <CardTitle className="text-base">Segurança</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {me?.hasPassword && (
-                <>
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-medium">Alterar senha</p>
-                      <p className="text-sm text-muted-foreground">Use 8+ caracteres com letras e números.</p>
-                    </div>
-                    <Button variant="outline" onClick={() => setPasswordOpen(true)}>
-                      <KeyRound className="mr-2 h-4 w-4" /> Alterar senha
-                    </Button>
-                  </div>
-                  <Separator />
-                </>
-              )}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium">{isInitialPassword ? "Definir senha" : "Alterar senha"}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {isInitialPassword
+                      ? "Crie uma senha para também acessar com e-mail e senha."
+                      : "Use 8+ caracteres com letras e números."}
+                  </p>
+                </div>
+                <Button variant="outline" onClick={() => setPasswordOpen(true)}>
+                  <KeyRound className="mr-2 h-4 w-4" /> {isInitialPassword ? "Definir senha" : "Alterar senha"}
+                </Button>
+              </div>
+              <Separator />
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="space-y-0.5">
                   <p className="text-sm font-medium text-destructive">Excluir conta</p>
@@ -348,33 +366,35 @@ export default function SettingsPage() {
           }}>
             <DialogContent showCloseButton={!changingPassword}>
               <DialogHeader>
-                <DialogTitle>Alterar senha</DialogTitle>
+                <DialogTitle>{isInitialPassword ? "Definir senha" : "Alterar senha"}</DialogTitle>
                 <DialogDescription>Ao alterar a senha, as outras sessões ativas são encerradas.</DialogDescription>
               </DialogHeader>
               <form onSubmit={handleChangePassword} className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="current-password">Senha atual</Label>
-                  <div className="relative">
-                    <Input
-                      id="current-password"
-                      type={showCurrentPassword ? "text" : "password"}
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      autoComplete="current-password"
-                      className="pr-10"
-                      required
-                      autoFocus
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      tabIndex={-1}
-                    >
-                      {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
+                {!isInitialPassword && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="current-password">Senha atual</Label>
+                    <div className="relative">
+                      <Input
+                        id="current-password"
+                        type={showCurrentPassword ? "text" : "password"}
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        autoComplete="current-password"
+                        className="pr-10"
+                        required
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        tabIndex={-1}
+                      >
+                        {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
                 <div className="space-y-1.5">
                   <Label htmlFor="new-password">Nova senha</Label>
                   <div className="relative">
@@ -441,13 +461,13 @@ export default function SettingsPage() {
                 </ul>
                 <DialogFooter>
                   <Button type="button" variant="outline" disabled={changingPassword} onClick={() => setPasswordOpen(false)}>Cancelar</Button>
-                  <Button type="submit" disabled={changingPassword || !currentPassword || !newPasswordRules.minLength || !newPasswordRules.matches}>
+                  <Button type="submit" disabled={changingPassword || (!isInitialPassword && !currentPassword) || !newPasswordRules.minLength || !newPasswordRules.matches}>
                     {changingPassword ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...
                       </>
                     ) : (
-                      "Salvar nova senha"
+                      isInitialPassword ? "Definir senha" : "Salvar nova senha"
                     )}
                   </Button>
                 </DialogFooter>
