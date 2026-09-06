@@ -1,4 +1,4 @@
-import { writeFile } from "node:fs/promises"
+import { readFile, writeFile } from "node:fs/promises"
 import { pathToFileURL } from "node:url"
 
 import { releases, resolveReleaseDate, type ChangeType, type Release } from "../src/content/releases"
@@ -36,12 +36,27 @@ export function renderChangelog(items: readonly Release[]) {
   return `${output.join("\n").trimEnd()}\n`
 }
 
+/**
+ * Fixa datas "auto" no releases.ts: a versão em desenvolvimento recebe a data
+ * de hoje no momento em que o changelog é gerado, evitando divergência depois.
+ */
+async function pinAutoDates() {
+  const filePath = new URL("../src/content/releases.ts", import.meta.url)
+  const source = await readFile(filePath, "utf8")
+  if (!source.includes('date: "auto"')) return
+
+  const today = resolveReleaseDate("auto")
+  await writeFile(filePath, source.replaceAll('date: "auto"', `date: "${today}"`), "utf8")
+}
+
 const isMainModule = process.argv[1]
   && pathToFileURL(process.argv[1]).href === import.meta.url
 
 if (isMainModule) {
-  writeFile("CHANGELOG.md", renderChangelog(releases), "utf8").catch((error) => {
-    console.error(error instanceof Error ? error.message : "Failed to generate changelog.")
-    process.exitCode = 1
-  })
+  pinAutoDates()
+    .then(() => writeFile("CHANGELOG.md", renderChangelog(releases), "utf8"))
+    .catch((error) => {
+      console.error(error instanceof Error ? error.message : "Failed to generate changelog.")
+      process.exitCode = 1
+    })
 }

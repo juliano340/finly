@@ -29,6 +29,11 @@ describe("release metadata", () => {
     }
   })
 
+  it("não deixa data automática pendente de fixação", () => {
+    const pendingAuto = releases.filter((release) => (release.date as string) === "auto")
+    expect(pendingAuto.map((release) => release.version)).toEqual([])
+  })
+
   it("keeps generated CHANGELOG.md up to date", async () => {
     const changelog = await readFile("CHANGELOG.md", "utf8")
 
