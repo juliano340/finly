@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.22] - 2026-09-06
+
+### Adicionado
+
+- Fechamento mensal ganha a lista 'Contas do mês': faturas e custos fixos juntos, ordenados por vencimento, com filtros de pendentes/pagas e badges de atraso.
+
 ## [0.2.21] - 2026-09-06
 
 ### Adicionado

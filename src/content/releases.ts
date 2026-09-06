@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.21"
+export const CURRENT_VERSION = "0.2.22"
 
 export const releases = [
+  {
+    version: "0.2.22",
+    date: "2026-09-06",
+    changes: [
+      { type: "feat", description: "Fechamento mensal ganha a lista 'Contas do mês': faturas e custos fixos juntos, ordenados por vencimento, com filtros de pendentes/pagas e badges de atraso." },
+    ],
+  },
   {
     version: "0.2.21",
     date: "2026-09-06",
