@@ -124,4 +124,43 @@ describe("notifications.service", () => {
     expect(notifications.some((item) => item.type === "FIXED_COST" && item.amount === 55 && item.dueDate.startsWith("2026-09-16"))).toBe(true)
     expect(notifications.some((item) => item.type === "FIXED_COST" && item.amount === 55 && item.dueDate.startsWith("2026-09-01"))).toBe(false)
   })
+
+  it("ordena os lembretes por vencimento mais próximo", async () => {
+    const card = await createCard(
+      userId,
+      { name: `Sort Card ${Date.now()}`, brand: "Visa", color: "#22C55E", closingDay: 10, dueDay: 20, bankAccountId: null },
+      prisma
+    )
+    expect(card).not.toBeNull()
+    if (!card) return
+
+    await createCardInvoice(
+      userId,
+      { cardId: card.id, month: "2026-10", dueDate: new Date("2026-10-05T12:00:00"), amount: 40, status: "PENDING" },
+      prisma
+    )
+    await createCardInvoice(
+      userId,
+      { cardId: card.id, month: "2026-09", dueDate: new Date("2026-09-25T12:00:00"), amount: 30, status: "PENDING" },
+      prisma
+    )
+    await createFixedCost(
+      userId,
+      { type: "EXPENSE" as const, name: `Sort Notify ${Date.now()}`, defaultAmount: 20, categoryId, paymentMethod: "PIX", dueDay: 18, paidInsideCard: false, cardId: null, bankAccountId: null, active: true, startDate: "2026-01-01", frequency: "MONTHLY", endType: "NONE" },
+      prisma
+    )
+
+    const notifications = await getDueSoonNotifications(userId, 60, prisma, new Date("2026-09-15T12:00:00"))
+
+    const relevant = notifications.filter((item) =>
+      (item.type === "INVOICE" && (item.amount === 30 || item.amount === 40)) ||
+      (item.type === "FIXED_COST" && item.amount === 20)
+    )
+
+    expect(relevant.map((item) => item.dueDate.slice(0, 10))).toEqual([
+      "2026-09-18",
+      "2026-09-25",
+      "2026-10-05",
+    ])
+  })
 })

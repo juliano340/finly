@@ -71,7 +71,9 @@ export async function getDueSoonNotifications(
     }]
   })
 
-  return [...invoiceNotifications, ...fixedCostNotifications]
+  return [...invoiceNotifications, ...fixedCostNotifications].sort((a, b) =>
+    a.dueDate.localeCompare(b.dueDate)
+  )
 }
 
 function deduplicateMonthlyOccurrences<T extends {
