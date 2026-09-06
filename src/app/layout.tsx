@@ -2,7 +2,10 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import Script from "next/script"
 import { Providers } from "@/components/providers"
+import { version } from "../../package.json"
 import "./globals.css"
+
+const OG_IMAGE = `/og.png?v=${version}`
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,14 +27,14 @@ export const metadata: Metadata = {
       "Gerencie suas finanças pessoais de forma simples e inteligente.",
     type: "website",
     locale: "pt_BR",
-    images: [{ url: "/og.png", width: 1200, height: 630 }],
+    images: [{ url: OG_IMAGE, width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Finly — Controle Financeiro",
     description:
       "Gerencie suas finanças pessoais de forma simples e inteligente.",
-    images: ["/og.png"],
+    images: [OG_IMAGE],
   },
 }
 
