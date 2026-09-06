@@ -25,5 +25,6 @@ export default defineConfig({
     command: "npm run dev",
     url: `http://localhost:${port}`,
     reuseExistingServer: !process.env.CI,
+    env: { EMAILS_DISABLED: "true" },
   },
 })

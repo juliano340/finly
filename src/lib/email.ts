@@ -29,7 +29,7 @@ export interface SendEmailInput {
 }
 
 export async function sendEmail({ to, subject, html }: SendEmailInput): Promise<void> {
-  if (process.env.NODE_ENV === "test") return
+  if (process.env.NODE_ENV === "test" || process.env.EMAILS_DISABLED === "true") return
 
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
     console.warn("[email] SMTP_USER/SMTP_PASS nao configurados — emails nao serao enviados")
