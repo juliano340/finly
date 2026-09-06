@@ -15,7 +15,7 @@ import { useMonthParam } from "@/hooks/use-month-param"
     incomeItems: { name: string; amount: number; type: "FIXED" | "LOOSE"; status: "PENDING" | "PAID" }[]
   }
   invoices: { id: string; amount: number; dueDate: string; status: "PENDING" | "PAID"; card: { name: string }; items: { id: string; description: string; amount: number }[] }[]
-  fixedCosts: { id: string; amount: number; status: "PENDING" | "PAID"; fixedCost: { name: string; type: "INCOME" | "EXPENSE"; paidInsideCard: boolean; paymentMethod: string; category: { name: string }; card: { name: string } | null; bankAccount: { name: string } | null } }[]
+  fixedCosts: { id: string; dueDate: string | null; amount: number; status: "PENDING" | "PAID"; fixedCost: { name: string; type: "INCOME" | "EXPENSE"; paidInsideCard: boolean; paymentMethod: string; category: { name: string }; card: { name: string } | null; bankAccount: { name: string } | null } }[]
   looseExpenses: { id: string; amount: number; description: string | null; category: { name: string } }[]
 }
 
@@ -31,6 +31,7 @@ function MonthlyClosingPageContent() {
   const [month, setMonth] = useMonthParam({ defaultMonth: getCurrentMonth() })
   const [data, setData] = useState<ClosingData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [billFilter, setBillFilter] = useState<"ALL" | "PENDING" | "PAID">("ALL")
 
   function fetchClosing() {
     return fetch(`/api/monthly-closing?month=${month}`)
@@ -54,7 +55,6 @@ function MonthlyClosingPageContent() {
     await fetch(`/api/fixed-cost-occurrences/${id}/pay`, { method: "POST" })
     fetchClosing()
   }
-
   const summary = data?.summary
 
   const pendingFormula = [
@@ -98,6 +98,34 @@ function MonthlyClosingPageContent() {
       .map((item) => ({ id: item.id, name: item.fixedCost.name, amount: item.amount, status: item.status })),
   }
 
+  const bills: BillRow[] = [
+    ...(data?.invoices ?? []).map((invoice): BillRow => ({
+      id: invoice.id,
+      kind: "INVOICE" as const,
+      name: `Fatura ${invoice.card.name}`,
+      category: "Cartão de crédito",
+      method: `Fatura ${invoice.card.name}`,
+      account: invoice.card.name,
+      dueDate: invoice.dueDate,
+      amount: invoice.amount,
+      status: invoice.status,
+    })),
+    ...(data?.fixedCosts ?? [])
+      .filter((item) => item.fixedCost.type === "EXPENSE")
+      .map((item): BillRow => ({
+        id: item.id,
+        kind: "FIXED_COST" as const,
+        name: item.fixedCost.name,
+        category: item.fixedCost.category.name,
+        method: item.fixedCost.paidInsideCard ? `Fatura ${item.fixedCost.card?.name ?? ""}` : "Fora do cartão",
+        account: item.fixedCost.bankAccount?.name ?? "não definida",
+        dueDate: item.dueDate,
+        amount: item.amount,
+        status: item.status,
+        payable: Boolean(item.fixedCost.bankAccount),
+      })),
+  ].sort((a, b) => (a.dueDate ?? "9999-12-31").localeCompare(b.dueDate ?? "9999-12-31"))
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -139,13 +167,44 @@ function MonthlyClosingPageContent() {
         <ExpenseComposition items={totalFormula} pendingItems={pendingFormula} details={expenseDetails} loading={loading} month={month} />
       </div>
       <section className="grid gap-4 lg:grid-cols-2">
+        <Card className="border-0 shadow-sm lg:col-span-2">
+          <CardHeader className="pb-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1">
+                <CardTitle className="text-base">Contas do mês</CardTitle>
+                <p className="text-sm text-muted-foreground">Faturas e custos fixos — o que já foi pago e o que falta.</p>
+              </div>
+              <div className="flex gap-1.5">
+                {(["ALL", "PENDING", "PAID"] as const).map((option) => (
+                  <Button key={option} size="sm" variant={billFilter === option ? "default" : "outline"} onClick={() => setBillFilter(option)}>
+                    {option === "ALL" ? "Todas" : option === "PENDING" ? "Pendentes" : "Pagas"}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <BillsList loading={loading} bills={bills} filter={billFilter} month={month} onPayFixedCost={handlePayFixedCost} />
+          </CardContent>
+        </Card>
         <Card className="border-0 shadow-sm lg:col-span-2"><CardHeader><CardTitle className="text-base">Cartões e faturas</CardTitle><p className="text-sm text-muted-foreground">Compare o valor lançado com a previsão dos custos fixos por cartão.</p></CardHeader><CardContent><CardRows loading={loading} invoices={data?.invoices} estimates={summary?.estimatedInvoicesByCard} /></CardContent></Card>
       </section>
-      <Card className="border-0 shadow-sm"><CardHeader><CardTitle className="text-base">Custos fixos do mês</CardTitle></CardHeader><CardContent><FixedCostRows loading={loading} items={data?.fixedCosts} onPay={handlePayFixedCost} /></CardContent></Card>
     </div>
   )
 }
 
+type BillRow = {
+  id: string
+  kind: "INVOICE" | "FIXED_COST"
+  name: string
+  category: string
+  method: string
+  account: string
+  dueDate: string | null
+  amount: number
+  status: "PENDING" | "PAID"
+  payable?: boolean
+}
 type DetailItem = { name?: string; label?: string; amount?: number; value?: number; status?: string }
 type ExpenseDetail = { id: string; name: string; amount: number; status: string; children?: { id: string; name: string; amount: number }[] }
 
@@ -383,11 +442,19 @@ function CardRows({ loading, invoices = [], estimates = [] }: {
   )
 }
 
-function FixedCostRows({ loading, items = [], onPay }: {
+function BillsList({ loading, bills = [], filter, month, onPayFixedCost }: {
   loading: boolean
-  items?: ClosingData["fixedCosts"]
-  onPay: (id: string) => void
+  bills?: BillRow[]
+  filter: "ALL" | "PENDING" | "PAID"
+  month: string
+  onPayFixedCost: (id: string) => void
 }) {
+  const visible = bills.filter((bill) => filter === "ALL" || bill.status === filter)
+  const paidCount = bills.filter((bill) => bill.status === "PAID").length
+  const paidTotal = bills.filter((bill) => bill.status === "PAID").reduce((total, bill) => total + bill.amount, 0)
+  const pendingTotal = bills.filter((bill) => bill.status === "PENDING").reduce((total, bill) => total + bill.amount, 0)
+  const todayISO = new Date().toLocaleDateString("en-CA")
+
   if (loading) return (
     <div className="space-y-3 py-4">
       {Array.from({ length: 4 }).map((_, i) => (
@@ -402,48 +469,68 @@ function FixedCostRows({ loading, items = [], onPay }: {
       ))}
     </div>
   )
-  if (items.length === 0) return <p className="py-4 text-sm text-muted-foreground">Nenhum custo fixo neste mês.</p>
+
+  const emptyLabel = filter === "PENDING" ? "Nenhuma conta pendente neste mês." : filter === "PAID" ? "Nenhuma conta paga neste mês." : "Nenhuma conta neste mês."
+  if (visible.length === 0) return <p className="py-4 text-sm text-muted-foreground">{emptyLabel}</p>
 
   return (
     <div>
+      <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        <span>{paidCount} de {bills.length} pagas</span>
+        <span>Pago: <span className="font-medium text-foreground">{formatCurrency(paidTotal)}</span></span>
+        <span>A pagar: <span className="font-medium text-foreground">{formatCurrency(pendingTotal)}</span></span>
+      </div>
       <div className="hidden grid-cols-[1.5fr_1fr_1.2fr_1.2fr_auto_auto] gap-4 border-b px-3 pb-2 text-xs font-medium text-muted-foreground sm:grid">
-        <span>Custo</span><span>Categoria</span><span>Pagamento</span><span>Conta</span><span>Status</span><span className="text-right">Valor</span>
+        <span>Conta</span><span>Categoria</span><span>Vencimento</span><span>Pagamento</span><span>Status</span><span className="text-right">Valor</span>
       </div>
       <div className="space-y-3 sm:space-y-0">
-      {items.map((item) => (
-        <div key={item.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-lg border p-3 sm:grid-cols-[1.5fr_1fr_1.2fr_1.2fr_auto_auto] sm:items-center sm:gap-4 sm:rounded-none sm:border-0 sm:border-b sm:px-3">
-          <div className="min-w-0">
-            <p className="truncate font-semibold">{item.fixedCost.name}</p>
-            <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-xs text-muted-foreground sm:hidden">
-              <span>{item.fixedCost.category.name}</span>
-              <span aria-hidden="true">·</span>
-              <span>{item.fixedCost.paidInsideCard ? `Incluído na fatura ${item.fixedCost.card?.name ?? ""}` : "Fora do cartão"}</span>
+        {visible.map((bill) => {
+          const overdue = bill.status === "PENDING" && bill.dueDate !== null && bill.dueDate.slice(0, 10) < todayISO
+          const badgeClass = bill.status === "PAID" ? "bg-success/10 text-success" : overdue ? "bg-destructive/10 text-destructive" : "bg-amber-500/10 text-amber-600"
+          const badgeLabel = bill.status === "PAID" ? "Pago" : overdue ? "Atrasada" : "Pendente"
+          return (
+            <div key={`${bill.kind}-${bill.id}`} className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-lg border p-3 sm:grid-cols-[1.5fr_1fr_1.2fr_1.2fr_auto_auto] sm:items-center sm:gap-4 sm:rounded-none sm:border-0 sm:border-b sm:px-3">
+              <div className="min-w-0">
+                <p className="truncate font-semibold">{bill.name}</p>
+                <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-xs text-muted-foreground sm:hidden">
+                  <span>{bill.category}</span>
+                  <span aria-hidden="true">·</span>
+                  <span>{bill.method}</span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground sm:hidden">
+                  Vence em {bill.dueDate ? formatDate(bill.dueDate) : "sem data"} · Conta: {bill.account}
+                </p>
+                <span className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium sm:hidden ${badgeClass}`}>
+                  {badgeLabel}
+                </span>
+              </div>
+              <div className="text-right sm:col-start-6">
+                <p className="whitespace-nowrap font-semibold tabular-nums">{formatCurrency(bill.amount)}</p>
+                {bill.status === "PENDING" && (bill.kind === "FIXED_COST" ? (
+                  bill.payable && (
+                    <Button className="mt-2" size="sm" variant="outline" onClick={() => onPayFixedCost(bill.id)}>
+                      Lançar na conta
+                    </Button>
+                  )
+                ) : (
+                  <Link href={`/cards?tab=invoices&month=${month}`} className="mt-2 block">
+                    <Button size="sm" variant="outline">Pagar fatura</Button>
+                  </Link>
+                ))}
+              </div>
+              <span className="hidden text-sm sm:col-start-2 sm:block">{bill.category}</span>
+              <span className="hidden text-sm text-muted-foreground sm:col-start-3 sm:block">{bill.dueDate ? formatDate(bill.dueDate) : "—"}</span>
+              <span className="hidden text-sm text-muted-foreground sm:col-start-4 sm:block">{bill.method}</span>
+              <span className="hidden sm:col-start-5 sm:block">
+                <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${badgeClass}`}>{badgeLabel}</span>
+              </span>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground sm:hidden">
-              Conta: {item.fixedCost.bankAccount?.name ?? "não definida"}
-            </p>
-            <span className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium sm:hidden ${item.status === "PAID" ? "bg-success/10 text-success" : "bg-amber-500/10 text-amber-600"}`}>
-              {item.status === "PAID" ? "Pago" : "Pendente"}
-            </span>
-          </div>
-          <div className="text-right sm:col-start-6">
-            <p className="whitespace-nowrap font-semibold tabular-nums">{formatCurrency(item.amount)}</p>
-            {item.status === "PENDING" && item.fixedCost.bankAccount && (
-              <Button className="mt-2" size="sm" variant="outline" onClick={() => onPay(item.id)}>
-                Lançar na conta
-              </Button>
-            )}
-          </div>
-          <span className="hidden text-sm sm:col-start-2 sm:block">{item.fixedCost.category.name}</span>
-          <span className="hidden text-sm text-muted-foreground sm:col-start-3 sm:block">{item.fixedCost.paidInsideCard ? `Fatura ${item.fixedCost.card?.name ?? ""}` : "Fora do cartão"}</span>
-          <span className="hidden text-sm text-muted-foreground sm:col-start-4 sm:block">{item.fixedCost.bankAccount?.name ?? "não definida"}</span>
-          <span className="hidden text-xs sm:col-start-5 sm:block">{item.status === "PAID" ? "Pago" : "Pendente"}</span>
-        </div>
-      ))}
+          )
+        })}
       </div>
       <div className="flex items-center justify-between border-t bg-muted/30 px-3 py-3 text-sm font-semibold">
-        <span>Total</span>
-        <span className="tabular-nums">{formatCurrency(items.reduce((total, item) => total + item.amount, 0))}</span>
+        <span>Total do mês</span>
+        <span className="tabular-nums">{formatCurrency(bills.reduce((total, bill) => total + bill.amount, 0))}</span>
       </div>
     </div>
   )
