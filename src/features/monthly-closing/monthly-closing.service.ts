@@ -139,7 +139,7 @@ export async function getMonthlyClosing(
   return {
     financialMonth,
     invoices: invoicesWithTotals,
-    fixedCosts: occurrences,
+    fixedCosts: expenseOccurrences,
     looseExpenses: looseExpenseItems,
     summary: {
       month,

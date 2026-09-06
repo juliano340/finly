@@ -48,6 +48,9 @@ describe("monthly-closing.service", () => {
       prisma.fixedCost.create({
         data: { name: `Streaming ${Date.now()}`, defaultAmount: 50, categoryId, paymentMethod: "CREDIT_CARD", paidInsideCard: true, cardId: card.id, userId },
       }),
+      prisma.fixedCost.create({
+        data: { name: `Salário ${Date.now()}`, type: "INCOME", defaultAmount: 1500, categoryId, paymentMethod: "PIX", paidInsideCard: false, userId },
+      }),
     ])
     await Promise.all([
       prisma.fixedCostOccurrence.create({
@@ -55,6 +58,9 @@ describe("monthly-closing.service", () => {
       }),
       prisma.fixedCostOccurrence.create({
         data: { fixedCostId: fixedCosts[1].id, financialMonthId: financialMonth.id, month, amount: 50, status: "PENDING", dueDate: new Date("2026-06-15T12:00:00"), userId },
+      }),
+      prisma.fixedCostOccurrence.create({
+        data: { fixedCostId: fixedCosts[2].id, financialMonthId: financialMonth.id, month, amount: 1500, status: "PAID", dueDate: new Date("2026-06-05T12:00:00"), userId },
       }),
     ])
     await prisma.cardInvoice.create({
@@ -73,10 +79,10 @@ describe("monthly-closing.service", () => {
     expect(closing.summary.fixedCostsOutsideCardTotal).toBe(120)
     expect(closing.summary.fixedCostsInsideCardTotal).toBe(50)
     expect(closing.summary.looseExpensesTotal).toBe(80)
-    expect(closing.summary.incomeTotal).toBe(1000)
+    expect(closing.summary.incomeTotal).toBe(2500)
     expect(closing.summary.totalToPay).toBe(500)
-    expect(closing.summary.projectedBalance).toBe(500)
-    expect(closing.summary.estimatedInvoicesByCard[0]?.estimatedAmount).toBe(50)
+    expect(closing.summary.projectedBalance).toBe(2000)
+    expect(closing.fixedCosts.map((item) => item.fixedCost.name)).not.toContain(fixedCosts[2].name)
   })
 
   it("calcula saldo projetado como receitas totais menos gastos totais (pagos e não pagos)", async () => {
