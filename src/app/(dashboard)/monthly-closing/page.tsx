@@ -5,7 +5,7 @@ import Link from "next/link"
 import { ArrowUpDown, ChevronDown, ChevronUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { formatCurrency, formatDate } from "@/lib/utils"
+import { dueLabel, formatCurrency, formatDate } from "@/lib/utils"
 import { MonthNavigator, changeMonth, getCurrentMonth } from "@/components/month-navigator"
 import { useMonthParam } from "@/hooks/use-month-param"
 import { useTableSelection } from "@/components/data-table/use-table-selection"
@@ -653,7 +653,7 @@ function BillsList({ loading, bills = [], filter, month, onPayFixedCost }: {
                 {bill.category} · {bill.method}
               </p>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                Vence em {bill.dueDate ? formatDate(bill.dueDate) : "sem data"} · Conta: {bill.account}
+                {dueLabel(bill.dueDate) ?? "sem data"} · Conta: {bill.account}
               </p>
               <div className="mt-2 flex items-center justify-between gap-3">
                 <p className="font-semibold tabular-nums">{formatCurrency(bill.amount)}</p>

@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { cn, formatCurrency } from "@/lib/utils"
+import { cn, dueLabel, formatCurrency, isOverdue } from "@/lib/utils"
 import { ariaSort, sortButtonLabel } from "@/lib/accessible-sort"
 import { MonthNavigator, changeMonth, formatMonth, getCurrentMonth } from "@/components/month-navigator"
 import { useMonthParam } from "@/hooks/use-month-param"
@@ -105,6 +105,13 @@ function formatDueDate(dueDay: number | null, month: string) {
 
 function formatCalendarDate(value: string) {
   return new Date(value).toLocaleDateString("pt-BR", { timeZone: "UTC" })
+}
+
+function dueDayIso(dueDay: number | null, month: string) {
+  if (!dueDay) return null
+  const [year, m] = month.split("-").map(Number)
+  const lastDay = new Date(year, m, 0).getDate()
+  return `${year}-${String(m).padStart(2, "0")}-${String(Math.min(dueDay, lastDay)).padStart(2, "0")}`
 }
 
 function FixedCostsPageInner() {
@@ -693,13 +700,12 @@ function FixedCostsPageInner() {
           const isLoading = payingId === occ.fixedCostId || unpayingId === occ.fixedCostId
           const isLoadingCard = payingCardId === occ.fixedCostId || unpayingCardId === occ.fixedCostId
           const sourceLabel = occ.fixedCost.paidInsideCard ? `Cartão ${occ.fixedCost.card?.name ?? "-"}` : "Fora do cartão"
-          const dueLabel = occ.dueDate ? formatCalendarDate(occ.dueDate) : occ.fixedCost.dueDay ? formatDueDate(occ.fixedCost.dueDay, occ.month) : null
+          const dueDateIso = occ.dueDate ?? dueDayIso(occ.fixedCost.dueDay, occ.month)
+          const dueTextLabel = dueLabel(dueDateIso)
+          const dueOverdue = occ.status === "PENDING" && isOverdue(dueDateIso)
           return (
             <div key={occ.id} className="rounded-lg border bg-card p-3 transition-colors hover:bg-muted/50">
-              <div className="flex items-start gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-bold">
-                  {occ.fixedCost.name.charAt(0)}
-                </div>
+              <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <button type="button" onClick={() => openEditSheet(occ)} className="min-w-0 truncate text-left font-medium hover:underline">
@@ -707,14 +713,14 @@ function FixedCostsPageInner() {
                     </button>
                     <strong className="shrink-0 text-sm tabular-nums">{formatCurrency(occ.amount)}</strong>
                   </div>
-                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                    {occ.fixedCost.category.name} · {sourceLabel}
-                  </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    {dueLabel && (
-                      <span className="inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full bg-muted px-2 text-xs font-medium text-muted-foreground">
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                  {occ.fixedCost.category.name} · {sourceLabel}
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {dueTextLabel && (
+                      <span className={cn("inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full px-2 text-xs font-medium", dueOverdue ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground")}>
                         <CalendarClock className="h-3.5 w-3.5" />
-                        Vence {dueLabel}
+                        {dueTextLabel}
                       </span>
                     )}
 

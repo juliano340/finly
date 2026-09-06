@@ -24,9 +24,18 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.23"
+export const CURRENT_VERSION = "0.2.24"
 
 export const releases = [
+  {
+    version: "0.2.24",
+    date: "2026-09-06",
+    changes: [
+      { type: "feat", description: "Vencimentos agora dizem 'Vence hoje', 'Vence em' ou 'Venceu em' conforme a data, nos cards de lançamentos fixos, faturas e fechamento mensal." },
+      { type: "fix", description: "Pendências com vencimento passado ganham destaque vermelho no badge de vencimento dos cards de lançamentos fixos." },
+      { type: "refactor", description: "Cards de lançamentos fixos no celular ficam mais compactos, sem o círculo com a inicial do lançamento." },
+    ],
+  },
   {
     version: "0.2.23",
     date: "2026-09-06",

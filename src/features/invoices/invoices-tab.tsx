@@ -36,7 +36,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { cn, dueLabel, formatCurrency, formatDate } from "@/lib/utils";
 import { isAccountNegative, getAvailableBalance } from "@/lib/balance";
 import { ImportPdfDialog } from "./import-pdf-dialog";
 import {
@@ -1059,7 +1059,7 @@ export function InvoicesTab() {
                       </strong>
                     </div>
                     <p className="text-xs text-muted-foreground truncate">
-                      Vence {formatDate(invoice.dueDate)} ·{" "}
+                      {dueLabel(invoice.dueDate)} ·{" "}
                       {invoice.status === "PAID"
                         ? `Pago${invoice.paymentMethod ? ` via ${methodLabels[invoice.paymentMethod] ?? invoice.paymentMethod}` : ""}`
                         : lifecycleLabels[invoice.lifecycleStatus]}
@@ -1866,7 +1866,7 @@ export function InvoicesTab() {
                         <div className="flex-1">
                           <p className="text-sm font-medium">{inv.card.name}</p>
                           <p className="text-xs text-muted-foreground">
-                            Vence {formatDate(inv.dueDate)}
+                            {dueLabel(inv.dueDate)}
                           </p>
                         </div>
                         <span className="text-sm font-medium">

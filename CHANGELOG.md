@@ -2,6 +2,20 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.24] - 2026-09-06
+
+### Adicionado
+
+- Vencimentos agora dizem 'Vence hoje', 'Vence em' ou 'Venceu em' conforme a data, nos cards de lançamentos fixos, faturas e fechamento mensal.
+
+### Corrigido
+
+- Pendências com vencimento passado ganham destaque vermelho no badge de vencimento dos cards de lançamentos fixos.
+
+### Alterado
+
+- Cards de lançamentos fixos no celular ficam mais compactos, sem o círculo com a inicial do lançamento.
+
 ## [0.2.23] - 2026-09-06
 
 ### Adicionado
