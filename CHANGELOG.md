@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.18] - 2026-09-05
+
+### Corrigido
+
+- Fechamento mensal não lista mais receitas fixas (ex.: salário) no card de custos fixos do mês.
+
 ## [0.2.17] - 2026-09-05
 
 ### Corrigido

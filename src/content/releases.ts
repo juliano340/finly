@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.17"
+export const CURRENT_VERSION = "0.2.18"
 
 export const releases = [
+  {
+    version: "0.2.18",
+    date: "auto",
+    changes: [
+      { type: "fix", description: "Fechamento mensal não lista mais receitas fixas (ex.: salário) no card de custos fixos do mês." },
+    ],
+  },
   {
     version: "0.2.17",
     date: "auto",
