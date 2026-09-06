@@ -337,9 +337,13 @@ export function InvoicesTab() {
   const editFormRef = useRef<HTMLFormElement>(null);
   const [editLifecycle, setEditLifecycle] = useState<string | null>(null);
   const selectedInvoiceId = selectedInvoice?.id ?? null;
-  useEffect(() => {
+  const [prevInvoiceId, setPrevInvoiceId] = useState<string | null>(null);
+  if (selectedInvoiceId !== prevInvoiceId) {
+    // Fatura trocada no sheet: reseta a etapa escolhida (padrão React de
+    // ajuste de state durante o render, sem efeito).
+    setPrevInvoiceId(selectedInvoiceId);
     setEditLifecycle(null);
-  }, [selectedInvoiceId]);
+  }
   const selectedLocked =
     !!selectedInvoice &&
     (selectedInvoice.lifecycleStatus === "CLOSED" ||
