@@ -63,3 +63,17 @@ jobs:
       - run: npm run test:e2e
         env:
           DATABASE_URL: "file:./test.db"
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: [test, e2e]
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: team_0tbbu6XeDEvkxx5tZkaj9wXH
+      VERCEL_PROJECT_ID: prj_NjAFxN02Ru4YfvA8NrKmGMjpfSaq
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Vercel production
+        run: npx --yes vercel@latest deploy --prod --token="${{ secrets.VERCEL_TOKEN }}"
