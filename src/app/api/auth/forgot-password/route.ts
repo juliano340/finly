@@ -5,13 +5,22 @@ import {
   createPasswordResetToken,
   RateLimitError,
 } from "@/features/auth/password-reset.service"
+import { consumeIpRateLimit } from "@/features/auth/request-rate-limit.service"
 import { sendEmail } from "@/lib/email"
 import { passwordResetTemplate } from "@/lib/email-templates"
 
 const TOKEN_TTL_MINUTES = 30
+const FORGOT_RATE_LIMIT = { max: 10, windowMs: 60 * 60 * 1000 }
 
 export async function POST(request: Request) {
   try {
+    if (await consumeIpRateLimit(request, "forgot-password", FORGOT_RATE_LIMIT)) {
+      return NextResponse.json(
+        { error: "Muitas tentativas. Tente novamente mais tarde." },
+        { status: 429 }
+      )
+    }
+
     const body = await request.json()
     const parsed = forgotPasswordSchema.safeParse(body)
 

@@ -5,8 +5,18 @@ import {
   EmailVerificationTokenInvalidError,
   verifyEmail,
 } from "@/features/auth/email-verification.service"
+import { consumeIpRateLimit } from "@/features/auth/request-rate-limit.service"
+
+const VERIFY_RATE_LIMIT = { max: 20, windowMs: 60 * 60 * 1000 }
 
 export async function POST(request: Request) {
+  if (await consumeIpRateLimit(request, "verify-email", VERIFY_RATE_LIMIT)) {
+    return NextResponse.json(
+      { error: "Muitas tentativas. Tente novamente mais tarde." },
+      { status: 429 }
+    )
+  }
+
   const body = await request.json().catch(() => null)
   const token = typeof body?.token === "string" ? body.token : ""
 
