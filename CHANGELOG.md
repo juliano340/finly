@@ -2,6 +2,17 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.25] - 2026-09-07
+
+### Segurança
+
+- Proteção contra força bruta: limites de tentativas em todas as rotas de acesso (login, cadastro, recuperação de senha e confirmação de e-mail), com identificação confiável do IP do visitante.
+- Excluir a conta criada com Google agora exige sessão recente e a confirmação digitando o próprio e-mail, protegendo os dados financeiros contra sequestro de sessão.
+- Limites de tamanho em backups, exclusões em lote e importações de planilha, impedindo que envios gigantes derrubem o sistema.
+- Importação de CSV protege descrições contra execução de fórmulas ao abrir em Excel/Sheets e rejeita arquivos acima de 10 mil linhas.
+- Login pelo Google só vincula automaticamente contas com e-mail já verificado, bloqueando a tomada de conta via e-mail pendente.
+- Chave de sessão passa a ser obrigatória em produção e pacotes com vulnerabilidades conhecidas foram atualizados.
+
 ## [0.2.24] - 2026-09-06
 
 ### Adicionado

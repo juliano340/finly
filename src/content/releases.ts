@@ -24,9 +24,21 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.24"
+export const CURRENT_VERSION = "0.2.25"
 
 export const releases = [
+  {
+    version: "0.2.25",
+    date: "2026-09-07",
+    changes: [
+      { type: "security", description: "Proteção contra força bruta: limites de tentativas em todas as rotas de acesso (login, cadastro, recuperação de senha e confirmação de e-mail), com identificação confiável do IP do visitante." },
+      { type: "security", description: "Excluir a conta criada com Google agora exige sessão recente e a confirmação digitando o próprio e-mail, protegendo os dados financeiros contra sequestro de sessão." },
+      { type: "security", description: "Limites de tamanho em backups, exclusões em lote e importações de planilha, impedindo que envios gigantes derrubem o sistema." },
+      { type: "security", description: "Importação de CSV protege descrições contra execução de fórmulas ao abrir em Excel/Sheets e rejeita arquivos acima de 10 mil linhas." },
+      { type: "security", description: "Login pelo Google só vincula automaticamente contas com e-mail já verificado, bloqueando a tomada de conta via e-mail pendente." },
+      { type: "security", description: "Chave de sessão passa a ser obrigatória em produção e pacotes com vulnerabilidades conhecidas foram atualizados." },
+    ],
+  },
   {
     version: "0.2.24",
     date: "2026-09-06",
