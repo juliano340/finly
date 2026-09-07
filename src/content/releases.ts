@@ -24,9 +24,22 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.25"
+export const CURRENT_VERSION = "0.2.26"
 
 export const releases = [
+  {
+    version: "0.2.26",
+    date: "2026-09-07",
+    changes: [
+      { type: "feat", description: "Antecedência dos lembretes agora é configurável: em Configurações > Notificações, escolha com quantos dias de folga quer ser avisado dos vencimentos (de 1 a 30 dias; padrão 7)." },
+      { type: "feat", description: "Formulário de lançamento de transações reorganizado: valor em destaque com R$, campos agrupados em \"Detalhes\" e \"Quando\", e escolha de despesa/receita em botões coloridos (vermelho/verde)." },
+      { type: "refactor", description: "Todos os menus de seleção do aplicativo seguem agora um único padrão visual: mesma aparência, mesmos cantos e abertura consistente em faturas, custos fixos, cartões, contas, transações, transferências, dashboard, configurações e cadastro." },
+      { type: "refactor", description: "Menus de seleção com opção já escolhida mostram o nome dela em português (ex.: \"Aberta\", \"Mensal\", \"Recebimento\"), em vez de códigos internos como OPEN, MONTHLY ou INCOME." },
+      { type: "fix", description: "Menus de seleção dentro de painéis laterais (nova fatura, novo custo fixo, editar cartão) abriam vazios ou cortados; agora abrem sempre como lista suspensa normal." },
+      { type: "fix", description: "Salvar a edição de uma série de custo fixo não perde mais a categoria, o método de pagamento, o cartão ou a conta prevista." },
+      { type: "fix", description: "Nova fatura, simular pagamento, copiar faturas e importar PDF deixaram de usar o seletor nativo do navegador em favor do menu padronizado do app." },
+    ],
+  },
   {
     version: "0.2.25",
     date: "2026-09-07",

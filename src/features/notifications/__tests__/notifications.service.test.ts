@@ -128,7 +128,7 @@ describe("notifications.service", () => {
   it("respeita a antecedência configurada ao incluir lembretes", async () => {
     const created = await createFixedCost(
       userId,
-      { type: "EXPENSE" as const, name: `Config Notify ${Date.now()}`, defaultAmount: 70, categoryId, paymentMethod: "PIX", dueDay: 10, paidInsideCard: false, cardId: null, bankAccountId: null, active: true, startDate: "2026-01-01", frequency: "MONTHLY", endType: "NONE" },
+      { type: "EXPENSE" as const, name: `Config Notify ${Date.now()}`, defaultAmount: 70, categoryId, paymentMethod: "PIX", dueDay: 7, paidInsideCard: false, cardId: null, bankAccountId: null, active: true, startDate: "2026-01-01", frequency: "MONTHLY", endType: "NONE" },
       prisma
     )
     if (!created) return
@@ -139,7 +139,7 @@ describe("notifications.service", () => {
       update: {},
     })
     await prisma.fixedCostOccurrence.create({
-      data: { fixedCostId: created.id, financialMonthId: juneFM.id, month: "2026-06", dueDate: new Date("2026-06-10T12:00:00"), amount: 70, status: "PENDING", userId },
+      data: { fixedCostId: created.id, financialMonthId: juneFM.id, month: "2026-06", dueDate: new Date("2026-06-07T12:00:00"), amount: 70, status: "PENDING", userId },
     })
 
     const withDefault = await getDueSoonNotifications(userId, 7, prisma, new Date("2026-06-01T12:00:00"))

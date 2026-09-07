@@ -9,16 +9,16 @@ Todas as mudanças relevantes do Finly são registradas neste arquivo.
 - Antecedência dos lembretes agora é configurável: em Configurações > Notificações, escolha com quantos dias de folga quer ser avisado dos vencimentos (de 1 a 30 dias; padrão 7).
 - Formulário de lançamento de transações reorganizado: valor em destaque com R$, campos agrupados em "Detalhes" e "Quando", e escolha de despesa/receita em botões coloridos (vermelho/verde).
 
-### Alterado
-
-- Todos os menus de seleção do aplicativo seguem agora um único padrão visual: mesma aparência, mesmos cantos e abertura consistente em faturas, custos fixos, cartões, contas, transações, transferências, dashboard, configurações e cadastro.
-- Menus de seleção com opção já escolhida mostram o nome dela em português (ex.: "Aberta", "Mensal", "Recebimento"), em vez de códigos internos como OPEN, MONTHLY ou INCOME.
-
 ### Corrigido
 
 - Menus de seleção dentro de painéis laterais (nova fatura, novo custo fixo, editar cartão) abriam vazios ou cortados; agora abrem sempre como lista suspensa normal.
 - Salvar a edição de uma série de custo fixo não perde mais a categoria, o método de pagamento, o cartão ou a conta prevista.
 - Nova fatura, simular pagamento, copiar faturas e importar PDF deixaram de usar o seletor nativo do navegador em favor do menu padronizado do app.
+
+### Alterado
+
+- Todos os menus de seleção do aplicativo seguem agora um único padrão visual: mesma aparência, mesmos cantos e abertura consistente em faturas, custos fixos, cartões, contas, transações, transferências, dashboard, configurações e cadastro.
+- Menus de seleção com opção já escolhida mostram o nome dela em português (ex.: "Aberta", "Mensal", "Recebimento"), em vez de códigos internos como OPEN, MONTHLY ou INCOME.
 
 ## [0.2.25] - 2026-09-07
 
