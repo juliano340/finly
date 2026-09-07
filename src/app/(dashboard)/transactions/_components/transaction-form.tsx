@@ -1,7 +1,7 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { CalendarDays, CreditCard, FileText, Landmark, Tag, Wallet } from "lucide-react"
+import { CalendarDays, Tag } from "lucide-react"
 import {
   Sheet,
   SheetContent,

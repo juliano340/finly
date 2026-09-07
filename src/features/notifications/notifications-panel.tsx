@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useSession } from "next-auth/react"
@@ -49,7 +49,7 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false)
   const [daysAhead, setDaysAhead] = useState(7)
   const [notifications, setNotifications] = useState<DueNotification[]>([])
-  const [notified, setNotified] = useState(false)
+  const notified = useRef(false)
 
   // Fetch on mount + on navigation (same as original: [status, pathname])
   useEffect(() => {
@@ -72,13 +72,13 @@ export function NotificationBell() {
 
   // Toast on first load
   useEffect(() => {
-    if (notified || notifications.length === 0) return
+    if (notified.current || notifications.length === 0) return
     const overdue = notifications.filter((n) => n.status === "OVERDUE").length
     const dueToday = notifications.filter((n) => n.status === "DUE_TODAY").length
     if (overdue > 0) toast.warning(`Você tem ${overdue} ${overdue === 1 ? "conta atrasada" : "contas atrasadas"}`)
     else if (dueToday > 0) toast.info(`Você tem ${dueToday} ${dueToday === 1 ? "conta vencendo hoje" : "contas vencendo hoje"}`)
-    setNotified(true)
-  }, [notifications, notified])
+    notified.current = true
+  }, [notifications])
 
   return (
     <>
