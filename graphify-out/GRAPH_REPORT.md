@@ -1,113 +1,103 @@
 # Graph Report - finly  (2026-09-07)
 
 ## Corpus Check
-- 422 files · ~312,754 words
+- 390 files · ~314,566 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1678 nodes · 3914 edges · 107 communities (77 shown, 28 thin omitted)
+- 1684 nodes · 3940 edges · 98 communities (69 shown, 27 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 31 edges (avg confidence: 0.79)
 - Token cost: 0 input · 0 output
 
+## Graph Freshness
+- Built from commit: `ffd3f32b`
+- Run `git rev-parse HEAD` and compare to check if the graph is stale.
+- Run `graphify update .` after code changes (no API cost).
+
 ## Community Hubs (Navigation)
-- Importação CSV/PDF & Faturamento
-- Serviço de Fechamento Mensal
-- API de Contas Bancárias
-- API de Faturas de Cartão
-- Página de Custos Fixos
-- Orçamentos & Recuperação de Senha
-- Página de Fechamento Mensal
-- Página de Contas Bancárias
-- Rotas de API Compartilhadas
-- Análise de Faturas & Gráficos
-- API de Estatísticas do Dashboard
-- Tipos de Formulários & Tabelas
-- Backup & Restauração
-- Verificação de E-mail
-- Página de Cartões
-- API de Cartões
-- Tabela de Transações
-- Parsers de Extrato
-- Sistema de Changelog
-- API de Orçamentos
-- Fluxo de Redefinição de Senha
-- Pagamento de Faturas
-- Calculadora do Plano Mensal
-- API de Categorias
-- Serviço de E-mail & Verificação
-- Gráficos do Dashboard
-- Recorrência & Datas
-- API de Notificações
-- Custos Fixos: Serviço & Erros
-- Navegação de Mês & Testes
-- Seed Demo
-- Rate Limit & Perfil
-- Gráfico de Evolução da Fatura
-- Notificações no Layout
-- Custos Fixos & Navegação de Mês
-- API do Plano Mensal
-- Diálogos & Perfil de Usuário
-- Serviço de Billing
-- Serviço de Autenticação
-- Fontes Financeiras do Plano
-- Transações Recentes
-- Gráfico de Evolução Mensal
-- Gráfico de Frequência de Compras
-- Infraestrutura de Testes
-- Gráfico de Ondas de Gastos
-- Hook de Seleção de Tabela
-- Tipos pdf-parse
-- Formulários de Auth & Orçamento
-- Contratos de Props & Tipos
+- parse-inter-invoice.ts
 - Utilitários & Helpers E2E
-- Biblioteca de Componentes UI
-- Componente de Tabs
-- Rota do Plano Mensal & Testes
-- Troca de Senha API
-- Página 404
-- Layout Raiz & Next.js
-- Showcase de Marketing
-- Rate Limit de Login
-- Páginas de Faturas & Análise
-- Verificação de Schema de Produção
-- Página de Configurações
-- Script de Build Vercel
-- Wizard de Transferência
-- Auth Secret & Proxy
-- Seed do Prisma
-- Ícone do App
-- Plugin Graphify (OpenCode)
-- Migração de Produção
-- Página de Verificação de E-mail
-- Páginas Dashboard & Plano Mensal
-- { GET, POST }
-- Configuração do Pacote
+- ADRs & Pipeline de Produção
+- import.service.ts
+- categories/page.tsx
+- fixed-costs.service.ts
+- dialog.tsx
+- vitest
+- react
+- monthly-plan.types.ts
+- monthly-closing.service.ts
+- bank-accounts.service.ts
+- card-invoices.service.ts
+- fixed-costs/page.tsx
+- cn
+- package.json
+- lucide-react
+- monthly-closing/page.tsx
+- FixedCostsPageInner
+- lib/prisma.ts
+- settings/page.tsx
 - Dependências do Projeto
+- formatCurrency
 - Scripts NPM
+- dashboard.service.ts
+- transaction-row.tsx
 - Dependências de Dev
 - Configuração de Componentes
-- Configuração TypeScript
-- Testes de Auth Guard
-- Config OpenCode
-- Configuração ESLint
-- Configuração PostCSS
-- Configuração Vercel
-- Summary 01-05: Monthly Plan Page & Form
-- Limite Diário Seguro Card
-- Anti-Doubling Matrix
-- PMES-003: Committed Expenses (No Double Count)
-- America/Sao_Paulo Timezone Constraint
-- ADRs & Pipeline de Produção
+- backup.service.ts
+- next-themes
+- seed-demo.ts
+- pdf-import.service.ts
+- purchase-frequency.tsx
+- Sistema de Changelog
+- API de Orçamentos
+- monthly-plan.schema.ts
+- pdf-import.types.ts
 - Design: Auth & Marca
-- Schema Prisma & CI/CD
+- monthly-plan.calculator.ts
+- Configuração TypeScript
+- Plan 01-02: Contracts, Validation & Calculator
+- password/route.ts
 - Screenshots do App
+- resend-verification/route.ts
+- @testing-library/react
+- recurrence.ts
+- app/layout.tsx
+- API de Notificações
+- Showcase de Marketing
+- use-month-param.ts
+- me/route.ts
+- Gráfico de Evolução da Fatura
+- notifications-panel.tsx
+- buttonVariants
+- auth.ts
+- monthly-plan.service.ts
+- Verificação de Schema de Produção
+- Serviço de Billing
+- SettingsPage
+- Script de Build Vercel
+- monthly-plan.sources.ts
+- TransferWizard
+- Auth Secret & Proxy
 - Screenshots: Orçamentos & Categorias
+- transactions/page.tsx
+- Seed do Prisma
+- Ícone do App
+- Tipos pdf-parse
+- Testes de Auth Guard
 - Design: Landing
+- Config OpenCode
+- Plugin Graphify (OpenCode)
 - Ícones SVG Públicos
+- Migração de Produção
+- Página de Verificação de E-mail
+- dashboard/page.tsx
 - Component → Hook → Service → Prisma → DB
 - Feature-Based Architecture
 - Cards Page - Dark Mode Screenshot
 - Fixed Costs Page - Dark Mode Screenshot
+- Configuração ESLint
+- Configuração PostCSS
+- Configuração Vercel
 - Dual Prisma Schema Pattern
 - Multi-Tenant Isolation by userId
 - setState inside useEffect Lint Rule
@@ -115,20 +105,28 @@
 - Summary 01-02: Contracts, Validation & Calculator
 - Summary 01-03: Financial Composition & Service
 - Summary 01-04: Authenticated API
+- Summary 01-05: Monthly Plan Page & Form
+- Limite Diário Seguro Card
+- Anti-Doubling Matrix
+- PMES-003: Committed Expenses (No Double Count)
+- America/Sao_Paulo Timezone Constraint
+- { GET, POST }
 
 ## God Nodes (most connected - your core abstractions)
 1. `cn()` - 96 edges
 2. `vitest` - 64 edges
 3. `formatCurrency()` - 57 edges
-4. `react` - 54 edges
-5. `lucide-react` - 49 edges
-6. `prisma` - 44 edges
+4. `react` - 55 edges
+5. `lucide-react` - 50 edges
+6. `prisma` - 45 edges
 7. `Button()` - 41 edges
 8. `moneyToNumber()` - 37 edges
-9. `getTestClient()` - 25 edges
-10. `scripts` - 25 edges
+9. `scripts` - 25 edges
+10. `getTestClient()` - 25 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `calculateMonthlyPlan()` --calls--> `getSupportedMonthWindow (D-17 Window)`  [EXTRACTED]
+  src/features/monthly-plan/monthly-plan.calculator.ts → .planning/phases/01-plano-do-mes/01-02-SUMMARY.md
 - `Plan 01-02: Contracts, Validation & Calculator` --references--> `MonthlyPlanDto`  [EXTRACTED]
   .planning/phases/01-plano-do-mes/01-02-PLAN.md → src/features/monthly-plan/monthly-plan.types.ts
 - `Plan 01-02: Contracts, Validation & Calculator` --references--> `calculateMonthlyPlan()`  [EXTRACTED]
@@ -137,8 +135,6 @@
   .planning/REQUIREMENTS.md → src/features/monthly-plan/monthly-plan.calculator.ts
 - `Daily Safe Limit Formula` --rationale_for--> `calculateMonthlyPlan()`  [EXTRACTED]
   .planning/REQUIREMENTS.md → src/features/monthly-plan/monthly-plan.calculator.ts
-- `calculateMonthlyPlan()` --calls--> `getSupportedMonthWindow (D-17 Window)`  [EXTRACTED]
-  src/features/monthly-plan/monthly-plan.calculator.ts → .planning/phases/01-plano-do-mes/01-02-SUMMARY.md
 
 ## Import Cycles
 - None detected.
@@ -157,271 +153,111 @@
 - **Security Defense-in-Depth (Auth + Rate Limiting + Input Validation + Tenant Isolation)** — docs_adr_002__per_route_auth_concept, docs_adr_003__jwt_invalidation_concept, docs_adr_006__rate_limiting_concept, planning_phases_01_plano_do_mes_01_research__known_threat_patterns, docs_migrations__database_roles [INFERRED 0.85]
 - **Social Preview Branding Assets** — public_social_preview_html, public_social_preview_html_brand_finly, public_og_png, public_social_preview_html_tech_stack [INFERRED 0.85]
 
-## Communities (107 total, 28 thin omitted)
+## Communities (98 total, 27 thin omitted)
 
-### Community 0 - "Importação CSV/PDF & Faturamento"
-Cohesion: 0.06
-Nodes (42): ImportResult, ParsedTransaction, AutoCategoryRule, PdfImportResult, BankParser, ChartDataItem, ImportedTransactionData, ImportSessionData (+34 more)
-
-### Community 10 - "Serviço de Fechamento Mensal"
-Cohesion: 0.19
-Nodes (17): AmbiguousLegacyMovementError, CardInvoiceFixedCostSyncInput, FixedCostOccurrenceClient, MonthlyClosingSummary, POST(), POST(), GET(), aggregateTransactions() (+9 more)
-
-### Community 11 - "API de Contas Bancárias"
-Cohesion: 0.11
-Nodes (29): BankAccountAdjustmentInput, BankAccountInput, BankAccountMovementInput, BankAccountTransferInput, BenefitRechargeInput, POST(), POST(), POST() (+21 more)
-
-### Community 12 - "API de Faturas de Cartão"
-Cohesion: 0.10
-Nodes (32): CardInvoiceInput, CardInvoiceItemInput, ParsedCardInvoiceInput, ParsedCardInvoiceItemInput, InvoiceLockedError, POST(), DELETE(), POST() (+24 more)
-
-### Community 13 - "Página de Custos Fixos"
-Cohesion: 0.07
-Nodes (30): BankAccountItem, CardItem, Category, FixedCostData, FixedCostEditScope, Occurrence, OccurrenceSortField, DataTableToolbarProps (+22 more)
-
-### Community 16 - "Orçamentos & Recuperação de Senha"
-Cohesion: 0.07
-Nodes (33): Status, BudgetCardProps, DeleteDialogProps, Budget, BudgetSummary, Category, AddButtonProps, ForgotPasswordPage() (+25 more)
-
-### Community 17 - "Página de Fechamento Mensal"
-Cohesion: 0.17
-Nodes (6): BillRow, BillSortField, ClosingData, DetailItem, ExpenseDetail, billCollator
-
-### Community 18 - "Página de Contas Bancárias"
-Cohesion: 0.11
-Nodes (20): AccountSortField, BankAccount, StepperProps, StepperStep, Account, TransferWizardProps, SortDirection, BankAccountsPage() (+12 more)
-
-### Community 19 - "Rotas de API Compartilhadas"
-Cohesion: 0.10
-Nodes (13): EmailNotVerifiedError, OAuthAccountError, AppPrismaClient, POST(), unpayFixedCostOccurrenceWithCard(), batchSchema, batchSchema, googleEnabled (+5 more)
-
-### Community 22 - "Análise de Faturas & Gráficos"
-Cohesion: 0.09
-Nodes (22): CategoryData, Category, RankingItem, SortDir, SortKey, TxDetail, TxDetail, PlanContent() (+14 more)
-
-### Community 24 - "API de Estatísticas do Dashboard"
-Cohesion: 0.16
-Nodes (19): CardInvoiceEvolutionStats, DashboardStats, MonthlyEvolutionStats, GET(), GET(), GET(), ensureMonthlyEvolutionData(), formatMonthKey() (+11 more)
-
-### Community 25 - "Tipos de Formulários & Tabelas"
-Cohesion: 0.06
-Nodes (36): CategoryCardProps, CategoryTableProps, TransactionFormProps, TransactionTableProps, BankAccountOption, InvoiceOption, CategoryWithCount, TransactionInput (+28 more)
-
-### Community 28 - "Backup & Restauração"
-Cohesion: 0.16
-Nodes (14): BackupData, ImportMode, ImportResult, GET(), POST(), deleteAllUserData(), exportData(), importData() (+6 more)
-
-### Community 29 - "Verificação de E-mail"
-Cohesion: 0.23
-Nodes (10): EmailVerificationRateLimitError, EmailVerificationTokenExpiredError, EmailVerificationTokenInvalidError, POST(), createEmailVerificationToken(), hashToken(), identifierFor(), verifyEmail() (+2 more)
-
-### Community 3 - "Página de Cartões"
-Cohesion: 0.33
-Nodes (9): BankAccountItem, CardItem, CardsTab, CardsPage(), changeTab(), isCardsTab(), resolveCardsTab(), withCardsTab() (+1 more)
-
-### Community 30 - "API de Cartões"
-Cohesion: 0.20
-Nodes (14): CardInput, DELETE(), PUT(), GET(), POST(), createCard(), deleteCard(), dueDateWithDay() (+6 more)
-
-### Community 31 - "Tabela de Transações"
-Cohesion: 0.14
-Nodes (14): TransactionRowProps, CategoryCellProps, CategoryOption, DropdownMenu(), DropdownMenuCheckboxItem(), DropdownMenuContent(), DropdownMenuItem(), DropdownMenuRadioItem() (+6 more)
-
-### Community 32 - "Parsers de Extrato"
+### Community 0 - "parse-inter-invoice.ts"
 Cohesion: 0.15
-Nodes (11): BankParser, ParsedInvoice, ParsedTransaction, parseCurrency(), parsePortugueseDate(), extractTotal(), findValueAfter(), tryParseTransaction() (+3 more)
-
-### Community 33 - "Sistema de Changelog"
-Cohesion: 0.20
-Nodes (17): ReleaseGroup, ChangeType, Release, ReleaseChange, pinAutoDates(), renderChangelog(), ChangelogPage(), formatReleaseDate() (+9 more)
-
-### Community 34 - "API de Orçamentos"
-Cohesion: 0.20
-Nodes (14): BudgetInput, BudgetSummary, BudgetWithCategory, DELETE(), PUT(), GET(), POST(), createBudget() (+6 more)
-
-### Community 35 - "Fluxo de Redefinição de Senha"
-Cohesion: 0.14
-Nodes (17): ForgotPasswordInput, ResetPasswordInput, RateLimitError, TokenExpiredError, TokenInvalidError, UserNotFoundError, POST(), createPasswordResetToken() (+9 more)
-
-### Community 37 - "Pagamento de Faturas"
-Cohesion: 0.19
-Nodes (14): InvoiceCalculationInput, MoneyValue, GET(), POST(), getBankAccountBalance(), getBankAccountsTotal(), validateExpenseLimit(), calculateInvoiceTotals() (+6 more)
-
-### Community 39 - "Calculadora do Plano Mensal"
-Cohesion: 0.16
-Nodes (19): MonthlyPlanCalculationInput, MonthlyPlanStatusInfo, calculateMonthlyPlan(), calendarDaysInMonth(), getDaysRemaining(), getStatus(), monthStart(), nextMonthStart() (+11 more)
-
-### Community 4 - "API de Categorias"
-Cohesion: 0.21
-Nodes (13): CategoryFormProps, CategoryInput, DELETE(), PUT(), GET(), POST(), createCategory(), deleteCategory() (+5 more)
-
-### Community 44 - "Serviço de E-mail & Verificação"
-Cohesion: 0.15
-Nodes (18): SendEmailInput, EmailVerificationEmailInput, PasswordResetEmailInput, POST(), POST(), POST(), getTransporter(), sendEmail() (+10 more)
-
-### Community 46 - "Gráficos do Dashboard"
-Cohesion: 0.12
-Nodes (11): DailyTrendChartProps, ExpenseByCategoryChartProps, IncomeVsExpenseChartProps, Category, ChartMode, TxDetail, DailyTrendChart(), ExpenseByCategoryChart() (+3 more)
-
-### Community 47 - "Recorrência & Datas"
-Cohesion: 0.23
-Nodes (10): EndType, Frequency, IntervalUnit, RecurrenceConfig, addInterval(), computeRecurrenceDates(), fixCostOccurrenceDueDate(), monthKey() (+2 more)
-
-### Community 49 - "API de Notificações"
-Cohesion: 0.27
-Nodes (12): DueNotification, GET(), addDays(), deduplicateMonthlyOccurrences(), endOfDay(), fixedCostDueDate(), getDueSoonNotifications(), hasAtMostOneOccurrencePerMonth() (+4 more)
-
-### Community 5 - "Custos Fixos: Serviço & Erros"
-Cohesion: 0.07
-Nodes (45): ProtectedFixedCostOccurrenceError, StaleFixedCostOccurrenceError, FixedCostInput, FixedCostOccurrenceAmountUpdateInput, DuplicateFixedCostNameError, ProtectedFixedCostOccurrenceError, StaleFixedCostOccurrenceError, dateInMonth() (+37 more)
-
-### Community 51 - "Navegação de Mês & Testes"
-Cohesion: 0.19
-Nodes (12): UseMonthParamOptions, DashboardPage(), isValidMonth(), isWithinRange(), resolvePersistentMonth(), useMonthParam(), auth, navigation (+4 more)
-
-### Community 52 - "Seed Demo"
-Cohesion: 0.25
-Nodes (11): FixedCostExpenseLimitError, POST(), currentMonth(), POST(), currentMonth(), POST(), GET(), ensureFinancialMonth() (+3 more)
-
-### Community 53 - "Rate Limit & Perfil"
-Cohesion: 0.15
-Nodes (9): IpRateLimitOptions, DELETE(), consumeIpRateLimit(), clientAddress(), DELETE_ACCOUNT_RATE_LIMIT, deleteAccountOAuthSchema, deleteAccountSchema, updateProfileSchema (+1 more)
-
-### Community 54 - "Gráfico de Evolução da Fatura"
-Cohesion: 0.23
-Nodes (10): CardInvoiceEvolutionChartProps, CardTooltipProps, ChartItem, TooltipPayloadItem, CardInvoiceEvolutionCard, CardInvoiceEvolutionMonth, CardInvoiceEvolutionChart(), CardTooltip() (+2 more)
-
-### Community 55 - "Notificações no Layout"
-Cohesion: 0.21
-Nodes (11): DueNotification, RawDueNotification, DueNotificationStatus, DashboardLayoutContent(), notificationLabel(), DropdownMenuLabel(), Separator(), computeDaysUntilDue() (+3 more)
-
-### Community 56 - "Custos Fixos & Navegação de Mês"
-Cohesion: 0.19
-Nodes (12): MonthNavigatorProps, dueDayIso(), FixedCostsPageInner(), formatCalendarDate(), formatDueDate(), MonthlyClosingPageContent(), changeMonth(), formatMonth() (+4 more)
-
-### Community 59 - "API do Plano Mensal"
-Cohesion: 0.28
-Nodes (9): MonthlyPlanMonthError, GET(), json(), getMonthlyPlan(), updateMonthlyPlan(), validateRequestedMonth(), dynamic, AS_OF (+1 more)
-
-### Community 6 - "Diálogos & Perfil de Usuário"
-Cohesion: 0.10
-Nodes (20): DeleteDialogProps, MeResponse, DeleteDialogProps, ConfirmDialogProps, CardOption, ImportPdfDialogProps, RegisterPage(), DeleteAccountButton() (+12 more)
-
-### Community 61 - "Serviço de Billing"
-Cohesion: 0.39
-Nodes (6): Plan, UserPlan, GET(), canPerformAction(), getUserPlan(), PLANS
-
-### Community 63 - "Serviço de Autenticação"
-Cohesion: 0.18
-Nodes (10): GoogleUserInput, RegisterInput, findOrCreateGoogleUser(), changePasswordSchema, initialPasswordSchema, registerSchema, testPrisma, prisma (+2 more)
-
-### Community 65 - "Fontes Financeiras do Plano"
-Cohesion: 0.36
-Nodes (7): MonthlyFinancialSources, SourceInvoice, SourceOccurrence, composeMonthlyFinancialSources(), getMonthlyTransactionWindow(), loadMonthlyFinancialSources(), sumDecimals()
-
-### Community 67 - "Transações Recentes"
-Cohesion: 0.38
-Nodes (5): RecentTransactionsProps, RecentTransactions(), Badge(), badgeVariants, class-variance-authority
-
-### Community 68 - "Gráfico de Evolução Mensal"
-Cohesion: 0.33
-Nodes (5): MonthlyEvolutionChartProps, MonthlyEvolutionItem, MonthlyEvolutionChart(), metricColors, metricLabels
-
-### Community 69 - "Gráfico de Frequência de Compras"
-Cohesion: 0.33
-Nodes (5): Category, ChartMode, RankingItem, CustomTooltip(), PurchaseFrequency()
-
-### Community 7 - "Infraestrutura de Testes"
-Cohesion: 0.16
-Nodes (14): AppPrismaClient, registerUser(), disconnectTestClient(), getTestClient(), teardown(), prisma, testPrisma, prisma (+6 more)
-
-### Community 71 - "Gráfico de Ondas de Gastos"
-Cohesion: 0.33
-Nodes (5): Category, ChartMode, TxDetail, CustomTooltip(), SpendingWaves()
-
-### Community 73 - "Hook de Seleção de Tabela"
-Cohesion: 0.60
-Nodes (4): UseTableSelectionOptions, readStoredSelection(), useTableSelection(), writeStoredSelection()
-
-### Community 76 - "Tipos pdf-parse"
-Cohesion: 0.50
-Nodes (3): PDFData, PDFOptions, pdf-parse
-
-### Community 8 - "Formulários de Auth & Orçamento"
-Cohesion: 0.12
-Nodes (26): BudgetFormProps, Category, Category, BankAccountOption, InvoiceOption, getInitialEmail(), getInitialRemember(), LoginPage() (+18 more)
-
-### Community 9 - "Contratos de Props & Tipos"
-Cohesion: 0.07
-Nodes (35): DailySafeLimitCardProps, EvolutionMetric, Category, AnalysisData, CategoryInfo, RankingItem, TransactionItem, MonthlyPlanFormProps (+27 more)
+Nodes (11): parseCurrency(), months, parsePortugueseDate(), parsers, extractTotal(), findValueAfter(), interParser, tryParseTransaction() (+3 more)
 
 ### Community 1 - "Utilitários & Helpers E2E"
 Cohesion: 0.06
-Nodes (18): authenticatedPage(), login(), register(), registerApi(), markEmailVerified(), toPrismaDateTime(), login(), main() (+10 more)
+Nodes (18): accounts, authenticatedPage(), basePlan, login(), register(), registerApi(), markEmailVerified(), toPrismaDateTime() (+10 more)
 
-### Community 14 - "Biblioteca de Componentes UI"
-Cohesion: 0.10
-Nodes (29): Avatar(), AvatarBadge(), AvatarFallback(), AvatarGroup(), AvatarGroupCount(), AvatarImage(), CardAction(), CardDescription() (+21 more)
+### Community 2 - "ADRs & Pipeline de Produção"
+Cohesion: 0.05
+Nodes (50): AGENTS.md — Next.js Agent Rules, Finly Changelog, CLAUDE.md — Project Canonical Documentation, Dual Schema Concept, ADR-001: Dual Prisma Schema, Per-Route Auth Pattern (No Middleware), ADR-002: Per-Route Auth Guards, JWT Invalidation via passwordChangedAt (+42 more)
 
-### Community 20 - "Componente de Tabs"
-Cohesion: 0.40
-Nodes (5): Tabs(), TabsContent(), TabsList(), TabsTrigger(), tabsListVariants
+### Community 3 - "import.service.ts"
+Cohesion: 0.21
+Nodes (11): POST(), ImportResult, MAX_CSV_LINES, parseAmount(), parseCSV(), parseDate(), ParsedTransaction, sanitizeCell() (+3 more)
 
-### Community 36 - "Rota do Plano Mensal & Testes"
-Cohesion: 0.33
-Nodes (9): GET(), hasAllowedOrigin(), json(), PUT(), isMonthWithinSupportedWindow(), dynamic, mocks, projection (+1 more)
+### Community 4 - "categories/page.tsx"
+Cohesion: 0.09
+Nodes (26): DELETE(), PUT(), GET(), POST(), CategoryCard(), CategoryCardProps, iconMap, CategoryForm() (+18 more)
 
-### Community 42 - "Troca de Senha API"
-Cohesion: 0.27
-Nodes (7): POST(), changePassword(), setInitialPassword(), CHANGE_PASSWORD_RATE_LIMIT, body, mocks, session
+### Community 5 - "fixed-costs.service.ts"
+Cohesion: 0.09
+Nodes (34): Debug: Fixed Cost Edit Scope, DELETE(), PATCH(), PUT(), mocks, payload, ProtectedFixedCostOccurrenceError, seriesPayload (+26 more)
 
-### Community 48 - "Layout Raiz & Next.js"
-Cohesion: 0.20
-Nodes (7): nextConfig, securityHeaders, version, geistMono, geistSans, metadata, next
-
-### Community 50 - "Showcase de Marketing"
-Cohesion: 0.15
-Nodes (11): ShowcaseMockup(), accountCards, categories, evolution, invoices, navItems, summaryCards, transactions (+3 more)
-
-### Community 57 - "Rate Limit de Login"
-Cohesion: 0.36
-Nodes (7): clearLoginFailures(), digest(), isLoginBlocked(), loginRateLimitKeys(), recordLoginFailure(), request, testPrisma
-
-### Community 58 - "Páginas de Faturas & Análise"
-Cohesion: 0.15
-Nodes (10): AnalysisPage(), findCategory(), BillsList(), CardRows(), statusRank(), InvoicesTab(), fetchData(), monthLabel() (+2 more)
-
-### Community 60 - "Verificação de Schema de Produção"
-Cohesion: 0.25
-Nodes (5): assert(), verifyProductionSchema(), dmlPrivileges, runtimeRoles, pg
-
-### Community 64 - "Script de Build Vercel"
-Cohesion: 0.38
-Nodes (4): runCommand(), runVercelBuild(), mockedSpawnSync, successfulRun
-
-### Community 66 - "Wizard de Transferência"
-Cohesion: 0.38
-Nodes (4): TransferWizard(), handleOpenChange(), handleSubmit(), resetForm()
-
-### Community 70 - "Auth Secret & Proxy"
-Cohesion: 0.28
-Nodes (4): importAuthSecret(), AUTH_SECRET, config, MUTATING_METHODS
-
-### Community 85 - "Páginas Dashboard & Plano Mensal"
+### Community 6 - "dialog.tsx"
 Cohesion: 0.16
-Nodes (13): DashboardPageContent(), formatChangePercent(), getCardInvoiceSummary(), getMetricSummary(), MonthlyPlanPageContent(), businessDateParts(), getBusinessMonthKey(), getSupportedMonthWindow() (+5 more)
+Nodes (16): DeleteDialog(), DeleteDialogProps, DeleteDialogProps, DeleteDialogProps, ConfirmDialog(), ConfirmDialogProps, Dialog(), DialogContent() (+8 more)
 
-### Community 15 - "Configuração do Pacote"
+### Community 7 - "vitest"
+Cohesion: 0.10
+Nodes (24): bcryptjs, vitest, changePasswordSchema, findOrCreateGoogleUser(), GoogleUserInput, initialPasswordSchema, RegisterInput, registerSchema (+16 more)
+
+### Community 8 - "react"
+Cohesion: 0.13
+Nodes (27): react, sonner, ForgotPasswordPage(), getInitialEmail(), getInitialRemember(), LoginPage(), ResetPasswordForm(), Status (+19 more)
+
+### Community 9 - "monthly-plan.types.ts"
+Cohesion: 0.18
+Nodes (12): DailySafeLimitCard(), DailySafeLimitCardProps, PlanContent(), statusPresentation, plan, MonthlyPlanSummaryProps, basePlan, MonthlyPlanDto (+4 more)
+
+### Community 10 - "monthly-closing.service.ts"
+Cohesion: 0.16
+Nodes (23): POST(), POST(), GET(), validateExpenseLimit(), calculateInvoiceTotals(), InvoiceCalculationInput, aggregateTransactions(), buildInvoiceEstimates() (+15 more)
+
+### Community 11 - "bank-accounts.service.ts"
+Cohesion: 0.11
+Nodes (28): POST(), POST(), POST(), DELETE(), PUT(), GET(), POST(), POST() (+20 more)
+
+### Community 12 - "card-invoices.service.ts"
 Cohesion: 0.06
-Nodes (29): name, private, @auth/prisma-adapter, @base-ui/react, clsx, dotenv, eslint, eslint-config-next (+21 more)
+Nodes (50): POST(), DELETE(), POST(), DELETE(), PUT(), GET(), GET(), POST() (+42 more)
+
+### Community 13 - "fixed-costs/page.tsx"
+Cohesion: 0.06
+Nodes (39): Debug: Account Adjust Loading Hidden, AccountSortField, BankAccount, BankAccountItem, CardItem, BankAccountItem, CardItem, Category (+31 more)
+
+### Community 14 - "cn"
+Cohesion: 0.06
+Nodes (43): navItems, Avatar(), AvatarBadge(), AvatarFallback(), AvatarGroup(), AvatarGroupCount(), AvatarImage(), CardAction() (+35 more)
+
+### Community 15 - "package.json"
+Cohesion: 0.06
+Nodes (31): name, private, @auth/prisma-adapter, @base-ui/react, clsx, dotenv, eslint, eslint-config-next (+23 more)
+
+### Community 16 - "lucide-react"
+Cohesion: 0.11
+Nodes (27): lucide-react, BudgetCard(), BudgetCardProps, BudgetForm(), Budget, BudgetsPage(), BudgetSummary, Category (+19 more)
+
+### Community 17 - "monthly-closing/page.tsx"
+Cohesion: 0.11
+Nodes (13): billCollator, BillRow, BillsList(), BillSortField, BreakdownRows(), ClosingData, DetailItem, ExpenseComposition() (+5 more)
+
+### Community 18 - "FixedCostsPageInner"
+Cohesion: 0.16
+Nodes (14): dueDayIso(), FixedCostsPageInner(), formatCalendarDate(), formatDueDate(), MonthlyClosingPageContent(), changeMonth(), formatMonth(), formatMonthDistance() (+6 more)
+
+### Community 19 - "lib/prisma.ts"
+Cohesion: 0.10
+Nodes (12): zod, batchSchema, POST(), POST(), batchSchema, POST(), AmbiguousLegacyMovementError, unpayFixedCostOccurrence() (+4 more)
+
+### Community 20 - "settings/page.tsx"
+Cohesion: 0.10
+Nodes (17): class-variance-authority, RegisterPage(), DeleteAccountButton(), MeResponse, NOTIFICATION_DAYS_OPTIONS, SignOutButton(), Stepper(), StepperProps (+9 more)
 
 ### Community 21 - "Dependências do Projeto"
 Cohesion: 0.07
 Nodes (28): dependencies, @auth/prisma-adapter, @base-ui/react, bcryptjs, better-sqlite3, class-variance-authority, clsx, date-fns (+20 more)
 
+### Community 22 - "formatCurrency"
+Cohesion: 0.07
+Nodes (25): CategoryChart(), CategoryData, CustomTooltip(), Category, ChartMode, CustomTooltip(), TxDetail, Category (+17 more)
+
 ### Community 23 - "Scripts NPM"
 Cohesion: 0.08
 Nodes (25): scripts, build, changelog:generate, db:migrate:deploy, db:migrate:prod, db:push:sqlite, dev, lint (+17 more)
+
+### Community 24 - "dashboard.service.ts"
+Cohesion: 0.14
+Nodes (24): GET(), GET(), GET(), GET(), dynamic, GET(), json(), getBankAccountsTotal() (+16 more)
+
+### Community 25 - "transaction-row.tsx"
+Cohesion: 0.19
+Nodes (12): AnalysisPage(), findCategory(), CardRows(), mockTx, TransactionRow(), TransactionRowProps, TransactionTable(), TransactionTableProps (+4 more)
 
 ### Community 26 - "Dependências de Dev"
 Cohesion: 0.09
@@ -431,61 +267,189 @@ Nodes (23): devDependencies, dotenv, eslint, eslint-config-next, jsdom, @playwri
 Cohesion: 0.09
 Nodes (21): aliases, components, hooks, lib, ui, utils, iconLibrary, menuAccent (+13 more)
 
+### Community 28 - "backup.service.ts"
+Cohesion: 0.16
+Nodes (14): Debug: Backup Import Duplicates, GET(), POST(), BackupData, backupSchema, ImportMode, isoDate, deleteAllUserData() (+6 more)
+
+### Community 29 - "next-themes"
+Cohesion: 0.38
+Nodes (3): next-themes, footerColumns, Toaster()
+
+### Community 30 - "seed-demo.ts"
+Cohesion: 0.12
+Nodes (25): ACCOUNTS, BUDGETS, CARDS, CATEGORIES, dateInMonth(), daysInMonth(), FIXED_COSTS, getMonthsToSeed() (+17 more)
+
+### Community 31 - "pdf-import.service.ts"
+Cohesion: 0.11
+Nodes (24): pdf-parse, GET(), POST(), POST(), PATCH(), POST(), autoCategorizeTransactions(), AutoCategoryRule (+16 more)
+
+### Community 32 - "purchase-frequency.tsx"
+Cohesion: 0.33
+Nodes (5): Category, ChartMode, CustomTooltip(), PurchaseFrequency(), RankingItem
+
+### Community 33 - "Sistema de Changelog"
+Cohesion: 0.20
+Nodes (17): pinAutoDates(), renderChangelog(), sections, ChangelogPage(), flatItems, formatReleaseDate(), getReleaseGroups(), ReleaseGroup (+9 more)
+
+### Community 34 - "API de Orçamentos"
+Cohesion: 0.20
+Nodes (14): DELETE(), PUT(), GET(), POST(), BudgetInput, budgetSchema, createBudget(), deleteBudget() (+6 more)
+
+### Community 36 - "monthly-plan.schema.ts"
+Cohesion: 0.17
+Nodes (18): dynamic, GET(), hasAllowedOrigin(), json(), PUT(), mocks, projection, updateRequestSchema (+10 more)
+
+### Community 37 - "pdf-import.types.ts"
+Cohesion: 0.20
+Nodes (7): BankParser, ChartDataItem, ImportedTransactionData, ImportSessionData, ParsedInvoice, ParsedTransaction, RankingItem
+
+### Community 38 - "Design: Auth & Marca"
+Cohesion: 0.12
+Nodes (19): Login Page (FinançasPro), Email/Password Auth + Social Login (Google, Apple), FinançasPro Brand Identity, Design System CSS Variables (Light Theme), Registration Page (FinançasPro), Multi-Step Registration Wizard (3 steps), User Objective Selection (save/invest/control/debt/plan), Password Strength Meter (weak/medium/strong) (+11 more)
+
+### Community 39 - "monthly-plan.calculator.ts"
+Cohesion: 0.21
+Nodes (16): Adaptive Daily Limit Redistribution, Daily Safe Limit Formula, calculateMonthlyPlan(), calendarDaysInMonth(), getDaysRemaining(), getStatus(), MonthlyPlanCalculationInput, monthStart() (+8 more)
+
 ### Community 40 - "Configuração TypeScript"
 Cohesion: 0.11
 Nodes (18): compilerOptions, allowJs, esModuleInterop, incremental, isolatedModules, jsx, lib, module (+10 more)
 
-### Community 77 - "Testes de Auth Guard"
-Cohesion: 0.50
-Nodes (3): HTTP_METHODS, protectedRoutes, routeModules
+### Community 41 - "Plan 01-02: Contracts, Validation & Calculator"
+Cohesion: 0.17
+Nodes (19): Dependabot Configuration, CI Workflow, Security Workflow, Plan 01-01: MonthlyPlan Entity & Schema, Plan 01-02: Contracts, Validation & Calculator, Plan 01-03: Financial Composition & Service, Plan 01-04: Authenticated API, Plan 01-05: Monthly Plan Page & Form (+11 more)
 
-### Community 2 - "ADRs & Pipeline de Produção"
-Cohesion: 0.05
-Nodes (50): MonthlyPlan Migration (20260809180000_add_monthly_plan), PostgreSQL Ephemeral Smoke Test, E2E Monthly Plan Test Suite, Production Schema Smoke Test (verify-production-schema.mjs), Vercel Build Pipeline (vercel-build.mjs), Dual Schema Concept, Per-Route Auth Pattern (No Middleware), JWT Invalidation via passwordChangedAt (+42 more)
-
-### Community 38 - "Design: Auth & Marca"
-Cohesion: 0.12
-Nodes (19): Login Page (FinançasPro), Registration Page (FinançasPro), Social Preview / OG Image Mockup Page, Email/Password Auth + Social Login (Google, Apple), FinançasPro Brand Identity, Design System CSS Variables (Light Theme), Multi-Step Registration Wizard (3 steps), User Objective Selection (save/invest/control/debt/plan) (+11 more)
-
-### Community 41 - "Schema Prisma & CI/CD"
-Cohesion: 0.18
-Nodes (18): Migration: Add MonthlyPlan Table, Prisma Schema (PostgreSQL), Prisma Schema (SQLite), daily-safe-limit-card.tsx (Dashboard Card), monthly-plan-form.tsx (Override/Goal/Margin Edit), monthly-plan-summary.tsx (Projection Explanation), PMES-001: Monthly Plan per Month, Dependabot Configuration (+10 more)
+### Community 42 - "password/route.ts"
+Cohesion: 0.27
+Nodes (7): CHANGE_PASSWORD_RATE_LIMIT, POST(), body, mocks, session, changePassword(), setInitialPassword()
 
 ### Community 43 - "Screenshots do App"
 Cohesion: 0.17
-Nodes (17): Dark Theme, Landing Page, Light Theme, Login Page, Monthly Closing Page, Notifications Page, Transactions Page, Landing Page - Dark Theme Screenshot (+9 more)
+Nodes (17): Landing Page - Dark Theme Screenshot, Landing Page - Light Theme Screenshot, Login Page - Dark Theme Screenshot, Login Page - Light Theme Screenshot, Monthly Closing Page - Dark Theme Screenshot, Monthly Closing Page - Light Theme Screenshot, Notifications Page - Dark Theme Screenshot, Notifications Page - Light Theme Screenshot (+9 more)
+
+### Community 44 - "resend-verification/route.ts"
+Cohesion: 0.06
+Nodes (49): nodemailer, FORGOT_RATE_LIMIT, POST(), POST(), REGISTER_RATE_LIMIT, registerSchema, POST(), RESEND_RATE_LIMIT (+41 more)
+
+### Community 45 - "@testing-library/react"
+Cohesion: 0.10
+Nodes (11): @testing-library/react, @testing-library/user-event, FixedCostsPage(), navigation, MonthlyPlanForm(), plan, MonthlyPlanPage(), navigation (+3 more)
+
+### Community 47 - "recurrence.ts"
+Cohesion: 0.23
+Nodes (10): date-fns, addInterval(), computeRecurrenceDates(), EndType, fixCostOccurrenceDueDate(), Frequency, IntervalUnit, monthKey() (+2 more)
+
+### Community 48 - "app/layout.tsx"
+Cohesion: 0.18
+Nodes (8): nextConfig, securityHeaders, version, next, geistMono, geistSans, metadata, Providers()
+
+### Community 49 - "API de Notificações"
+Cohesion: 0.27
+Nodes (12): GET(), addDays(), deduplicateMonthlyOccurrences(), DueNotification, endOfDay(), fixedCostDueDate(), getDueSoonNotifications(), hasAtMostOneOccurrencePerMonth() (+4 more)
+
+### Community 50 - "Showcase de Marketing"
+Cohesion: 0.15
+Nodes (11): accountCards, categories, evolution, invoices, navItems, ShowcaseMockup(), summaryCards, transactions (+3 more)
+
+### Community 51 - "use-month-param.ts"
+Cohesion: 0.15
+Nodes (13): Debug: Fixed Expenses Month Race, Debug: Dashboard Restored Month Race (Resolved), DashboardPage(), auth, navigation, MonthlyPlanPageContent(), navigation, isValidMonth() (+5 more)
+
+### Community 53 - "me/route.ts"
+Cohesion: 0.25
+Nodes (5): DELETE(), DELETE_ACCOUNT_RATE_LIMIT, deleteAccountOAuthSchema, deleteAccountSchema, updateProfileSchema
+
+### Community 54 - "Gráfico de Evolução da Fatura"
+Cohesion: 0.23
+Nodes (10): CardInvoiceEvolutionChart(), CardInvoiceEvolutionChartProps, CardTooltip(), CardTooltipProps, ChartItem, formatTooltipCurrency(), TooltipPayloadItem, tooltipValue() (+2 more)
+
+### Community 55 - "notifications-panel.tsx"
+Cohesion: 0.26
+Nodes (11): SheetDescription(), DueNotification, fetchNotifications(), NotificationBell(), notificationLabel(), NotificationsSheet(), RawDueNotification, computeDaysUntilDue() (+3 more)
+
+### Community 56 - "buttonVariants"
+Cohesion: 0.38
+Nodes (5): StatusIconTooltip(), PrivacidadePage(), TermosDeUsoPage(), buttonVariants, InvoiceActionIcon()
+
+### Community 57 - "auth.ts"
+Cohesion: 0.18
+Nodes (13): GET(), clearLoginFailures(), digest(), isLoginBlocked(), loginRateLimitKeys(), recordLoginFailure(), request, testPrisma (+5 more)
+
+### Community 59 - "monthly-plan.service.ts"
+Cohesion: 0.19
+Nodes (14): currentMonth(), POST(), currentMonth(), POST(), GET(), ensureFinancialMonth(), testPrisma, ensureFixedCostOccurrences() (+6 more)
+
+### Community 60 - "Verificação de Schema de Produção"
+Cohesion: 0.25
+Nodes (5): pg, assert(), dmlPrivileges, runtimeRoles, verifyProductionSchema()
+
+### Community 61 - "Serviço de Billing"
+Cohesion: 0.39
+Nodes (6): GET(), canPerformAction(), getUserPlan(), Plan, PLANS, UserPlan
+
+### Community 64 - "Script de Build Vercel"
+Cohesion: 0.38
+Nodes (4): runCommand(), runVercelBuild(), mockedSpawnSync, successfulRun
+
+### Community 65 - "monthly-plan.sources.ts"
+Cohesion: 0.25
+Nodes (7): @date-fns/tz, getMonthlyTransactionWindow(), MonthlyFinancialSources, SourceInvoice, SourceOccurrence, sumDecimals(), BUSINESS_TIME_ZONE
+
+### Community 66 - "TransferWizard"
+Cohesion: 0.10
+Nodes (21): BankAccountsPage(), businessDaysInCurrentMonth(), estimatedBenefitCredit(), formatMovementDescription(), CardsPage(), changeTab(), TransferWizard(), handleOpenChange() (+13 more)
+
+### Community 70 - "Auth Secret & Proxy"
+Cohesion: 0.28
+Nodes (4): AUTH_SECRET, importAuthSecret(), config, MUTATING_METHODS
 
 ### Community 72 - "Screenshots: Orçamentos & Categorias"
 Cohesion: 0.50
 Nodes (4): Budgets Page - Dark Mode Screenshot, Budgets Page - Light Mode Screenshot, Categories Page - Dark Mode Screenshot, Categories Page - Light Mode Screenshot
 
+### Community 73 - "transactions/page.tsx"
+Cohesion: 0.12
+Nodes (12): DeleteDialog(), formatMonth(), TransactionForm(), BankAccountOption, InvoiceOption, TransactionsPage(), readStoredSelection(), useTableSelection() (+4 more)
+
+### Community 76 - "Tipos pdf-parse"
+Cohesion: 0.50
+Nodes (3): pdf-parse, PDFData, PDFOptions
+
+### Community 77 - "Testes de Auth Guard"
+Cohesion: 0.50
+Nodes (3): HTTP_METHODS, protectedRoutes, routeModules
+
 ### Community 78 - "Design: Landing"
 Cohesion: 0.67
-Nodes (3): Dark/Light Theme Toggle System, Light Theme Landing Page, Cinema Dark Theme Landing Page
+Nodes (3): Light Theme Landing Page, Dark/Light Theme Toggle System, Cinema Dark Theme Landing Page
 
 ### Community 81 - "Ícones SVG Públicos"
 Cohesion: 0.67
 Nodes (3): File Icon SVG, Globe Icon SVG, Window Icon SVG
 
+### Community 85 - "dashboard/page.tsx"
+Cohesion: 0.09
+Nodes (24): recharts, DailyTrendChart(), DailyTrendChartProps, ExpenseByCategoryChart(), ExpenseByCategoryChartProps, IncomeVsExpenseChart(), IncomeVsExpenseChartProps, metricColors (+16 more)
+
 ## Knowledge Gaps
-- **469 isolated node(s):** `ImportResult`, `ParsedTransaction`, `AutoCategoryRule`, `PdfImportResult`, `ChartDataItem` (+464 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 636 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **28 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **470 isolated node(s):** `name`, `private`, `dev`, `build`, `changelog:generate` (+465 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 638 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **27 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `vitest` connect `Infraestrutura de Testes` to `Importação CSV/PDF & Faturamento`, `Página de Cartões`, `API de Categorias`, `Custos Fixos: Serviço & Erros`, `Diálogos & Perfil de Usuário`, `Contratos de Props & Tipos`, `Serviço de Fechamento Mensal`, `API de Contas Bancárias`, `API de Faturas de Cartão`, `Página de Custos Fixos`, `Configuração do Pacote`, `Orçamentos & Recuperação de Senha`, `Página de Contas Bancárias`, `Tipos de Formulários & Tabelas`, `Backup & Restauração`, `Verificação de E-mail`, `API de Cartões`, `Sistema de Changelog`, `API de Orçamentos`, `Fluxo de Redefinição de Senha`, `Rota do Plano Mensal & Testes`, `Pagamento de Faturas`, `Calculadora do Plano Mensal`, `Troca de Senha API`, `Página 404`, `Recorrência & Datas`, `Navegação de Mês & Testes`, `Rate Limit & Perfil`, `Notificações no Layout`, `Rate Limit de Login`, `Páginas de Faturas & Análise`, `API do Plano Mensal`, `Verificação de Schema de Produção`, `Serviço de Billing`, `Serviço de Autenticação`, `Script de Build Vercel`, `Auth Secret & Proxy`, `Testes de Auth Guard`, `Páginas Dashboard & Plano Mensal`?**
-  _High betweenness centrality (0.150) - this node is a cross-community bridge._
-- **Why does `react` connect `Formulários de Auth & Orçamento` to `Página de Cartões`, `Diálogos & Perfil de Usuário`, `Contratos de Props & Tipos`, `Página de Custos Fixos`, `Biblioteca de Componentes UI`, `Configuração do Pacote`, `Orçamentos & Recuperação de Senha`, `Página de Fechamento Mensal`, `Página de Contas Bancárias`, `Análise de Faturas & Gráficos`, `Tipos de Formulários & Tabelas`, `Tabela de Transações`, `Sistema de Changelog`, `Gráficos do Dashboard`, `Showcase de Marketing`, `Navegação de Mês & Testes`, `Notificações no Layout`, `Páginas de Faturas & Análise`, `Gráfico de Frequência de Compras`, `Gráfico de Ondas de Gastos`, `Hook de Seleção de Tabela`?**
-  _High betweenness centrality (0.090) - this node is a cross-community bridge._
-- **Why does `lucide-react` connect `Orçamentos & Recuperação de Senha` to `Sistema de Changelog`, `Página de Cartões`, `Transações Recentes`, `Diálogos & Perfil de Usuário`, `Formulários de Auth & Orçamento`, `Contratos de Props & Tipos`, `Página de Custos Fixos`, `Página 404`, `Configuração do Pacote`, `Página de Fechamento Mensal`, `Página de Contas Bancárias`, `Notificações no Layout`, `Custos Fixos & Navegação de Mês`, `Tipos de Formulários & Tabelas`, `Tabela de Transações`?**
-  _High betweenness centrality (0.065) - this node is a cross-community bridge._
-- **What connects `ImportResult`, `ParsedTransaction`, `AutoCategoryRule` to the rest of the system?**
-  _469 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `Importação CSV/PDF & Faturamento` be split into smaller, more focused modules?**
-  _Cohesion score 0.05649717514124294 - nodes in this community are weakly interconnected._
-- **Should `API de Contas Bancárias` be split into smaller, more focused modules?**
-  _Cohesion score 0.10661268556005399 - nodes in this community are weakly interconnected._
-- **Should `API de Faturas de Cartão` be split into smaller, more focused modules?**
-  _Cohesion score 0.09745293466223699 - nodes in this community are weakly interconnected._
+- **Why does `vitest` connect `vitest` to `import.service.ts`, `categories/page.tsx`, `fixed-costs.service.ts`, `monthly-plan.types.ts`, `monthly-closing.service.ts`, `bank-accounts.service.ts`, `card-invoices.service.ts`, `package.json`, `settings/page.tsx`, `dashboard.service.ts`, `transaction-row.tsx`, `backup.service.ts`, `seed-demo.ts`, `pdf-import.service.ts`, `Sistema de Changelog`, `API de Orçamentos`, `monthly-plan.schema.ts`, `monthly-plan.calculator.ts`, `password/route.ts`, `resend-verification/route.ts`, `@testing-library/react`, `recurrence.ts`, `use-month-param.ts`, `notifications-panel.tsx`, `auth.ts`, `monthly-plan.service.ts`, `Verificação de Schema de Produção`, `Serviço de Billing`, `Script de Build Vercel`, `TransferWizard`, `Auth Secret & Proxy`, `Testes de Auth Guard`?**
+  _High betweenness centrality (0.179) - this node is a cross-community bridge._
+- **Why does `react` connect `react` to `purchase-frequency.tsx`, `Sistema de Changelog`, `categories/page.tsx`, `dialog.tsx`, `transactions/page.tsx`, `fixed-costs/page.tsx`, `cn`, `package.json`, `lucide-react`, `monthly-closing/page.tsx`, `Showcase de Marketing`, `use-month-param.ts`, `settings/page.tsx`, `dashboard/page.tsx`, `formatCurrency`, `notifications-panel.tsx`, `next-themes`?**
+  _High betweenness centrality (0.089) - this node is a cross-community bridge._
+- **Why does `lucide-react` connect `lucide-react` to `Sistema de Changelog`, `categories/page.tsx`, `dialog.tsx`, `react`, `monthly-plan.types.ts`, `transactions/page.tsx`, `fixed-costs/page.tsx`, `cn`, `package.json`, `@testing-library/react`, `monthly-closing/page.tsx`, `FixedCostsPageInner`, `settings/page.tsx`, `dashboard/page.tsx`, `notifications-panel.tsx`, `buttonVariants`, `transaction-row.tsx`, `next-themes`?**
+  _High betweenness centrality (0.062) - this node is a cross-community bridge._
+- **What connects `name`, `private`, `dev` to the rest of the system?**
+  _470 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `Utilitários & Helpers E2E` be split into smaller, more focused modules?**
+  _Cohesion score 0.06205673758865248 - nodes in this community are weakly interconnected._
+- **Should `ADRs & Pipeline de Produção` be split into smaller, more focused modules?**
+  _Cohesion score 0.052244897959183675 - nodes in this community are weakly interconnected._
+- **Should `categories/page.tsx` be split into smaller, more focused modules?**
+  _Cohesion score 0.09059233449477352 - nodes in this community are weakly interconnected._
