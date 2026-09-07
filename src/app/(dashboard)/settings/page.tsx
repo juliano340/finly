@@ -354,7 +354,7 @@ export default function SettingsPage() {
                   <p className="text-sm font-medium text-destructive">Excluir conta</p>
                   <p className="text-sm text-muted-foreground">Apaga permanentemente seu perfil e todos os dados financeiros.</p>
                 </div>
-                <DeleteAccountButton hasPassword={me?.hasPassword !== false} />
+                <DeleteAccountButton hasPassword={me?.hasPassword !== false} email={me?.email ?? session?.user?.email ?? ""} />
               </div>
             </CardContent>
           </Card>
@@ -766,9 +766,10 @@ function SignOutButton() {
   )
 }
 
-function DeleteAccountButton({ hasPassword }: { hasPassword: boolean }) {
+function DeleteAccountButton({ hasPassword, email }: { hasPassword: boolean; email: string }) {
   const [open, setOpen] = useState(false)
   const [password, setPassword] = useState("")
+  const [confirmEmail, setConfirmEmail] = useState("")
   const [loading, setLoading] = useState(false)
 
   async function handleDelete(event: React.FormEvent<HTMLFormElement>) {
@@ -777,7 +778,7 @@ function DeleteAccountButton({ hasPassword }: { hasPassword: boolean }) {
     const response = await fetch("/api/me", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(hasPassword ? { password } : {}),
+      body: JSON.stringify(hasPassword ? { password } : { confirmEmail }),
     })
     setLoading(false)
 
@@ -795,7 +796,10 @@ function DeleteAccountButton({ hasPassword }: { hasPassword: boolean }) {
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => {
       setOpen(nextOpen)
-      if (!nextOpen) setPassword("")
+      if (!nextOpen) {
+        setPassword("")
+        setConfirmEmail("")
+      }
     }}>
       <Button variant="destructive" onClick={() => setOpen(true)}>
         <Trash2 className="mr-2 h-4 w-4" /> Excluir conta
@@ -803,10 +807,10 @@ function DeleteAccountButton({ hasPassword }: { hasPassword: boolean }) {
       <DialogContent showCloseButton={!loading}>
         <DialogHeader>
           <DialogTitle>Excluir conta permanentemente?</DialogTitle>
-          <DialogDescription>Esta ação não pode ser desfeita.{hasPassword ? " Digite sua senha para confirmar." : ""}</DialogDescription>
+          <DialogDescription>Esta ação não pode ser desfeita.{hasPassword ? " Digite sua senha para confirmar." : " Faça login novamente (se necessário) e digite seu e-mail para confirmar."}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleDelete} className="space-y-4">
-          {hasPassword && (
+          {hasPassword ? (
             <div className="space-y-2">
               <Label htmlFor="delete-account-password">Senha atual</Label>
               <Input
@@ -819,10 +823,24 @@ function DeleteAccountButton({ hasPassword }: { hasPassword: boolean }) {
                 autoFocus
               />
             </div>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="delete-account-confirm-email">Digite seu e-mail para confirmar</Label>
+              <Input
+                id="delete-account-confirm-email"
+                type="email"
+                value={confirmEmail}
+                onChange={(event) => setConfirmEmail(event.target.value)}
+                placeholder={email}
+                autoComplete="off"
+                required
+                autoFocus
+              />
+            </div>
           )}
           <DialogFooter>
             <Button type="button" variant="outline" disabled={loading} onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button type="submit" variant="destructive" disabled={loading || (hasPassword && !password)}>
+            <Button type="submit" variant="destructive" disabled={loading || (hasPassword ? !password : !confirmEmail)}>
               {loading ? "Excluindo..." : "Excluir permanentemente"}
             </Button>
           </DialogFooter>
