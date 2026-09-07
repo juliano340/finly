@@ -12,6 +12,7 @@ import {
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ExpenseByCategoryChart } from "./_components/expense-by-category-chart"
 import { IncomeVsExpenseChart } from "./_components/income-vs-expense-chart"
 import { DailyTrendChart } from "./_components/daily-trend-chart"
@@ -306,16 +307,24 @@ function DashboardPageContent() {
               </CardTitle>
               <p className="text-sm text-muted-foreground">Veja quanto cada cartão fechou mês a mês.</p>
             </div>
-            <select
-              className="h-9 rounded-md border bg-background px-3 text-sm"
+            <Select
+              items={{
+                all: "Todos os cartões",
+                ...Object.fromEntries((cardEvolution?.cards ?? []).map((card) => [card.id, card.name])),
+              }}
               value={selectedCardId}
-              onChange={(event) => setSelectedCardId(event.target.value)}
+              onValueChange={(v) => setSelectedCardId(v ?? "all")}
             >
-              <option value="all">Todos os cartões</option>
-              {cardEvolution?.cards.map((card) => (
-                <option key={card.id} value={card.id}>{card.name}</option>
-              ))}
-            </select>
+              <SelectTrigger className="h-9 w-full sm:w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os cartões</SelectItem>
+                {cardEvolution?.cards.map((card) => (
+                  <SelectItem key={card.id} value={card.id}>{card.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="grid gap-3 sm:grid-cols-4">
             <InsightCard title="Fatura atual" value={formatCurrency(cardSummary.current)} description={selectedCard?.name ?? "Todos os cartões"} loading={loading} />

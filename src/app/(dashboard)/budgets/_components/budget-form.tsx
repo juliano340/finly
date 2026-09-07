@@ -85,7 +85,7 @@ export function BudgetForm({
           </div>
           <div className="space-y-2">
             <Label>Categoria</Label>
-            <Select value={categoryId} onValueChange={(value) => setCategoryId(value ?? "")} required>
+            <Select items={Object.fromEntries(categories.map((c) => [c.id, c.name]))} value={categoryId} onValueChange={(value) => setCategoryId(value ?? "")} required>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione..." />
               </SelectTrigger>

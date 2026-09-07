@@ -15,9 +15,39 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn, dueLabel, formatCurrency, isOverdue } from "@/lib/utils"
+
+const PAYMENT_METHOD_ITEMS: Record<string, string> = {
+  PIX: "Pix",
+  BANK_SLIP: "Boleto",
+  DEBIT: "Débito",
+  CASH: "Dinheiro",
+}
+const FREQUENCY_ITEMS: Record<string, string> = {
+  DAILY: "Diária",
+  WEEKLY: "Semanal",
+  BIWEEKLY: "Quinzenal",
+  MONTHLY: "Mensal",
+  BIMONTHLY: "Bimestral",
+  QUARTERLY: "Trimestral",
+  SEMIANNUAL: "Semestral",
+  ANNUAL: "Anual",
+}
+const REC_UNIT_ITEMS: Record<string, string> = {
+  DAYS: "Dias",
+  WEEKS: "Semanas",
+  MONTHS: "Meses",
+  YEARS: "Anos",
+}
+const REC_END_ITEMS: Record<string, string> = {
+  NONE: "Sem data final",
+  DATE: "Encerrar em uma data",
+  COUNT: "Após N ocorrências",
+}
 import { ariaSort, sortButtonLabel } from "@/lib/accessible-sort"
 import { MonthNavigator, changeMonth, formatMonth, getCurrentMonth } from "@/components/month-navigator"
 import { useMonthParam } from "@/hooks/use-month-param"
@@ -128,6 +158,7 @@ function FixedCostsPageInner() {
   const [updateError, setUpdateError] = useState("")
   const [createError, setCreateError] = useState("")
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [recStartDate, setRecStartDate] = useState("")
   const [recFrequency, setRecFrequency] = useState("MONTHLY")
   const [recFrequencyType, setRecFrequencyType] = useState<"standard" | "custom">("standard")
@@ -147,6 +178,14 @@ function FixedCostsPageInner() {
   const [creatingLoading, setCreatingLoading] = useState(false)
   const [sortField, setSortField] = useState<OccurrenceSortField>("dueDate")
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
+  const [createCategoryId, setCreateCategoryId] = useState("")
+  const [createPaymentMethod, setCreatePaymentMethod] = useState("PIX")
+  const [createCardId, setCreateCardId] = useState("")
+  const [createBankAccountId, setCreateBankAccountId] = useState("")
+
+  const handleSelectChange = (setter: (v: string) => void, fallback: string) => (value: string | null) => {
+    setter(value ?? fallback)
+  }
 
   const inFlightUpdateRef = useRef(false)
   const inFlightCreateRef = useRef(false)
@@ -280,12 +319,12 @@ function FixedCostsPageInner() {
           name: formData.get("name"),
           type: activeTab,
           defaultAmount: String(formData.get("defaultAmount") ?? "").replace(",", "."),
-          categoryId: formData.get("categoryId"),
-          paymentMethod: paidInsideCard ? "CREDIT_CARD" : formData.get("paymentMethod") || "PIX",
+          categoryId: createCategoryId,
+          paymentMethod: paidInsideCard ? "CREDIT_CARD" : createPaymentMethod,
           dueDay: formData.get("dueDay") || null,
           paidInsideCard,
-          cardId: paidInsideCard ? formData.get("cardId") : null,
-          bankAccountId: formData.get("bankAccountId") || null,
+          cardId: paidInsideCard ? createCardId : null,
+          bankAccountId: createBankAccountId || null,
           active: true,
           startDate: recStartDate,
           frequency: recFrequencyType === "custom" ? "CUSTOM" : recFrequency,
@@ -304,6 +343,10 @@ function FixedCostsPageInner() {
       }
       toast.success(activeTab === "EXPENSE" ? "Custo fixo criado com sucesso." : "Receita fixa criada com sucesso.")
       setCreating(false)
+      setCreateCategoryId("")
+      setCreatePaymentMethod("PIX")
+      setCreateCardId("")
+      setCreateBankAccountId("")
       await fetchData()
     } finally {
       setCreatingLoading(false)
@@ -391,7 +434,9 @@ function FixedCostsPageInner() {
   }
 
   const handleDelete = async (itemId: string) => {
+    setIsDeleting(true)
     const res = await fetch(`/api/fixed-costs/${itemId}`, { method: "DELETE" })
+    setIsDeleting(false)
     setConfirmDelete(null)
     setSelectedOccurrence(null)
     if (res.ok) {
@@ -825,23 +870,30 @@ function FixedCostsPageInner() {
               <SheetHeader><SheetTitle>Novo {activeTab === "EXPENSE" ? "custo fixo" : "receita fixa"}</SheetTitle></SheetHeader>
               <form ref={createFormRef} className="flex-1 overflow-y-auto px-4 pb-4">
                 <div className="mt-4 grid gap-4">
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Nome</label>
+                  <div className="space-y-1.5">
+                    <Label>Nome</Label>
                     <Input name="name" placeholder="Ex: INTERNET" required />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Valor padrão</label>
+                  <div className="space-y-1.5">
+                    <Label>Valor padrão</Label>
                     <Input name="defaultAmount" type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="0,00" required />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Dia de vencimento</label>
+                  <div className="space-y-1.5">
+                    <Label>Dia de vencimento</Label>
                     <Input name="dueDay" type="number" min="1" max="31" placeholder="Ex: 10" />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Categoria</label>
-                    <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="categoryId" required>
-                      {filteredCategories.map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-                    </select>
+                  <div className="space-y-1.5">
+                    <Label>Categoria</Label>
+                    <Select value={createCategoryId} items={Object.fromEntries(filteredCategories.map((c) => [c.id, c.name]))} onValueChange={handleSelectChange(setCreateCategoryId, "")}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Selecione..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {filteredCategories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   {activeTab === "EXPENSE" && (
                     <>
@@ -850,95 +902,129 @@ function FixedCostsPageInner() {
                         Dentro do cartão
                       </label>
                       {!insideCard && (
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium">Método de pagamento</label>
-                          <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="paymentMethod" defaultValue="PIX">
-                            <option value="PIX">Pix</option>
-                            <option value="BANK_SLIP">Boleto</option>
-                            <option value="DEBIT">Débito</option>
-                            <option value="CASH">Dinheiro</option>
-                          </select>
+                        <div className="space-y-1.5">
+                          <Label>Método de pagamento</Label>
+                          <Select value={createPaymentMethod} items={PAYMENT_METHOD_ITEMS} onValueChange={handleSelectChange(setCreatePaymentMethod, "PIX")}>
+                            <SelectTrigger className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="PIX">Pix</SelectItem>
+                              <SelectItem value="BANK_SLIP">Boleto</SelectItem>
+                              <SelectItem value="DEBIT">Débito</SelectItem>
+                              <SelectItem value="CASH">Dinheiro</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                       )}
                       {insideCard && (
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium">Cartão</label>
-                          <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="cardId" required>
-                            {cards.map((card) => <option key={card.id} value={card.id}>{card.name}</option>)}
-                          </select>
+                        <div className="space-y-1.5">
+                          <Label>Cartão</Label>
+                          <Select value={createCardId} items={Object.fromEntries(cards.map((c) => [c.id, c.name]))} onValueChange={handleSelectChange(setCreateCardId, "")}>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Selecione um cartão" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {cards.map((card) => (
+                                <SelectItem key={card.id} value={card.id}>{card.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                       )}
                     </>
                   )}
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Conta prevista (débito)</label>
-                    <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="bankAccountId" defaultValue="">
-                      <option value="">Sem conta prevista</option>
-                      {bankAccounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
-                    </select>
+                  <div className="space-y-1.5">
+                    <Label>Conta prevista (débito)</Label>
+                    <Select value={createBankAccountId} items={{ "": "Sem conta prevista", ...Object.fromEntries(bankAccounts.map((a) => [a.id, a.name])) }} onValueChange={handleSelectChange(setCreateBankAccountId, "")}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Sem conta prevista" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Sem conta prevista</SelectItem>
+                        {bankAccounts.map((account) => (
+                          <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="border-t pt-4">
                     <p className="mb-3 text-sm font-medium">Recorrência</p>
                     <div className="space-y-3">
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium">Data de início</label>
+                      <div className="space-y-1.5">
+                        <Label>Data de início</Label>
                         <input type="date" className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recStartDate} onChange={(e) => setRecStartDate(e.target.value)} required />
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium">Tipo</label>
+                      <div className="space-y-1.5">
+                        <Label>Tipo</Label>
                         <div className="flex gap-2">
                           <button type="button" onClick={() => setRecFrequencyType("standard")} className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${recFrequencyType === "standard" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>Padrão</button>
                           <button type="button" onClick={() => setRecFrequencyType("custom")} className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${recFrequencyType === "custom" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>Personalizada</button>
                         </div>
                       </div>
                       {recFrequencyType === "standard" ? (
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium">Frequência</label>
-                          <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recFrequency} onChange={(e) => setRecFrequency(e.target.value)}>
-                            <option value="DAILY">Diária</option>
-                            <option value="WEEKLY">Semanal</option>
-                            <option value="BIWEEKLY">Quinzenal</option>
-                            <option value="MONTHLY">Mensal</option>
-                            <option value="BIMONTHLY">Bimestral</option>
-                            <option value="QUARTERLY">Trimestral</option>
-                            <option value="SEMIANNUAL">Semestral</option>
-                            <option value="ANNUAL">Anual</option>
-                          </select>
+                        <div className="space-y-1.5">
+                          <Label>Frequência</Label>
+                          <Select value={recFrequency} items={FREQUENCY_ITEMS} onValueChange={handleSelectChange(setRecFrequency, "MONTHLY")}>
+                            <SelectTrigger className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="DAILY">Diária</SelectItem>
+                              <SelectItem value="WEEKLY">Semanal</SelectItem>
+                              <SelectItem value="BIWEEKLY">Quinzenal</SelectItem>
+                              <SelectItem value="MONTHLY">Mensal</SelectItem>
+                              <SelectItem value="BIMONTHLY">Bimestral</SelectItem>
+                              <SelectItem value="QUARTERLY">Trimestral</SelectItem>
+                              <SelectItem value="SEMIANNUAL">Semestral</SelectItem>
+                              <SelectItem value="ANNUAL">Anual</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                       ) : (
                         <div className="flex gap-2">
-                          <div className="flex-1 space-y-1">
-                            <label className="text-sm font-medium">A cada</label>
+                          <div className="flex-1 space-y-1.5">
+                            <Label>A cada</Label>
                             <Input type="number" min="1" className="w-full" value={recCustomInterval} onChange={(e) => setRecCustomInterval(e.target.value)} placeholder="1" />
                           </div>
-                          <div className="flex-[2] space-y-1">
-                            <label className="text-sm font-medium">Unidade</label>
-                            <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recCustomUnit} onChange={(e) => setRecCustomUnit(e.target.value)}>
-                              <option value="DAYS">Dias</option>
-                              <option value="WEEKS">Semanas</option>
-                              <option value="MONTHS">Meses</option>
-                              <option value="YEARS">Anos</option>
-                            </select>
+                          <div className="flex-[2] space-y-1.5">
+                            <Label>Unidade</Label>
+                            <Select value={recCustomUnit} items={REC_UNIT_ITEMS} onValueChange={handleSelectChange(setRecCustomUnit, "MONTHS")}>
+                              <SelectTrigger className="w-full">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="DAYS">Dias</SelectItem>
+                                <SelectItem value="WEEKS">Semanas</SelectItem>
+                                <SelectItem value="MONTHS">Meses</SelectItem>
+                                <SelectItem value="YEARS">Anos</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
                       )}
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium">Término</label>
-                        <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recEndType} onChange={(e) => setRecEndType(e.target.value)}>
-                          <option value="NONE">Sem data final</option>
-                          <option value="DATE">Encerrar em uma data</option>
-                          <option value="COUNT">Após N ocorrências</option>
-                        </select>
+                      <div className="space-y-1.5">
+                        <Label>Término</Label>
+                        <Select value={recEndType} items={REC_END_ITEMS} onValueChange={handleSelectChange(setRecEndType, "NONE")}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="NONE">Sem data final</SelectItem>
+                            <SelectItem value="DATE">Encerrar em uma data</SelectItem>
+                            <SelectItem value="COUNT">Após N ocorrências</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       {recEndType === "DATE" && (
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium">Data de término</label>
+                        <div className="space-y-1.5">
+                          <Label>Data de término</Label>
                           <input type="date" className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recEndDate} onChange={(e) => setRecEndDate(e.target.value)} />
                         </div>
                       )}
                       {recEndType === "COUNT" && (
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium">Número de ocorrências</label>
+                        <div className="space-y-1.5">
+                          <Label>Número de ocorrências</Label>
                           <Input type="number" min="1" className="w-full" value={recEndAfterCount} onChange={(e) => setRecEndAfterCount(e.target.value)} placeholder="Ex: 12" />
                         </div>
                       )}
@@ -973,8 +1059,8 @@ function FixedCostsPageInner() {
                           </label>
                         ))}
                       </fieldset>
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium" htmlFor="occurrence-amount">Novo valor</label>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="occurrence-amount">Novo valor</Label>
                         <Input id="occurrence-amount" name="amount" type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*" defaultValue={selectedOccurrence.amount} required />
                       </div>
                       <p className="text-xs text-muted-foreground">
@@ -997,19 +1083,26 @@ function FixedCostsPageInner() {
                       <p className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300">
                         Estas configurações pertencem à série e afetam todos os meses que exibem este cadastro. O valor é alterado separadamente por escopo.
                       </p>
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium" htmlFor="series-name">Nome</label>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="series-name">Nome</Label>
                         <Input id="series-name" name="name" defaultValue={selectedTemplate.name} required />
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium" htmlFor="series-due-day">Dia de vencimento</label>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="series-due-day">Dia de vencimento</Label>
                         <Input id="series-due-day" name="dueDay" type="number" min="1" max="31" defaultValue={selectedTemplate.dueDay ?? ""} placeholder="Ex: 10" />
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium" htmlFor="series-category">Categoria</label>
-                        <select id="series-category" className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="categoryId" defaultValue={selectedTemplate.categoryId} required>
-                          {categories.filter((category) => category.type === selectedTemplate.type).map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-                        </select>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="series-category">Categoria</Label>
+                        <Select name="categoryId" defaultValue={selectedTemplate.categoryId} items={Object.fromEntries(categories.filter((category) => category.type === selectedTemplate.type).map((cat) => [cat.id, cat.name]))}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories.filter((category) => category.type === selectedTemplate.type).map((cat) => (
+                              <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       {selectedTemplate.type === "EXPENSE" && (
                         <>
@@ -1018,37 +1111,55 @@ function FixedCostsPageInner() {
                             Dentro do cartão
                           </label>
                           {!insideCard ? (
-                            <div className="space-y-1">
-                              <label className="text-sm font-medium" htmlFor="series-payment-method">Método de pagamento</label>
-                              <select id="series-payment-method" className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="paymentMethod" defaultValue={selectedTemplate.paymentMethod}>
-                                <option value="PIX">Pix</option>
-                                <option value="BANK_SLIP">Boleto</option>
-                                <option value="DEBIT">Débito</option>
-                                <option value="CASH">Dinheiro</option>
-                              </select>
+                            <div className="space-y-1.5">
+                              <Label htmlFor="series-payment-method">Método de pagamento</Label>
+                              <Select name="paymentMethod" defaultValue={selectedTemplate.paymentMethod} items={PAYMENT_METHOD_ITEMS}>
+                                <SelectTrigger className="w-full">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="PIX">Pix</SelectItem>
+                                  <SelectItem value="BANK_SLIP">Boleto</SelectItem>
+                                  <SelectItem value="DEBIT">Débito</SelectItem>
+                                  <SelectItem value="CASH">Dinheiro</SelectItem>
+                                </SelectContent>
+                              </Select>
                             </div>
                           ) : (
-                            <div className="space-y-1">
-                              <label className="text-sm font-medium" htmlFor="series-card">Cartão</label>
-                              <select id="series-card" className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="cardId" defaultValue={selectedTemplate.cardId ?? ""} required>
-                                <option value="">Selecione um cartão</option>
-                                {cards.map((card) => <option key={card.id} value={card.id}>{card.name}</option>)}
-                              </select>
+                            <div className="space-y-1.5">
+                              <Label htmlFor="series-card">Cartão</Label>
+                              <Select name="cardId" defaultValue={selectedTemplate.cardId ?? ""} items={Object.fromEntries(cards.map((card) => [card.id, card.name]))}>
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder="Selecione um cartão" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {cards.map((card) => (
+                                    <SelectItem key={card.id} value={card.id}>{card.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             </div>
                           )}
-                      </>
+                        </>
                       )}
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium" htmlFor="series-bank-account">Conta prevista (débito)</label>
-                        <select id="series-bank-account" className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="bankAccountId" defaultValue={selectedTemplate.bankAccountId ?? ""}>
-                          <option value="">Sem conta prevista</option>
-                          {bankAccounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
-                        </select>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="series-bank-account">Conta prevista (débito)</Label>
+                        <Select name="bankAccountId" defaultValue={selectedTemplate.bankAccountId ?? ""} items={{ "": "Sem conta prevista", ...Object.fromEntries(bankAccounts.map((account) => [account.id, account.name])) }}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Sem conta prevista" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Sem conta prevista</SelectItem>
+                            {bankAccounts.map((account) => (
+                              <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-3 border-t pt-4">
                         <p className="text-sm font-medium">Recorrência</p>
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium" htmlFor="series-start-date">Data de início</label>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="series-start-date">Data de início</Label>
                           <input id="series-start-date" type="date" className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recStartDate} onChange={(event) => setRecStartDate(event.target.value)} required />
                         </div>
                         <div className="flex gap-2">
@@ -1056,24 +1167,71 @@ function FixedCostsPageInner() {
                           <Button type="button" variant={recFrequencyType === "custom" ? "default" : "secondary"} className="flex-1" onClick={() => setRecFrequencyType("custom")}>Personalizada</Button>
                         </div>
                         {recFrequencyType === "standard" ? (
-                          <div className="space-y-1">
-                            <label className="text-sm font-medium" htmlFor="series-frequency">Frequência</label>
-                            <select id="series-frequency" className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recFrequency} onChange={(event) => setRecFrequency(event.target.value)}>
-                              <option value="DAILY">Diária</option><option value="WEEKLY">Semanal</option><option value="BIWEEKLY">Quinzenal</option><option value="MONTHLY">Mensal</option><option value="BIMONTHLY">Bimestral</option><option value="QUARTERLY">Trimestral</option><option value="SEMIANNUAL">Semestral</option><option value="ANNUAL">Anual</option>
-                            </select>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="series-frequency">Frequência</Label>
+                          <Select value={recFrequency} items={FREQUENCY_ITEMS} onValueChange={handleSelectChange(setRecFrequency, "MONTHLY")}>
+                              <SelectTrigger className="w-full">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="DAILY">Diária</SelectItem>
+                                <SelectItem value="WEEKLY">Semanal</SelectItem>
+                                <SelectItem value="BIWEEKLY">Quinzenal</SelectItem>
+                                <SelectItem value="MONTHLY">Mensal</SelectItem>
+                                <SelectItem value="BIMONTHLY">Bimestral</SelectItem>
+                                <SelectItem value="QUARTERLY">Trimestral</SelectItem>
+                                <SelectItem value="SEMIANNUAL">Semestral</SelectItem>
+                                <SelectItem value="ANNUAL">Anual</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
                         ) : (
                           <div className="flex gap-2">
-                            <div className="flex-1 space-y-1"><label className="text-sm font-medium" htmlFor="series-interval">A cada</label><Input id="series-interval" type="number" min="1" value={recCustomInterval} onChange={(event) => setRecCustomInterval(event.target.value)} /></div>
-                            <div className="flex-[2] space-y-1"><label className="text-sm font-medium" htmlFor="series-unit">Unidade</label><select id="series-unit" className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recCustomUnit} onChange={(event) => setRecCustomUnit(event.target.value)}><option value="DAYS">Dias</option><option value="WEEKS">Semanas</option><option value="MONTHS">Meses</option><option value="YEARS">Anos</option></select></div>
+                            <div className="flex-1 space-y-1.5">
+                              <Label htmlFor="series-interval">A cada</Label>
+                              <Input id="series-interval" type="number" min="1" value={recCustomInterval} onChange={(event) => setRecCustomInterval(event.target.value)} />
+                            </div>
+                            <div className="flex-[2] space-y-1.5">
+                              <Label htmlFor="series-unit">Unidade</Label>
+                              <Select value={recCustomUnit} items={REC_UNIT_ITEMS} onValueChange={handleSelectChange(setRecCustomUnit, "MONTHS")}>
+                                <SelectTrigger className="w-full">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="DAYS">Dias</SelectItem>
+                                  <SelectItem value="WEEKS">Semanas</SelectItem>
+                                  <SelectItem value="MONTHS">Meses</SelectItem>
+                                  <SelectItem value="YEARS">Anos</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
                         )}
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium" htmlFor="series-end-type">Término</label>
-                          <select id="series-end-type" className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recEndType} onChange={(event) => setRecEndType(event.target.value)}><option value="NONE">Sem data final</option><option value="DATE">Encerrar em uma data</option><option value="COUNT">Após N ocorrências</option></select>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="series-end-type">Término</Label>
+                          <Select value={recEndType} items={REC_END_ITEMS} onValueChange={handleSelectChange(setRecEndType, "NONE")}>
+                            <SelectTrigger className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="NONE">Sem data final</SelectItem>
+                              <SelectItem value="DATE">Encerrar em uma data</SelectItem>
+                              <SelectItem value="COUNT">Após N ocorrências</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
-                        {recEndType === "DATE" && <div className="space-y-1"><label className="text-sm font-medium" htmlFor="series-end-date">Data de término</label><input id="series-end-date" type="date" className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recEndDate} onChange={(event) => setRecEndDate(event.target.value)} /></div>}
-                        {recEndType === "COUNT" && <div className="space-y-1"><label className="text-sm font-medium" htmlFor="series-end-count">Número de ocorrências</label><Input id="series-end-count" type="number" min="1" value={recEndAfterCount} onChange={(event) => setRecEndAfterCount(event.target.value)} /></div>}
+                        {recEndType === "DATE" && (
+                          <div className="space-y-1.5">
+                            <Label htmlFor="series-end-date">Data de término</Label>
+                            <input id="series-end-date" type="date" className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recEndDate} onChange={(event) => setRecEndDate(event.target.value)} />
+                          </div>
+                        )}
+                        {recEndType === "COUNT" && (
+                          <div className="space-y-1.5">
+                            <Label htmlFor="series-end-count">Número de ocorrências</Label>
+                            <Input id="series-end-count" type="number" min="1" value={recEndAfterCount} onChange={(event) => setRecEndAfterCount(event.target.value)} />
+                          </div>
+                        )}
                       </div>
                       <label className="flex items-center gap-2 text-sm"><input type="checkbox" defaultChecked={selectedTemplate.active} name="active" />Ativo</label>
                       {updateError && <p className="text-sm text-destructive">{updateError}</p>}
@@ -1099,6 +1257,7 @@ function FixedCostsPageInner() {
         title="Excluir lançamento fixo"
         description="Tem certeza? Esta ação não pode ser desfeita."
         confirmText="Excluir"
+        loading={isDeleting}
         onConfirm={() => confirmDelete && handleDelete(confirmDelete)}
       />
 

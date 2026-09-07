@@ -6,7 +6,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Stepper } from "@/components/ui/stepper"
 import { formatCurrency } from "@/lib/utils"
 import { canWithdraw, isAccountNegative, getAvailableBalance } from "@/lib/balance"
@@ -259,9 +259,9 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium">Método</label>
-                  <Select value={method} onValueChange={(v) => setMethod(v ?? "PIX")}>
+                  <Select items={{ PIX: "Pix", TED: "TED", TRANSFER: "Transferência" }} value={method} onValueChange={(v) => setMethod(v ?? "PIX")}>
                     <SelectTrigger className="w-full">
-                      {method === "PIX" ? "Pix" : method === "TED" ? "TED" : "Transferência"}
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="PIX">Pix</SelectItem>

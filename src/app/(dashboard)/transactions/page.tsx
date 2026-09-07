@@ -211,6 +211,7 @@ export default function TransactionsPage() {
       {/* Filtros */}
       <div className="grid grid-cols-2 gap-3 md:flex md:flex-wrap">
         <Select
+          items={{ all: "Todos", INCOME: "Receitas", EXPENSE: "Despesas" }}
           value={filters.type ?? "all"}
           onValueChange={(v) => {
             const value = v ?? "all"
@@ -218,9 +219,7 @@ export default function TransactionsPage() {
           }}
         >
           <SelectTrigger className="w-full md:w-40">
-            <SelectValue>
-              {filters.type === "INCOME" ? "Receitas" : filters.type === "EXPENSE" ? "Despesas" : "Todos"}
-            </SelectValue>
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
@@ -229,6 +228,7 @@ export default function TransactionsPage() {
           </SelectContent>
         </Select>
         <Select
+          items={{ all: "Todas", ...Object.fromEntries(categories.map((c) => [c.id, c.name])) }}
           value={filters.categoryId ?? "all"}
           onValueChange={(v) => {
             const value = v ?? "all"
@@ -236,11 +236,7 @@ export default function TransactionsPage() {
           }}
         >
           <SelectTrigger className="w-full md:w-48">
-            <SelectValue>
-              {filters.categoryId
-                ? categories.find((c) => c.id === filters.categoryId)?.name ?? "Todas"
-                : "Todas"}
-            </SelectValue>
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas</SelectItem>

@@ -24,6 +24,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -45,6 +53,26 @@ import {
   getCurrentMonth,
 } from "@/components/month-navigator";
 import { useMonthParam } from "@/hooks/use-month-param";
+
+const CALCULATION_MODE_ITEMS: Record<string, string> = {
+  ENTERED_TOTAL: "Informar valor total da fatura",
+  CALCULATED: "Calcular pelos lançamentos",
+};
+const LIFECYCLE_ITEMS: Record<string, string> = {
+  ESTIMATED: "Estimada",
+  OPEN: "Aberta",
+  CLOSED: "Fechada",
+  PAID: "Paga",
+};
+const ITEM_KIND_ITEMS: Record<string, string> = {
+  MANUAL: "Avulso",
+  INSTALLMENT: "Parcela",
+  FORECAST: "Outro previsto",
+};
+const POSTING_STATUS_ITEMS: Record<string, string> = {
+  POSTED: "Lançado",
+  PROJECTED: "Previsto",
+};
 import { useTableSelection } from "@/components/data-table/use-table-selection";
 import { DataTableContainer } from "@/components/data-table/data-table-container";
 import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
@@ -336,6 +364,16 @@ export function InvoicesTab() {
   const inFlightUpdateRef = useRef(false);
   const editFormRef = useRef<HTMLFormElement>(null);
   const [editLifecycle, setEditLifecycle] = useState<string | null>(null);
+  const [editLifecycleStatus, setEditLifecycleStatus] = useState("OPEN");
+  const [editCardId, setEditCardId] = useState("");
+  const [editCalculationMode, setEditCalculationMode] = useState<
+    "CALCULATED" | "ENTERED_TOTAL"
+  >("ENTERED_TOTAL");
+  const [createCardId, setCreateCardId] = useState("");
+  const [createLifecycleStatus, setCreateLifecycleStatus] = useState("OPEN");
+  const [itemOccurrenceId, setItemOccurrenceId] = useState("");
+  const [itemKind, setItemKind] = useState("MANUAL");
+  const [itemPostingStatus, setItemPostingStatus] = useState("POSTED");
   const selectedInvoiceId = selectedInvoice?.id ?? null;
   const [prevInvoiceId, setPrevInvoiceId] = useState<string | null>(null);
   if (selectedInvoiceId !== prevInvoiceId) {
@@ -343,6 +381,9 @@ export function InvoicesTab() {
     // ajuste de state durante o render, sem efeito).
     setPrevInvoiceId(selectedInvoiceId);
     setEditLifecycle(null);
+    setEditCardId(selectedInvoice?.card.id ?? "");
+    setEditCalculationMode(selectedInvoice?.calculationMode ?? "ENTERED_TOTAL");
+    setEditLifecycleStatus(selectedInvoice?.lifecycleStatus ?? "OPEN");
   }
   const selectedLocked =
     !!selectedInvoice &&
@@ -437,23 +478,22 @@ export function InvoicesTab() {
   };
 
   const handleCreate = async (formData: FormData) => {
+    if (!createCardId) {
+      toast.error("Selecione um cartão");
+      return;
+    }
     const res = await fetch("/api/invoices", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        cardId: formData.get("cardId"),
+        cardId: createCardId,
         month,
         dueDate: formData.get("dueDate"),
-        calculationMode: formData.get("calculationMode"),
+        calculationMode: createMode,
         enteredTotal:
-          formData.get("calculationMode") === "ENTERED_TOTAL"
-            ? formData.get("amount")
-            : null,
-        amount:
-          formData.get("calculationMode") === "ENTERED_TOTAL"
-            ? formData.get("amount")
-            : 0,
-        lifecycleStatus: formData.get("lifecycleStatus"),
+          createMode === "ENTERED_TOTAL" ? formData.get("amount") : null,
+        amount: createMode === "ENTERED_TOTAL" ? formData.get("amount") : 0,
+        lifecycleStatus: createLifecycleStatus,
         status: "PENDING",
       }),
     });
@@ -521,15 +561,16 @@ export function InvoicesTab() {
       body: JSON.stringify({
         description: formData.get("description"),
         amount: formData.get("amount"),
-        kind: formData.get("fixedCostOccurrenceId")
-          ? "FIXED_COST"
-          : formData.get("kind"),
-        postingStatus: formData.get("postingStatus"),
-        fixedCostOccurrenceId: formData.get("fixedCostOccurrenceId") || null,
+        kind: itemOccurrenceId ? "FIXED_COST" : itemKind,
+        postingStatus: itemPostingStatus,
+        fixedCostOccurrenceId: itemOccurrenceId || null,
       }),
     });
     if (res.ok) {
       toast.success("Lançamento adicionado.");
+      setItemOccurrenceId("");
+      setItemKind("MANUAL");
+      setItemPostingStatus("POSTED");
       await fetchData();
     } else toast.error("Não foi possível adicionar o lançamento.");
   };
@@ -749,7 +790,14 @@ export function InvoicesTab() {
             <FileText className="mr-1.5 h-3.5 w-3.5" />
             Importar PDF
           </Button>
-          <Button size="sm" onClick={() => setCreating(true)}>
+          <Button
+            size="sm"
+            onClick={() => {
+              setCreateCardId("");
+              setCreateLifecycleStatus("OPEN");
+              setCreating(true);
+            }}
+          >
             Nova fatura
           </Button>
         </div>
@@ -1153,36 +1201,55 @@ export function InvoicesTab() {
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Como pagar</label>
-                <select
-                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              <div className="space-y-1.5">
+                <Label>Como pagar</Label>
+                <Select
+                  items={Object.fromEntries(
+                    paymentMethods.map((m) => [m.value, m.label]),
+                  )}
                   value={payMethod}
-                  onChange={(e) => setPayMethod(e.target.value)}
+                  onValueChange={(v) => setPayMethod(v ?? "PIX")}
                 >
-                  {paymentMethods.map((m) => (
-                    <option key={m.value} value={m.value}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {paymentMethods.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>
+                        {m.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {currentMethod?.needsAccount && (
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">Conta</label>
-                  <select
-                    className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                <div className="space-y-1.5">
+                  <Label>Conta</Label>
+                  <Select
+                    items={{
+                      "": "Selecione uma conta",
+                      ...Object.fromEntries(
+                        bankAccounts.map((acc) => [
+                          acc.id,
+                          `${acc.name} (${formatCurrency(acc.balance)})`,
+                        ]),
+                      ),
+                    }}
                     value={payAccountId}
-                    onChange={(e) => setPayAccountId(e.target.value)}
+                    onValueChange={(v) => setPayAccountId(v ?? "")}
                   >
-                    <option value="">Selecione uma conta</option>
-                    {bankAccounts.map((acc) => (
-                      <option key={acc.id} value={acc.id}>
-                        {acc.name} ({formatCurrency(acc.balance)})
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecione uma conta" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {bankAccounts.map((acc) => (
+                        <SelectItem key={acc.id} value={acc.id}>
+                          {acc.name} ({formatCurrency(acc.balance)})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
 
@@ -1287,40 +1354,62 @@ export function InvoicesTab() {
             <DialogTitle>Simular pagamento</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Fatura</label>
-              <select
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+            <div className="space-y-1.5">
+              <Label>Fatura</Label>
+              <Select
+                items={Object.fromEntries(
+                  invoices.map((inv) => [
+                    inv.id,
+                    `${inv.card.name} — ${formatCurrency(inv.effectiveTotal)}${inv.status === "PAID" ? " (paga)" : ""}`,
+                  ]),
+                )}
                 value={simInvoiceId}
-                onChange={(e) => {
-                  setSimInvoiceId(e.target.value);
-                  const inv = invoices.find((i) => i.id === e.target.value);
+                onValueChange={(v) => {
+                  const id = v ?? "";
+                  setSimInvoiceId(id);
+                  const inv = invoices.find((i) => i.id === id);
                   if (inv) setSimAmount(String(inv.effectiveTotal));
                 }}
               >
-                <option value="">Selecione uma fatura</option>
-                {invoices.map((inv) => (
-                  <option key={inv.id} value={inv.id}>
-                    {inv.card.name} — {formatCurrency(inv.effectiveTotal)}
-                    {inv.status === "PAID" ? " (paga)" : ""}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione uma fatura" />
+                </SelectTrigger>
+                <SelectContent>
+                  {invoices.map((inv) => (
+                    <SelectItem key={inv.id} value={inv.id}>
+                      {inv.card.name} — {formatCurrency(inv.effectiveTotal)}
+                      {inv.status === "PAID" ? " (paga)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">Conta</label>
-              <select
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+            <div className="space-y-1.5">
+              <Label>Conta</Label>
+              <Select
+                items={{
+                  "": "Selecione uma conta",
+                  ...Object.fromEntries(
+                    bankAccounts.map((acc) => [
+                      acc.id,
+                      `${acc.name} (${formatCurrency(acc.balance)})`,
+                    ]),
+                  ),
+                }}
                 value={simAccountId}
-                onChange={(e) => setSimAccountId(e.target.value)}
+                onValueChange={(v) => setSimAccountId(v ?? "")}
               >
-                <option value="">Selecione uma conta</option>
-                {bankAccounts.map((acc) => (
-                  <option key={acc.id} value={acc.id}>
-                    {acc.name} ({formatCurrency(acc.balance)})
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione uma conta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {bankAccounts.map((acc) => (
+                    <SelectItem key={acc.id} value={acc.id}>
+                      {acc.name} ({formatCurrency(acc.balance)})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1">
               <label className="text-sm font-medium">Valor a pagar</label>
@@ -1426,55 +1515,66 @@ export function InvoicesTab() {
                 className="flex-1 overflow-y-auto px-4 pb-4"
               >
                 <div className="mt-4 grid gap-4">
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Cartão</label>
-                    <select
-                      className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                      name="cardId"
-                      required
+                  <div className="space-y-1.5">
+                    <Label>Cartão</Label>
+                    <Select
+                      items={Object.fromEntries(
+                        cards.map((card) => [card.id, card.name]),
+                      )}
+                      value={createCardId}
+                      onValueChange={(v) => setCreateCardId(v ?? "")}
                     >
-                      {cards.map((card) => (
-                        <option key={card.id} value={card.id}>
-                          {card.name}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Selecione um cartão" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {cards.map((card) => (
+                          <SelectItem key={card.id} value={card.id}>
+                            {card.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">
-                      Data de vencimento
-                    </label>
+                  <div className="space-y-1.5">
+                    <Label>Data de vencimento</Label>
                     <Input name="dueDate" type="date" required />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Como calcular</label>
-                    <select
-                      className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                      name="calculationMode"
+                  <div className="space-y-1.5">
+                    <Label>Como calcular</Label>
+                    <Select
+                      items={CALCULATION_MODE_ITEMS}
                       value={createMode}
-                      onChange={(event) =>
-                        setCreateMode(event.target.value as typeof createMode)
+                      onValueChange={(v) =>
+                        setCreateMode(
+                          (v ?? "ENTERED_TOTAL") as typeof createMode,
+                        )
                       }
                     >
-                      <option value="ENTERED_TOTAL">
-                        Informar valor total da fatura
-                      </option>
-                      <option value="CALCULATED">
-                        Calcular pelos lançamentos
-                      </option>
-                    </select>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ENTERED_TOTAL">
+                          Informar valor total da fatura
+                        </SelectItem>
+                        <SelectItem value="CALCULATED">
+                          Calcular pelos lançamentos
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                     <p className="text-xs text-muted-foreground">
                       {createMode === "ENTERED_TOTAL"
                         ? "O valor já inclui gastos fixos pagos neste cartão."
                         : "Soma lançamentos, parcelas e gastos fixos previstos."}
                     </p>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">
+                  <div className="space-y-1.5">
+                    <Label>
                       Valor total{" "}
                       {createMode === "CALCULATED" &&
                         "(opcional, preservado para conferência)"}
-                    </label>
+                    </Label>
                     <Input
                       name="amount"
                       type="number"
@@ -1484,19 +1584,24 @@ export function InvoicesTab() {
                       required={createMode === "ENTERED_TOTAL"}
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">
-                      Etapa da fatura
-                    </label>
-                    <select
-                      className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                      name="lifecycleStatus"
-                      defaultValue="OPEN"
+                  <div className="space-y-1.5">
+                    <Label>Etapa da fatura</Label>
+                    <Select
+                      items={LIFECYCLE_ITEMS}
+                      value={createLifecycleStatus}
+                      onValueChange={(v) =>
+                        setCreateLifecycleStatus(v ?? "OPEN")
+                      }
                     >
-                      <option value="ESTIMATED">Estimada</option>
-                      <option value="OPEN">Aberta</option>
-                      <option value="CLOSED">Fechada</option>
-                    </select>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ESTIMATED">Estimada</SelectItem>
+                        <SelectItem value="OPEN">Aberta</SelectItem>
+                        <SelectItem value="CLOSED">Fechada</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <Button type="submit" className="mt-6 w-full">
@@ -1520,24 +1625,34 @@ export function InvoicesTab() {
                   <form ref={editFormRef} className="space-y-4">
                     {!editLocked && (
                       <>
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium">Cartão</label>
-                          <select
-                            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                        <div className="space-y-1.5">
+                          <Label>Cartão</Label>
+                          <input
+                            type="hidden"
                             name="cardId"
-                            defaultValue={selectedInvoice.card.id}
+                            value={editCardId}
+                          />
+                          <Select
+                            items={Object.fromEntries(
+                              cards.map((card) => [card.id, card.name]),
+                            )}
+                            value={editCardId}
+                            onValueChange={(v) => setEditCardId(v ?? "")}
                           >
-                            {cards.map((card) => (
-                              <option key={card.id} value={card.id}>
-                                {card.name}
-                              </option>
-                            ))}
-                          </select>
+                            <SelectTrigger className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {cards.map((card) => (
+                                <SelectItem key={card.id} value={card.id}>
+                                  {card.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium">
-                            Data de vencimento
-                          </label>
+                        <div className="space-y-1.5">
+                          <Label>Data de vencimento</Label>
                           <Input
                             name="dueDate"
                             type="date"
@@ -1545,30 +1660,40 @@ export function InvoicesTab() {
                             required
                           />
                         </div>
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium">
-                            Como calcular
-                          </label>
-                          <select
-                            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                        <div className="space-y-1.5">
+                          <Label>Como calcular</Label>
+                          <input
+                            type="hidden"
                             name="calculationMode"
-                            defaultValue={selectedInvoice.calculationMode}
+                            value={editCalculationMode}
+                          />
+                          <Select
+                            items={CALCULATION_MODE_ITEMS}
+                            value={editCalculationMode}
+                            onValueChange={(v) =>
+                              setEditCalculationMode(
+                                (v ?? "ENTERED_TOTAL") as typeof createMode,
+                              )
+                            }
                           >
-                            <option value="ENTERED_TOTAL">
-                              Informar valor total da fatura
-                            </option>
-                            <option value="CALCULATED">
-                              Calcular pelos lançamentos
-                            </option>
-                          </select>
+                            <SelectTrigger className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="ENTERED_TOTAL">
+                                Informar valor total da fatura
+                              </SelectItem>
+                              <SelectItem value="CALCULATED">
+                                Calcular pelos lançamentos
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
                           <p className="text-xs text-muted-foreground">
                             Itens e valor informado são preservados ao trocar.
                           </p>
                         </div>
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium">
-                            Valor total informado
-                          </label>
+                        <div className="space-y-1.5">
+                          <Label>Valor total informado</Label>
                           <Input
                             name="amount"
                             type="number"
@@ -1580,22 +1705,35 @@ export function InvoicesTab() {
                         </div>
                       </>
                     )}
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium">
-                        Etapa da fatura
-                      </label>
-                      <select
-                        className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                        name="lifecycleStatus"
-                        defaultValue={selectedInvoice.lifecycleStatus}
+                    <div className="space-y-1.5">
+                      <Label>Etapa da fatura</Label>
+                      {selectedInvoice.lifecycleStatus !== "PAID" && (
+                        <input
+                          type="hidden"
+                          name="lifecycleStatus"
+                          value={editLifecycleStatus}
+                        />
+                      )}
+                      <Select
+                        items={LIFECYCLE_ITEMS}
+                        value={editLifecycleStatus}
                         disabled={selectedInvoice.lifecycleStatus === "PAID"}
-                        onChange={(event) => setEditLifecycle(event.target.value)}
+                        onValueChange={(v) => {
+                          const status = v ?? "OPEN";
+                          setEditLifecycleStatus(status);
+                          setEditLifecycle(status);
+                        }}
                       >
-                        <option value="ESTIMATED">Estimada</option>
-                        <option value="OPEN">Aberta</option>
-                        <option value="CLOSED">Fechada</option>
-                        <option value="PAID">Paga</option>
-                      </select>
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ESTIMATED">Estimada</SelectItem>
+                          <SelectItem value="OPEN">Aberta</SelectItem>
+                          <SelectItem value="CLOSED">Fechada</SelectItem>
+                          <SelectItem value="PAID">Paga</SelectItem>
+                        </SelectContent>
+                      </Select>
                       {editLocked ? (
                         <p className="text-xs text-muted-foreground">
                           Fatura {selectedInvoice.lifecycleStatus === "PAID" ? "paga" : "fechada"}: escolha a etapa Aberta para reabri-la e editar vencimento e valores.
@@ -1688,46 +1826,95 @@ export function InvoicesTab() {
                           placeholder="Valor"
                           required
                         />
-                        <select
-                          className="rounded-md border bg-background px-2 py-2 text-sm"
-                          name="fixedCostOccurrenceId"
-                          defaultValue=""
-                        >
-                          <option value="">Não vincular a gasto fixo</option>
-                          {selectedInvoice.fixedOccurrences
-                            .filter(
-                              (occurrence) =>
-                                !selectedInvoice.items.some(
-                                  (item) =>
-                                    item.fixedCostOccurrenceId ===
-                                    occurrence.id,
-                                ),
-                            )
-                            .map((occurrence) => (
-                              <option key={occurrence.id} value={occurrence.id}>
-                                Substituir previsão: {occurrence.fixedCost.name}{" "}
-                                ({formatCurrency(occurrence.amount)})
-                              </option>
-                            ))}
-                        </select>
+                        <div className="space-y-1.5">
+                          <Label>Vínculo com gasto fixo</Label>
+                          <Select
+                            items={Object.fromEntries(
+                              selectedInvoice.fixedOccurrences
+                                .filter(
+                                  (occurrence) =>
+                                    !selectedInvoice.items.some(
+                                      (item) =>
+                                        item.fixedCostOccurrenceId ===
+                                        occurrence.id,
+                                    ),
+                                )
+                                .map((occurrence) => [
+                                  occurrence.id,
+                                  `Substituir previsão: ${occurrence.fixedCost.name} (${formatCurrency(occurrence.amount)})`,
+                                ]),
+                            )}
+                            value={itemOccurrenceId}
+                            onValueChange={(v) => setItemOccurrenceId(v ?? "")}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Não vincular a gasto fixo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {selectedInvoice.fixedOccurrences
+                                .filter(
+                                  (occurrence) =>
+                                    !selectedInvoice.items.some(
+                                      (item) =>
+                                        item.fixedCostOccurrenceId ===
+                                        occurrence.id,
+                                    ),
+                                )
+                                .map((occurrence) => (
+                                  <SelectItem
+                                    key={occurrence.id}
+                                    value={occurrence.id}
+                                  >
+                                    Substituir previsão:{" "}
+                                    {occurrence.fixedCost.name} (
+                                    {formatCurrency(occurrence.amount)})
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                         <div className="grid grid-cols-2 gap-2">
-                          <select
-                            className="rounded-md border bg-background px-2 py-2 text-sm"
-                            name="kind"
-                            defaultValue="MANUAL"
-                          >
-                            <option value="MANUAL">Avulso</option>
-                            <option value="INSTALLMENT">Parcela</option>
-                            <option value="FORECAST">Outro previsto</option>
-                          </select>
-                          <select
-                            className="rounded-md border bg-background px-2 py-2 text-sm"
-                            name="postingStatus"
-                            defaultValue="POSTED"
-                          >
-                            <option value="POSTED">Lançado</option>
-                            <option value="PROJECTED">Previsto</option>
-                          </select>
+                          <div className="space-y-1.5">
+                            <Label>Tipo</Label>
+                            <Select
+                              items={ITEM_KIND_ITEMS}
+                              value={itemKind}
+                              onValueChange={(v) => setItemKind(v ?? "MANUAL")}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="MANUAL">Avulso</SelectItem>
+                                <SelectItem value="INSTALLMENT">
+                                  Parcela
+                                </SelectItem>
+                                <SelectItem value="FORECAST">
+                                  Outro previsto
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label>Status</Label>
+                            <Select
+                              items={POSTING_STATUS_ITEMS}
+                              value={itemPostingStatus}
+                              onValueChange={(v) =>
+                                setItemPostingStatus(v ?? "POSTED")
+                              }
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="POSTED">Lançado</SelectItem>
+                                <SelectItem value="PROJECTED">
+                                  Previsto
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                         <Button type="submit" size="sm">
                           Adicionar lançamento
@@ -1818,19 +2005,26 @@ export function InvoicesTab() {
             </p>
           ) : (
             <>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Mês de origem</label>
-                <select
-                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              <div className="space-y-1.5">
+                <Label>Mês de origem</Label>
+                <Select
+                  items={Object.fromEntries(
+                    availableMonths.map((m) => [m.month, monthLabel(m.month)]),
+                  )}
                   value={copySourceMonth}
-                  onChange={(e) => fetchPrevMonthInvoices(e.target.value)}
+                  onValueChange={(v) => fetchPrevMonthInvoices(v ?? "")}
                 >
-                  {availableMonths.map((m) => (
-                    <option key={m.month} value={m.month}>
-                      {monthLabel(m.month)}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableMonths.map((m) => (
+                      <SelectItem key={m.month} value={m.month}>
+                        {monthLabel(m.month)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               {loadingPrev ? (
                 <div className="flex items-center justify-center py-8">

@@ -8,6 +8,8 @@ import { AddButton } from "@/components/ui/add-button"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { InvoicesTab } from "@/features/invoices/invoices-tab"
@@ -49,6 +51,10 @@ export default function CardsPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<CardsTab>("cards")
   const [tabReady, setTabReady] = useState(false)
+  const [createBankAccountId, setCreateBankAccountId] = useState("")
+  const [editBankAccountId, setEditBankAccountId] = useState("")
+
+  const safeSet = (setter: (v: string) => void) => (v: string | null) => setter(v ?? "")
 
   useEffect(() => {
     const urlTab = searchParams.get("tab")
@@ -96,10 +102,11 @@ export default function CardsPage() {
         color: formData.get("color") || "#22C55E",
         closingDay: formData.get("closingDay") || null,
         dueDay: formData.get("dueDay") || null,
-        bankAccountId: formData.get("bankAccountId") || null,
+        bankAccountId: createBankAccountId || null,
       }),
     })
     setCreating(false)
+    setCreateBankAccountId("")
     if (res.ok) {
       toast.success("Cartão criado com sucesso.")
     } else {
@@ -123,7 +130,7 @@ export default function CardsPage() {
           color: formData.get("color") || "#22C55E",
           closingDay: formData.get("closingDay") || null,
           dueDay: formData.get("dueDay") || null,
-          bankAccountId: formData.get("bankAccountId") || null,
+          bankAccountId: editBankAccountId || null,
         }),
       })
       if (res.ok) {
@@ -203,7 +210,7 @@ export default function CardsPage() {
             ) : cards.map((card) => (
               <tr key={card.id} className="border-b transition-colors hover:bg-muted/50">
                 <td className="px-4 py-3">
-                  <button type="button" onClick={() => setSelectedCard(card)} className="flex items-center gap-3 text-left font-medium hover:underline">
+                  <button type="button" onClick={() => { setSelectedCard(card); setEditBankAccountId(card.bankAccountId ?? "") }} className="flex items-center gap-3 text-left font-medium hover:underline">
                     <span className="flex h-9 w-9 items-center justify-center rounded-full text-white" style={{ backgroundColor: card.color }}>
                       <CreditCard className="h-4 w-4" />
                     </span>
@@ -219,7 +226,7 @@ export default function CardsPage() {
                     size="icon"
                     variant="ghost"
                     aria-label="Editar cartão"
-                    onClick={() => setSelectedCard(card)}
+                    onClick={() => { setSelectedCard(card); setEditBankAccountId(card.bankAccountId ?? "") }}
                   >
                     <Settings className="h-4 w-4" />
                   </Button>
@@ -250,7 +257,7 @@ export default function CardsPage() {
         ) : cards.map((card) => (
           <div key={card.id} className="rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50">
             <div className="flex items-center gap-3">
-              <button type="button" onClick={() => setSelectedCard(card)} className="flex flex-1 items-center gap-3 text-left min-w-0">
+              <button type="button" onClick={() => { setSelectedCard(card); setEditBankAccountId(card.bankAccountId ?? "") }} className="flex flex-1 items-center gap-3 text-left min-w-0">
                 <span className="shrink-0 rounded-lg p-2 text-white" style={{ backgroundColor: card.color }}><CreditCard className="h-4 w-4" /></span>
                 <div className="min-w-0 flex-1">
                   <p className="font-medium truncate">{card.name}</p>
@@ -263,7 +270,7 @@ export default function CardsPage() {
                 variant="ghost"
                 className="h-8 w-8 shrink-0"
                 aria-label="Editar cartão"
-                onClick={() => setSelectedCard(card)}
+                onClick={() => { setSelectedCard(card); setEditBankAccountId(card.bankAccountId ?? "") }}
               >
                 <Settings className="h-4 w-4" />
               </Button>
@@ -279,20 +286,27 @@ export default function CardsPage() {
               <SheetHeader><SheetTitle>Novo cartão</SheetTitle></SheetHeader>
               <form action={handleCreate} className="flex-1 overflow-y-auto px-4 pb-4">
                 <div className="mt-4 grid gap-4">
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Nome do cartão</label>
+                  <div className="space-y-1.5">
+                    <Label>Nome do cartão</Label>
                     <Input name="name" placeholder="Ex: NUBANK PLATINUM" required />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Bandeira</label>
+                  <div className="space-y-1.5">
+                    <Label>Bandeira</Label>
                     <Input name="brand" placeholder="Ex: MASTERCARD" />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Conta vinculada</label>
-                    <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="bankAccountId" defaultValue="">
-                      <option value="">Sem conta vinculada</option>
-                      {bankAccounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
-                    </select>
+                  <div className="space-y-1.5">
+                    <Label>Conta vinculada</Label>
+                    <Select value={createBankAccountId} items={{ "": "Sem conta vinculada", ...Object.fromEntries(bankAccounts.map((a) => [a.id, a.name])) }} onValueChange={safeSet(setCreateBankAccountId)}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Sem conta vinculada" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Sem conta vinculada</SelectItem>
+                        {bankAccounts.map((account) => (
+                          <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
@@ -323,28 +337,35 @@ export default function CardsPage() {
               <div className="flex-1 overflow-y-auto px-4 pb-4">
                 <form ref={editFormRef} className="mt-4 space-y-4">
                   <div className="grid gap-4">
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium">Nome do cartão</label>
+                    <div className="space-y-1.5">
+                      <Label>Nome do cartão</Label>
                       <Input name="name" defaultValue={selectedCard.name} required />
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium">Bandeira</label>
+                    <div className="space-y-1.5">
+                      <Label>Bandeira</Label>
                       <Input name="brand" defaultValue={selectedCard.brand ?? ""} />
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium">Conta vinculada</label>
-                      <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="bankAccountId" defaultValue={selectedCard.bankAccountId ?? ""}>
-                        <option value="">Sem conta vinculada</option>
-                        {bankAccounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
-                      </select>
+                    <div className="space-y-1.5">
+                      <Label>Conta vinculada</Label>
+                      <Select value={editBankAccountId} items={{ "": "Sem conta vinculada", ...Object.fromEntries(bankAccounts.map((a) => [a.id, a.name])) }} onValueChange={safeSet(setEditBankAccountId)}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Sem conta vinculada" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Sem conta vinculada</SelectItem>
+                          {bankAccounts.map((account) => (
+                            <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium">Dia fechamento</label>
+                      <div className="space-y-1.5">
+                        <Label>Dia fechamento</Label>
                         <Input name="closingDay" type="number" min="1" max="31" defaultValue={selectedCard.closingDay ?? ""} placeholder="Ex: 15" />
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium">Dia vencimento</label>
+                      <div className="space-y-1.5">
+                        <Label>Dia vencimento</Label>
                         <Input name="dueDay" type="number" min="1" max="31" defaultValue={selectedCard.dueDay ?? ""} placeholder="Ex: 10" />
                         <p className="text-xs text-muted-foreground">Ao alterar, faturas abertas deste mês em diante passam a vencer no novo dia. Faturas fechadas/pagas não mudam.</p>
                       </div>

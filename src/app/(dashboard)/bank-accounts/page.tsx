@@ -9,13 +9,28 @@ import { AddButton } from "@/components/ui/add-button"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { TransferWizard } from "@/features/bank-accounts/components/transfer-wizard"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { isAccountNegative, getAvailableBalance } from "@/lib/balance"
 import { ariaSort, sortButtonLabel } from "@/lib/accessible-sort"
+
+const ACCOUNT_TYPE_ITEMS: Record<string, string> = {
+  CHECKING: "Corrente",
+  SAVINGS: "Poupança",
+  DIGITAL: "Digital",
+  CASH: "Dinheiro",
+  INVESTMENT: "Investimento",
+  BENEFIT: "Benefício / Pré-pago",
+}
+const MOVEMENT_TYPE_ITEMS: Record<string, string> = {
+  INCOME: "Recebimento",
+  EXPENSE: "Saída",
+}
 
 interface BankAccount {
   id: string
@@ -55,6 +70,7 @@ export default function BankAccountsPage() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
   const [creatingType, setCreatingType] = useState<BankAccount["type"]>("DIGITAL")
   const [editingType, setEditingType] = useState<BankAccount["type"]>("DIGITAL")
+  const [movementType, setMovementType] = useState<"INCOME" | "EXPENSE">("INCOME")
   const updateInFlightRef = useRef(false)
 
   const fetchAccounts = async () => {
@@ -370,45 +386,50 @@ export default function BankAccountsPage() {
               <SheetHeader><SheetTitle>Nova conta</SheetTitle></SheetHeader>
               <form action={handleCreate} className="flex-1 overflow-y-auto px-4 pb-4">
                 <div className="mt-4 grid gap-4">
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Nome da conta</label>
+                  <div className="space-y-1.5">
+                    <Label>Nome da conta</Label>
                     <Input className="uppercase" name="name" placeholder="Ex: NUBANK" onInput={uppercaseInput} required />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Instituição</label>
+                  <div className="space-y-1.5">
+                    <Label>Instituição</Label>
                     <Input className="uppercase" name="institution" placeholder="Ex: NUBANK" onInput={uppercaseInput} />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Tipo da conta</label>
-                    <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="type" value={creatingType} onChange={(event) => setCreatingType(event.target.value as BankAccount["type"])}>
-                      <option value="CHECKING">Corrente</option>
-                      <option value="SAVINGS">Poupança</option>
-                      <option value="DIGITAL">Digital</option>
-                      <option value="CASH">Dinheiro</option>
-                      <option value="INVESTMENT">Investimento</option>
-                      <option value="BENEFIT">Benefício / Pré-pago</option>
-                    </select>
+                  <div className="space-y-1.5">
+                    <Label>Tipo da conta</Label>
+                    <Select value={creatingType} items={ACCOUNT_TYPE_ITEMS} onValueChange={(v) => setCreatingType(v as BankAccount["type"])}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CHECKING">Corrente</SelectItem>
+                        <SelectItem value="SAVINGS">Poupança</SelectItem>
+                        <SelectItem value="DIGITAL">Digital</SelectItem>
+                        <SelectItem value="CASH">Dinheiro</SelectItem>
+                        <SelectItem value="INVESTMENT">Investimento</SelectItem>
+                        <SelectItem value="BENEFIT">Benefício / Pré-pago</SelectItem>
+                      </SelectContent>
+                    </Select>
                     {creatingType === "BENEFIT" && <p className="text-xs text-muted-foreground">Para vale-alimentação, refeição e outros saldos fornecidos pela empresa.</p>}
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Saldo inicial</label>
+                  <div className="space-y-1.5">
+                    <Label>Saldo inicial</Label>
                     <Input name="initialBalance" type="number" step="0.01" placeholder="0,00" defaultValue="0" />
                   </div>
                   {creatingType === "BENEFIT" ? (
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium">Valor por dia trabalhado (opcional)</label>
+                    <div className="space-y-1.5">
+                      <Label>Valor por dia trabalhado (opcional)</Label>
                       <Input name="benefitDailyRate" type="number" step="0.01" min="0.01" placeholder="Ex: 22,00" />
                       <p className="text-xs text-muted-foreground">Usado para sugerir o valor da recarga mensal.</p>
                     </div>
                   ) : (
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium">Limite cheque especial</label>
+                    <div className="space-y-1.5">
+                      <Label>Limite cheque especial</Label>
                       <Input name="overdraftLimit" type="number" step="0.01" placeholder="0,00" defaultValue="0" />
                       <p className="text-xs text-muted-foreground">0 = sem cheque especial</p>
                     </div>
                   )}
                   <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium">Cor:</label>
+                    <Label>Cor:</Label>
                     <Input name="color" type="color" defaultValue="#22C55E" className="w-16" />
                   </div>
                 </div>
@@ -493,8 +514,8 @@ export default function BankAccountsPage() {
                     </div>
                     {showForm === "recharge" && selectedAccount.type === "BENEFIT" && (
                       <form action={(formData) => handleRecharge(selectedAccount.id, formData)} className="grid gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium">Valor creditado pela empresa</label>
+                        <div className="space-y-1.5">
+                          <Label>Valor creditado pela empresa</Label>
                           <Input
                             name="amount"
                             type="number"
@@ -522,7 +543,18 @@ export default function BankAccountsPage() {
                       <form action={(formData) => { handleMovement(selectedAccount.id, formData); setShowForm(null) }} className="grid gap-2 rounded-lg border p-3">
                         <div className="grid grid-cols-2 gap-2">
                           <Input name="amount" type="number" step="0.01" min="0.01" placeholder="Valor" required />
-                          <select className="rounded-md border bg-background px-3 py-2 text-sm" name="type" defaultValue="INCOME"><option value="INCOME">Recebimento</option><option value="EXPENSE">Saída</option></select>
+                          <div className="space-y-1.5">
+                            <input type="hidden" name="type" value={movementType} />
+                            <Select value={movementType} items={MOVEMENT_TYPE_ITEMS} onValueChange={(v) => setMovementType(v as "INCOME" | "EXPENSE")}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="INCOME">Recebimento</SelectItem>
+                                <SelectItem value="EXPENSE">Saída</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                         <Input className="uppercase" name="description" placeholder="Descrição" onInput={uppercaseInput} />
                         <Input name="date" type="date" />
@@ -654,40 +686,45 @@ export default function BankAccountsPage() {
                 {detailTab === "edit" && (
                   <div className="mt-4 space-y-6">
                     <form action={(formData) => handleUpdate(selectedAccount.id, formData)} className="grid gap-4">
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium">Nome da conta</label>
+                      <div className="space-y-1.5">
+                        <Label>Nome da conta</Label>
                         <Input className="uppercase" name="name" defaultValue={selectedAccount.name} onInput={uppercaseInput} required />
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium">Instituição</label>
+                      <div className="space-y-1.5">
+                        <Label>Instituição</Label>
                         <Input className="uppercase" name="institution" defaultValue={selectedAccount.institution ?? ""} onInput={uppercaseInput} />
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium">Tipo da conta</label>
-                        <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" name="type" value={editingType} onChange={(event) => setEditingType(event.target.value as BankAccount["type"])}>
-                          <option value="CHECKING">Corrente</option>
-                          <option value="SAVINGS">Poupança</option>
-                          <option value="DIGITAL">Digital</option>
-                          <option value="CASH">Dinheiro</option>
-                          <option value="INVESTMENT">Investimento</option>
-                          <option value="BENEFIT">Benefício / Pré-pago</option>
-                        </select>
+                      <div className="space-y-1.5">
+                        <Label>Tipo da conta</Label>
+                        <Select value={editingType} items={ACCOUNT_TYPE_ITEMS} onValueChange={(v) => setEditingType(v as BankAccount["type"])}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="CHECKING">Corrente</SelectItem>
+                            <SelectItem value="SAVINGS">Poupança</SelectItem>
+                            <SelectItem value="DIGITAL">Digital</SelectItem>
+                            <SelectItem value="CASH">Dinheiro</SelectItem>
+                            <SelectItem value="INVESTMENT">Investimento</SelectItem>
+                            <SelectItem value="BENEFIT">Benefício / Pré-pago</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       {editingType === "BENEFIT" ? (
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium">Valor por dia trabalhado (opcional)</label>
+                        <div className="space-y-1.5">
+                          <Label>Valor por dia trabalhado (opcional)</Label>
                           <Input name="benefitDailyRate" type="number" step="0.01" min="0.01" placeholder="Ex: 22,00" defaultValue={selectedAccount.benefitDailyRate ?? ""} />
                           <p className="text-xs text-muted-foreground">A conta benefício não permite cheque especial nem transferências.</p>
                         </div>
                       ) : (
-                        <div className="space-y-1">
-                          <label className="text-sm font-medium">Limite cheque especial</label>
+                        <div className="space-y-1.5">
+                          <Label>Limite cheque especial</Label>
                           <Input name="overdraftLimit" type="number" step="0.01" placeholder="0,00" defaultValue={selectedAccount.overdraftLimit.toFixed(2)} />
                           <p className="text-xs text-muted-foreground">0 = sem cheque especial</p>
                         </div>
                       )}
                       <div className="flex items-center gap-2">
-                        <label className="text-sm font-medium">Cor:</label>
+                        <Label>Cor:</Label>
                         <Input name="color" type="color" defaultValue={selectedAccount.color} className="w-16" />
                       </div>
                       <Button type="submit" className="w-full" disabled={updateSubmitting}>

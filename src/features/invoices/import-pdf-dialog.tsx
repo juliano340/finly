@@ -9,6 +9,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 
 interface CardOption {
@@ -37,6 +39,8 @@ export function ImportPdfDialog({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const safeSet = (setter: (v: string) => void) => (v: string | null) => setter(v ?? "")
 
   const handleSubmit = async () => {
     if (!file) return
@@ -113,19 +117,23 @@ export function ImportPdfDialog({
         <div className="space-y-4">
           {!invoiceId && cards && cards.length > 0 && (
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">Cartão</label>
-              <select
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              <Label>Cartão</Label>
+              <Select
+                items={Object.fromEntries(cards.map((card) => [card.id, card.name]))}
                 value={cardId}
-                onChange={(e) => setCardId(e.target.value)}
+                onValueChange={safeSet(setCardId)}
               >
-                <option value="">Selecione um cartão</option>
-                {cards.map((card) => (
-                  <option key={card.id} value={card.id}>
-                    {card.name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione um cartão" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cards.map((card) => (
+                    <SelectItem key={card.id} value={card.id}>
+                      {card.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 
