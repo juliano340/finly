@@ -128,6 +128,13 @@ export async function findOrCreateGoogleUser(input: GoogleUserInput, client?: Pr
 
   const existing = await db.user.findUnique({ where: { email } })
   if (existing) {
+    // Anti account-takeover: só vincula automaticamente se a conta local
+    // já provou posse do e-mail (verificada) ou é órfã sem senha (nunca
+    // verificada — o Google prova a posse neste momento). Uma conta com
+    // senha e e-mail pendente de verificação pode ter sido criada por
+    // terceiros com o e-mail da vítima e NÃO deve ser vinculada.
+    if (!existing.emailVerified && existing.passwordHash) return null
+
     if (existing.image !== input.image) {
       return db.user.update({
         where: { id: existing.id },

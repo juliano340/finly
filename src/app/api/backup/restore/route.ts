@@ -35,7 +35,7 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error("[backup/restore]", err)
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Erro ao importar backup" },
+      { error: "Não foi possível restaurar o backup. Verifique o arquivo e tente novamente." },
       { status: 500 }
     )
   }

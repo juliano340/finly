@@ -7,7 +7,6 @@ import {
   createEmailVerificationToken,
   EmailVerificationRateLimitError,
   EMAIL_VERIFICATION_TTL_MINUTES,
-  isEmailVerified,
 } from "@/features/auth/email-verification.service"
 import { consumeIpRateLimit } from "@/features/auth/request-rate-limit.service"
 
@@ -25,10 +24,6 @@ export async function POST(request: Request) {
     if (!parsed.success) return NextResponse.json({ error: "E-mail inválido." }, { status: 400 })
 
     const email = parsed.data.email.trim().toLowerCase()
-
-    if (await isEmailVerified(email, prisma)) {
-      return NextResponse.json({ alreadyVerified: true })
-    }
 
     try {
       const token = await createEmailVerificationToken(email, prisma)
