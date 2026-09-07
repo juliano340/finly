@@ -66,7 +66,7 @@ export const backupSchema = z.object({
       type: z.enum(["INCOME", "EXPENSE"]),
       description: z.string().nullable().optional(),
       date: isoDate,
-    })),
+    })).max(50000),
     fixedCosts: z.array(z.object({
       id: z.string(),
       name: z.string(),

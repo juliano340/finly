@@ -10,6 +10,17 @@ export interface ImportResult {
   errors: string[]
 }
 
+export const MAX_CSV_LINES = 10_000
+
+/**
+ * Neutraliza formula injection: valores iniciados por =, + ou @ são
+ * interpretados como fórmulas pelo Excel/Sheets quando o CSV é reexportado.
+ * Prefixar com apóstrofo força tratamento como texto.
+ */
+function sanitizeCell(value: string): string {
+  return /^[=+@\t\r]/.test(value) ? `'${value}` : value
+}
+
 export function parseCSV(content: string): ImportResult {
   const lines = content.split("\n").filter((l) => l.trim())
   const errors: string[] = []
@@ -17,6 +28,13 @@ export function parseCSV(content: string): ImportResult {
 
   if (lines.length < 2) {
     return { transactions: [], errors: ["Arquivo CSV vazio ou sem cabeçalho"] }
+  }
+
+  if (lines.length > MAX_CSV_LINES) {
+    return {
+      transactions: [],
+      errors: [`Arquivo excede o limite de ${MAX_CSV_LINES} linhas`],
+    }
   }
 
   const header = lines[0].toLowerCase()
@@ -55,7 +73,7 @@ export function parseCSV(content: string): ImportResult {
     transactions.push({
       date,
       amount: Math.abs(amount),
-      description,
+      description: sanitizeCell(description),
       type: amount < 0 ? "EXPENSE" : "INCOME",
     })
   }
