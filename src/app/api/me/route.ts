@@ -24,7 +24,6 @@ export async function GET() {
       image: true,
       plan: true,
       createdAt: true,
-      passwordHash: true,
     },
   })
 
@@ -32,7 +31,12 @@ export async function GET() {
     return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })
   }
 
-  return NextResponse.json({ ...user, passwordHash: undefined, hasPassword: Boolean(user.passwordHash) })
+  const credentials = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { passwordHash: true },
+  })
+
+  return NextResponse.json({ ...user, hasPassword: Boolean(credentials?.passwordHash) })
 }
 
 export async function PATCH(request: Request) {

@@ -46,9 +46,9 @@ describe("findOrCreateGoogleUser", () => {
     await expect(prisma.user.findMany({ where: { email: googleEmail } })).resolves.toHaveLength(1)
   })
 
-  it("vincula conta existente criada por credenciais", async () => {
+  it("vincula conta existente criada por credenciais e verificada", async () => {
     const registered = await prisma.user.create({
-      data: { email: credentialsEmail, passwordHash: "$2b$12$abc" },
+      data: { email: credentialsEmail, passwordHash: "$2b$12$abc", emailVerified: new Date() },
     })
 
     const linked = await findOrCreateGoogleUser(
@@ -62,10 +62,43 @@ describe("findOrCreateGoogleUser", () => {
     expect(users[0].passwordHash).toBe("$2b$12$abc")
   })
 
+  it("recusa vincular conta com senha e e-mail não verificado (anti-takeover)", async () => {
+    const victimEmail = `unlinked-${suffix}@test.com`
+    const attackerBait = await prisma.user.create({
+      data: { email: victimEmail, passwordHash: "$2b$12$abc" },
+    })
+
+    const linked = await findOrCreateGoogleUser(
+      { email: victimEmail, name: "Vítima", emailVerified: true },
+      prisma
+    )
+
+    expect(linked).toBeNull()
+    const users = await prisma.user.findMany({ where: { email: victimEmail } })
+    expect(users).toHaveLength(1)
+    expect(users[0].id).toBe(attackerBait.id)
+    await prisma.user.delete({ where: { email: victimEmail } })
+  })
+
+  it("vincula conta órfã sem senha e não verificada (Google prova a posse)", async () => {
+    const orphanEmail = `orphan-${suffix}@test.com`
+    const orphan = await prisma.user.create({
+      data: { email: orphanEmail, name: "Órfã" },
+    })
+
+    const linked = await findOrCreateGoogleUser(
+      { email: orphanEmail, name: "Dono Real", emailVerified: true },
+      prisma
+    )
+
+    expect(linked!.id).toBe(orphan.id)
+    await prisma.user.delete({ where: { email: orphanEmail } })
+  })
+
   it("sincroniza a foto do Google em usuário existente e preserva o nome", async () => {
     const email = `photo-${suffix}@test.com`
     const created = await prisma.user.create({
-      data: { email, name: "Nome Editado", passwordHash: "$2b$12$abc" },
+      data: { email, name: "Nome Editado", passwordHash: "$2b$12$abc", emailVerified: new Date() },
     })
 
     const linked = await findOrCreateGoogleUser(

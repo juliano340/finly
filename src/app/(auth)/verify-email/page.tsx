@@ -79,11 +79,6 @@ function VerifyEmailContent() {
     const data = await response.json().catch(() => ({}))
     setResending(false)
 
-    if (data.alreadyVerified) {
-      setStatus("verified")
-      return
-    }
-
     if (!response.ok) {
       if (typeof data.retryAfterMinutes === "number") {
         setCooldown(data.retryAfterMinutes * 60)
