@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v5
         with:
@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v5
         with:
@@ -73,7 +73,7 @@ jobs:
       VERCEL_PROJECT_ID: prj_NjAFxN02Ru4YfvA8NrKmGMjpfSaq
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Deploy to Vercel production
         run: npx --yes vercel@latest deploy --prod --token="${{ secrets.VERCEL_TOKEN }}"
