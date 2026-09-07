@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 import type { PrismaClient } from "@/generated/prisma/client"
 import { prisma as defaultPrisma } from "@/lib/prisma"
+import { clientAddress } from "@/lib/client-ip"
 
 const MAX_FAILURES = 5
 const MAX_IP_FAILURES = 25
@@ -9,11 +10,6 @@ const LOCK_MS = 15 * 60 * 1000
 
 function digest(value: string): string {
   return createHash("sha256").update(value).digest("hex")
-}
-
-function clientAddress(request: Request): string | null {
-  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-  return forwarded || request.headers.get("x-real-ip")?.trim() || null
 }
 
 export function loginRateLimitKeys(email: string, request: Request): string[] {

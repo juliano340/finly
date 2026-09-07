@@ -24,19 +24,27 @@ const options = { max: 3, windowMs: 60 * 60 * 1000 }
 describe("consumeIpRateLimit", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
-    vi.stubEnv("NODE_ENV", "production")
+    vi.unstubAllEnvs()
   })
 
   afterEach(() => {
     vi.unstubAllEnvs()
   })
 
-  it("não contabiliza nada fora de produção", async () => {
-    vi.stubEnv("NODE_ENV", "development")
+  it("não contabiliza nada quando RATE_LIMIT_DISABLED=true", async () => {
+    vi.stubEnv("RATE_LIMIT_DISABLED", "true")
     const client = makeClient()
     const limited = await consumeIpRateLimit(makeRequest("1.1.1.1"), "register", options, client as never)
     expect(limited).toBe(false)
     expect(client.loginAttempt.upsert).not.toHaveBeenCalled()
+  })
+
+  it("contabiliza mesmo fora de produção quando a flag não está setada", async () => {
+    const client = makeClient()
+    client.loginAttempt.upsert.mockResolvedValue({ failedAttempts: 1, windowStartedAt: new Date() })
+    const limited = await consumeIpRateLimit(makeRequest("1.1.1.1"), "register", options, client as never)
+    expect(limited).toBe(false)
+    expect(client.loginAttempt.upsert).toHaveBeenCalledTimes(1)
   })
 
   it("não limita quando não há IP identificável", async () => {

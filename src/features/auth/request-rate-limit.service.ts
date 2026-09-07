@@ -1,15 +1,11 @@
 import { createHash } from "node:crypto"
 import type { PrismaClient } from "@/generated/prisma/client"
 import { prisma as defaultPrisma } from "@/lib/prisma"
+import { clientAddress } from "@/lib/client-ip"
 
 export interface IpRateLimitOptions {
   max: number
   windowMs: number
-}
-
-function clientAddress(request: Request): string | null {
-  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-  return forwarded || request.headers.get("x-real-ip")?.trim() || null
 }
 
 export async function consumeIpRateLimit(
@@ -19,7 +15,7 @@ export async function consumeIpRateLimit(
   client?: PrismaClient,
   now = new Date(),
 ): Promise<boolean> {
-  if (process.env.NODE_ENV !== "production") return false
+  if (process.env.RATE_LIMIT_DISABLED === "true") return false
 
   const db = client ?? defaultPrisma
   const address = clientAddress(request)
