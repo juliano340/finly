@@ -88,4 +88,32 @@ data-invalida,100.00
     expect(result.transactions).toHaveLength(1)
     expect(result.transactions[0].amount).toBe(1500)
   })
+
+  it("retorna erro quando excede o limite de linhas", () => {
+    const header = "data,valor"
+    const rows = Array.from({ length: 10_001 }, () => "01/06/2026,-100.00").join("\n")
+    const result = parseCSV(`${header}\n${rows}`)
+    expect(result.transactions).toHaveLength(0)
+    expect(result.errors[0]).toContain("limite")
+  })
+
+  it("neutraliza formula injection na descrição", () => {
+    const csv = `data,valor,descrição
+01/06/2026,-100.00,=CMD|' /C calc'!A0
+01/06/2026,-100.00,+saldo
+01/06/2026,-100.00,@importante`
+    const result = parseCSV(csv)
+    expect(result.transactions[0].description).toBe(`'=CMD|' /C calc'!A0`)
+    expect(result.transactions[1].description).toBe("'+saldo")
+    expect(result.transactions[2].description).toBe("'@importante")
+  })
+
+  it("não altera descrições normais", () => {
+    const csv = `data,valor,descrição
+01/06/2026,-100.00,Supermercado
+02/06/2026,-50.00,-50 desconto`
+    const result = parseCSV(csv)
+    expect(result.transactions[0].description).toBe("Supermercado")
+    expect(result.transactions[1].description).toBe("-50 desconto")
+  })
 })
