@@ -102,6 +102,7 @@ model User {
   image                String?
   passwordHash         String?
   passwordChangedAt    DateTime?
+  notificationDaysAhead Int      @default(7)
   plan                 Plan      @default(FREE)
   stripeCustomerId     String?   @unique
   stripeSubscriptionId String?

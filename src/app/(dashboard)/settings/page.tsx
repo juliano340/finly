@@ -12,10 +12,20 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Stepper } from "@/components/ui/stepper"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getPasswordStrength, PASSWORD_STRENGTH_COLORS, PASSWORD_STRENGTH_LABELS } from "@/lib/password-strength"
+import { formatDate } from "@/lib/utils"
+
+const NOTIFICATION_DAYS_OPTIONS = [
+  { value: "1", label: "1 dia (só amanhã)" },
+  { value: "3", label: "3 dias" },
+  { value: "7", label: "7 dias (padrão)" },
+  { value: "14", label: "14 dias" },
+  { value: "30", label: "30 dias" },
+]
 
 interface MeResponse {
   id: string
@@ -23,8 +33,14 @@ interface MeResponse {
   email: string
   image: string | null
   plan: string
+  notificationDaysAhead: number
   createdAt: string
   hasPassword: boolean
+}
+
+function notificationWindowEnd(daysAhead: number): string {
+  const now = new Date()
+  return formatDate(new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() + daysAhead)).toISOString())
 }
 
 export default function SettingsPage() {
@@ -49,6 +65,8 @@ export default function SettingsPage() {
   const [confirmRestore, setConfirmRestore] = useState(false)
   const [confirmResetFixedExpenses, setConfirmResetFixedExpenses] = useState(false)
   const [resettingFixedExpenses, setResettingFixedExpenses] = useState(false)
+  const [daysAhead, setDaysAhead] = useState("7")
+  const [savingNotifications, setSavingNotifications] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [action, setAction] = useState<"choose" | "export" | "import" | "reset">("choose")
   const [step, setStep] = useState(0)
@@ -62,6 +80,7 @@ export default function SettingsPage() {
         if (!active || !data) return
         setMe(data)
         setName(data.name ?? "")
+        setDaysAhead(String(data.notificationDaysAhead ?? 7))
       })
       .finally(() => active && setLoading(false))
     return () => {
@@ -99,6 +118,30 @@ export default function SettingsPage() {
   function startEditingProfile() {
     setName(me?.name ?? "")
     setEditingProfile(true)
+  }
+
+  const notificationsDirty = Number(daysAhead) !== (me?.notificationDaysAhead ?? 7)
+
+  const handleSaveNotifications = async () => {
+    if (savingNotifications || !notificationsDirty) return
+    setSavingNotifications(true)
+    try {
+      const res = await fetch("/api/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notificationDaysAhead: Number(daysAhead) }),
+      })
+      if (res.ok) {
+        const updated: MeResponse = await res.json()
+        setMe(updated)
+        toast.success("Preferências de notificação salvas.")
+      } else {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.error ?? "Não foi possível salvar as preferências de notificação.")
+      }
+    } finally {
+      setSavingNotifications(false)
+    }
   }
 
   function cancelEditingProfile() {
@@ -265,6 +308,7 @@ export default function SettingsPage() {
       <Tabs defaultValue="account" className="w-full">
         <TabsList>
           <TabsTrigger value="account">Conta</TabsTrigger>
+          <TabsTrigger value="notifications">Notificações</TabsTrigger>
           <TabsTrigger value="appearance">Aparência</TabsTrigger>
           <TabsTrigger value="session">Sessão</TabsTrigger>
           <TabsTrigger value="data">Dados</TabsTrigger>
@@ -474,6 +518,49 @@ export default function SettingsPage() {
               </form>
             </DialogContent>
           </Dialog>
+        </TabsContent>
+
+        <TabsContent value="notifications" className="w-full space-y-4">
+          <Card className="border-0 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base">Lembretes de vencimento</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Carregando…
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="notification-days-ahead">Antecedência do aviso</Label>
+                    <Select items={NOTIFICATION_DAYS_OPTIONS} value={daysAhead} onValueChange={(value) => setDaysAhead(value ?? "7")}>
+                      <SelectTrigger id="notification-days-ahead" className="w-64">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {NOTIFICATION_DAYS_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-sm text-muted-foreground">
+                      O sino de lembretes exibe contas com vencimento entre hoje e{" "}
+                      {notificationWindowEnd(Number(daysAhead))}, incluindo as atrasadas há até 30 dias.
+                    </p>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button onClick={handleSaveNotifications} disabled={savingNotifications || !notificationsDirty}>
+                      {savingNotifications ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                      Salvar preferências
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="appearance" className="w-full space-y-4">

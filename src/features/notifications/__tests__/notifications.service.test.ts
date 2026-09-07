@@ -125,6 +125,30 @@ describe("notifications.service", () => {
     expect(notifications.some((item) => item.type === "FIXED_COST" && item.amount === 55 && item.dueDate.startsWith("2026-09-01"))).toBe(false)
   })
 
+  it("respeita a antecedência configurada ao incluir lembretes", async () => {
+    const created = await createFixedCost(
+      userId,
+      { type: "EXPENSE" as const, name: `Config Notify ${Date.now()}`, defaultAmount: 70, categoryId, paymentMethod: "PIX", dueDay: 10, paidInsideCard: false, cardId: null, bankAccountId: null, active: true, startDate: "2026-01-01", frequency: "MONTHLY", endType: "NONE" },
+      prisma
+    )
+    if (!created) return
+
+    const juneFM = await prisma.financialMonth.upsert({
+      where: { month_userId: { month: "2026-06", userId } },
+      create: { month: "2026-06", userId },
+      update: {},
+    })
+    await prisma.fixedCostOccurrence.create({
+      data: { fixedCostId: created.id, financialMonthId: juneFM.id, month: "2026-06", dueDate: new Date("2026-06-10T12:00:00"), amount: 70, status: "PENDING", userId },
+    })
+
+    const withDefault = await getDueSoonNotifications(userId, 7, prisma, new Date("2026-06-01T12:00:00"))
+    expect(withDefault.some((item) => item.type === "FIXED_COST" && item.amount === 70)).toBe(true)
+
+    const withShortWindow = await getDueSoonNotifications(userId, 2, prisma, new Date("2026-06-01T12:00:00"))
+    expect(withShortWindow.some((item) => item.type === "FIXED_COST" && item.amount === 70)).toBe(false)
+  })
+
   it("ordena os lembretes por vencimento mais próximo", async () => {
     const card = await createCard(
       userId,

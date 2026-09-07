@@ -7,6 +7,7 @@ import { consumeIpRateLimit } from "@/features/auth/request-rate-limit.service"
 
 const updateProfileSchema = z.object({
   name: z.string().min(1).max(80).optional(),
+  notificationDaysAhead: z.number().int().min(1).max(90).optional(),
 })
 
 export async function GET() {
@@ -23,6 +24,7 @@ export async function GET() {
       email: true,
       image: true,
       plan: true,
+      notificationDaysAhead: true,
       createdAt: true,
     },
   })
@@ -52,13 +54,17 @@ export async function PATCH(request: Request) {
 
   const updated = await prisma.user.update({
     where: { id: session.user.id },
-    data: { name: parsed.data.name },
+    data: {
+      name: parsed.data.name,
+      notificationDaysAhead: parsed.data.notificationDaysAhead,
+    },
     select: {
       id: true,
       name: true,
       email: true,
       image: true,
       plan: true,
+      notificationDaysAhead: true,
       createdAt: true,
     },
   })

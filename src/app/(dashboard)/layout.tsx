@@ -1,10 +1,9 @@
 "use client"
 
-import { Suspense, useState, useEffect, useRef } from "react"
+import { Suspense, useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { signOut, useSession } from "next-auth/react"
-import { toast } from "sonner"
 import {
   LayoutDashboard,
   Tags,
@@ -18,7 +17,6 @@ import {
   ChevronLeft,
   Menu,
   X,
-  Bell,
   LogOut,
   User as UserIcon,
 } from "lucide-react"
@@ -33,9 +31,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { NotificationBell } from "@/features/notifications/notifications-panel"
 import { CURRENT_VERSION } from "@/content/releases"
-import { formatCurrency, formatDate } from "@/lib/utils"
-import { computeDaysUntilDue, deriveStatus, type DueNotificationStatus } from "@/lib/compute-days-until-due"
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -48,20 +45,6 @@ const navItems = [
   { href: "/categories", label: "Categorias", icon: Tags },
   { href: "/settings", label: "Configurações", icon: Settings },
 ]
-
-interface RawDueNotification {
-  id: string
-  type: "INVOICE" | "FIXED_COST"
-  title: string
-  amount: number
-  dueDate: string
-  href: string
-}
-
-interface DueNotification extends RawDueNotification {
-  daysUntilDue: number
-  status: DueNotificationStatus
-}
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -78,29 +61,12 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
-  const [notificationsOpen, setNotificationsOpen] = useState(false)
-  const [notifications, setNotifications] = useState<DueNotification[]>([])
-  const [notified, setNotified] = useState(false)
   const [logoutOpen, setLogoutOpen] = useState(false)
-  const notificationsRef = useRef<HTMLDivElement | null>(null)
-  const [bellPos, setBellPos] = useState<{ top: number; right: number } | null>(null)
 
   const handleLogout = () => {
     setLogoutOpen(false)
     signOut({ callbackUrl: "/login", redirect: true })
   }
-
-  useEffect(() => {
-    if (!notificationsOpen) return
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node
-      if (notificationsRef.current && !notificationsRef.current.contains(target)) {
-        setNotificationsOpen(false)
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [notificationsOpen])
 
   useEffect(() => {
     const desktopQuery = window.matchMedia("(min-width: 768px)")
@@ -118,39 +84,11 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener("keydown", closeOnEscape)
   }, [mobileNavOpen])
 
-  const fetchNotifications = () => {
-    return fetch("/api/notifications/due-soon")
-      .then((res) => res.ok ? res.json() : [])
-      .then((data: RawDueNotification[]) => {
-        const enriched: DueNotification[] = data.map((item) => {
-          const daysUntilDue = computeDaysUntilDue(item.dueDate)
-          return { ...item, daysUntilDue, status: deriveStatus(daysUntilDue) }
-        })
-        setNotifications(enriched)
-      })
-      .catch(() => setNotifications([]))
-  }
-
   useEffect(() => {
     if (status === "unauthenticated") {
       router.replace("/login")
     }
   }, [status, router])
-
-  useEffect(() => {
-    if (status !== "authenticated") return
-    fetchNotifications()
-  }, [status, pathname])
-
-  useEffect(() => {
-    if (notified || notifications.length === 0) return
-    const overdue = notifications.filter((item) => item.status === "OVERDUE").length
-    const dueToday = notifications.filter((item) => item.status === "DUE_TODAY").length
-    if (overdue > 0) toast.warning(`Você tem ${overdue} ${overdue === 1 ? "conta atrasada" : "contas atrasadas"}`)
-    else if (dueToday > 0) toast.info(`Você tem ${dueToday} ${dueToday === 1 ? "conta vencendo hoje" : "contas vencendo hoje"}`)
-    const timer = window.setTimeout(() => setNotified(true), 0)
-    return () => window.clearTimeout(timer)
-  }, [notifications, notified])
 
   if (status === "loading") {
     return (
@@ -313,55 +251,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             </h2>
           </div>
           <div className="relative flex items-center gap-3">
-            <div ref={notificationsRef} className="relative">
-              <button
-                type="button"
-                onClick={(e) => {
-                  if (!notificationsOpen) {
-                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                    setBellPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right })
-                    fetchNotifications()
-                  }
-                  setNotificationsOpen((open) => !open)
-                }}
-                className="relative rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-              >
-                <Bell className="h-4 w-4" />
-                {notifications.length > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
-                    {notifications.length > 9 ? "9+" : notifications.length}
-                  </span>
-                )}
-              </button>
-              {notificationsOpen && bellPos && (
-                <div className="fixed z-[9999] w-80 overflow-hidden rounded-xl border bg-background shadow-lg" style={{ top: bellPos.top, right: bellPos.right }}>
-                  <div className="border-b p-3">
-                    <p className="text-sm font-semibold">Lembretes</p>
-                    <p className="text-xs text-muted-foreground">Contas próximas do vencimento</p>
-                  </div>
-                  <div className="max-h-96 overflow-y-auto p-2">
-                    {notifications.length === 0 ? (
-                      <p className="p-3 text-sm text-muted-foreground">Nenhuma conta próxima do vencimento.</p>
-                    ) : notifications.map((item) => (
-                      <Link
-                        key={`${item.type}-${item.id}`}
-                        href={item.href}
-                        onClick={() => setNotificationsOpen(false)}
-                        className="block rounded-lg p-3 text-sm transition-colors hover:bg-muted"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-medium">{item.title}</p>
-                            <p className="text-xs text-muted-foreground">{notificationLabel(item)} · {formatDate(item.dueDate)}</p>
-                          </div>
-                          <p className="shrink-0 font-semibold">{formatCurrency(item.amount)}</p>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            <NotificationBell />
             <AvatarMenu
               name={session?.user?.name ?? null}
               email={session?.user?.email ?? null}
@@ -389,12 +279,6 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       />
     </div>
   )
-}
-
-function notificationLabel(item: DueNotification) {
-  if (item.status === "OVERDUE") return item.daysUntilDue === -1 ? "Atrasada há 1 dia" : `Atrasada há ${Math.abs(item.daysUntilDue)} dias`
-  if (item.status === "DUE_TODAY") return "Vence hoje"
-  return item.daysUntilDue === 1 ? "Vence amanhã" : `Vence em ${item.daysUntilDue} dias`
 }
 
 function AvatarMenu({ name, email, image, onLogout }: { name: string | null; email: string | null; image: string | null; onLogout: () => void }) {
