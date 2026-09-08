@@ -11,10 +11,9 @@ vi.mock("pdf-parse", () => ({ default: vi.fn() }))
 
 const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const
 
-const routeModules = import.meta.glob<Record<string, unknown>>(
-  "../app/api/**/route.ts",
-  { eager: true },
-)
+const routeModules = import.meta.glob("../app/api/**/route.ts", {
+  eager: true,
+}) as Record<string, Record<string, unknown>>
 
 const protectedRoutes = Object.entries(routeModules).filter(
   ([path]) => !path.includes("/api/auth/")
