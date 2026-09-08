@@ -10,6 +10,7 @@ export const cardInvoiceSchema = z.object({
   lifecycleStatus: z.enum(["ESTIMATED", "OPEN", "CLOSED", "PAID"]).default("OPEN"),
   enteredTotal: z.coerce.number().min(0, "Valor não pode ser negativo").optional().nullable(),
   paidAt: z.coerce.date().optional().nullable(),
+  autoCreated: z.coerce.boolean().default(false),
 })
 
 export const copyCardInvoicesSchema = z.object({
@@ -33,7 +34,7 @@ export const cardInvoiceItemSchema = z.object({
 type ParsedCardInvoiceInput = z.output<typeof cardInvoiceSchema>
 type ParsedCardInvoiceItemInput = z.output<typeof cardInvoiceItemSchema>
 
-export type CardInvoiceInput = Omit<ParsedCardInvoiceInput, "amount" | "status" | "calculationMode" | "lifecycleStatus"> &
-  Partial<Pick<ParsedCardInvoiceInput, "amount" | "status" | "calculationMode" | "lifecycleStatus">>
+export type CardInvoiceInput = Omit<ParsedCardInvoiceInput, "amount" | "status" | "calculationMode" | "lifecycleStatus" | "autoCreated"> &
+  Partial<Pick<ParsedCardInvoiceInput, "amount" | "status" | "calculationMode" | "lifecycleStatus" | "autoCreated">>
 export type CardInvoiceItemInput = Omit<ParsedCardInvoiceItemInput, "kind" | "postingStatus"> &
   Partial<Pick<ParsedCardInvoiceItemInput, "kind" | "postingStatus">>

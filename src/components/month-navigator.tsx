@@ -24,12 +24,11 @@ export function changeMonth(month: string, amount: -1 | 1) {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`
 }
 
+const MONTH_ABBR = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+
 export function formatMonth(month: string) {
   const [year, monthNumber] = month.split("-").map(Number)
-  return new Date(Number(year), monthNumber - 1).toLocaleDateString("pt-BR", {
-    month: "long",
-    year: "numeric",
-  })
+  return `${MONTH_ABBR[monthNumber - 1]} ${year}`
 }
 
 function formatMonthDistance(month: string, todayMonth: string) {
@@ -85,7 +84,7 @@ export function MonthNavigator({
             onChange={(event) => onMonthChange(event.target.value)}
           />
         ) : (
-          <span className="min-w-36 px-2 text-center text-sm font-medium capitalize">{formatMonth(month)}</span>
+          <span className="min-w-36 px-2 text-center text-sm font-medium">{formatMonth(month)}</span>
         )}
         <Button type="button" variant="ghost" size="icon" className="size-8" aria-label="Próximo mês" disabled={nextDisabled} onClick={() => onMonthChange(next)}>
           <ChevronRight aria-hidden="true" className="size-4" />

@@ -22,6 +22,7 @@ export async function getTransactions(
   filters?: {
     id?: string
     type?: "INCOME" | "EXPENSE"
+    status?: "ACTIVE" | "REVERSED"
     categoryId?: string
     month?: string
     page?: number
@@ -36,6 +37,7 @@ export async function getTransactions(
   const skip = (page - 1) * limit
 
   const where: Record<string, unknown> = { userId }
+  where.status = filters?.status ?? "ACTIVE"
   if (filters?.id) where.id = filters.id
   if (filters?.type) where.type = filters.type
   if (filters?.categoryId) where.categoryId = filters.categoryId
@@ -321,18 +323,88 @@ export async function deleteTransaction(
   const tx = await db.transaction.findUnique({ where: { id }, include: { invoiceItem: true } })
   if (!tx || tx.userId !== userId) return false
 
+  // Estorno: remove efeitos financeiros (movimento + item da fatura),
+  // mas mantém a linha da transação como REVERSED para auditoria
   await db.$transaction(async (prismaTx) => {
-    await prismaTx.bankAccountMovement.deleteMany({
-      where: { transactionId: id },
-    })
-
-    await prismaTx.transaction.delete({ where: { id } })
+    await prismaTx.bankAccountMovement.deleteMany({ where: { transactionId: id } })
+    await prismaTx.cardInvoiceItem.deleteMany({ where: { transactionId: id } })
+    await prismaTx.transaction.update({ where: { id }, data: { status: "REVERSED" } })
   })
+
   if (tx.invoiceItem) await syncCalculatedInvoiceAmount(tx.invoiceItem.invoiceId, userId, db)
   return true
 }
 
+export async function permanentDeleteTransaction(
+  id: string,
+  userId: string,
+  client?: PrismaClient
+) {
+  const db = client ?? defaultPrisma
+  const tx = await db.transaction.findUnique({ where: { id }, include: { invoiceItem: true } })
+  if (!tx || tx.userId !== userId) return false
+
+  // Exclusão permanente: remove tudo do banco
+  await db.$transaction(async (prismaTx) => {
+    await prismaTx.bankAccountMovement.deleteMany({
+      where: { transactionId: id },
+    })
+    await prismaTx.cardInvoiceItem.deleteMany({ where: { transactionId: id } })
+    await prismaTx.transaction.delete({ where: { id } })
+  })
+
+  if (tx.invoiceItem) {
+    await syncCalculatedInvoiceAmount(tx.invoiceItem.invoiceId, userId, db)
+    await deleteInvoiceIfAutoCreatedAndEmpty(tx.invoiceItem.invoiceId, userId, db)
+  }
+  return true
+}
+
+async function deleteInvoiceIfAutoCreatedAndEmpty(invoiceId: string, userId: string, db: PrismaClient) {
+  const invoice = await db.cardInvoice.findFirst({
+    where: { id: invoiceId, userId, autoCreated: true },
+    include: { items: { select: { id: true } } },
+  })
+  if (invoice && invoice.items.length === 0) {
+    await db.cardInvoice.delete({ where: { id: invoiceId } })
+  }
+}
+
 export async function batchDeleteTransactions(
+  ids: string[],
+  userId: string,
+  client?: PrismaClient
+) {
+  const db = client ?? defaultPrisma
+  const transactions = await db.transaction.findMany({
+    where: { id: { in: ids }, userId },
+    include: { invoiceItem: true },
+  })
+
+  const invoiceIds = new Set<string>()
+  for (const tx of transactions) {
+    if (tx.invoiceItem) invoiceIds.add(tx.invoiceItem.invoiceId)
+  }
+
+  // Estorno em lote: remove efeitos financeiros, mantém linhas como REVERSED
+  await db.$transaction(async (prismaTx) => {
+    const txIds = transactions.map((t) => t.id)
+    await prismaTx.bankAccountMovement.deleteMany({ where: { transactionId: { in: txIds } } })
+    await prismaTx.cardInvoiceItem.deleteMany({ where: { transactionId: { in: txIds } } })
+    await prismaTx.transaction.updateMany({
+      where: { id: { in: txIds }, userId },
+      data: { status: "REVERSED" },
+    })
+  })
+
+  for (const invoiceId of invoiceIds) {
+    await syncCalculatedInvoiceAmount(invoiceId, userId, db)
+  }
+
+  return transactions.length
+}
+
+export async function permanentBatchDeleteTransactions(
   ids: string[],
   userId: string,
   client?: PrismaClient
@@ -357,6 +429,7 @@ export async function batchDeleteTransactions(
 
   for (const invoiceId of invoiceIds) {
     await syncCalculatedInvoiceAmount(invoiceId, userId, db)
+    await deleteInvoiceIfAutoCreatedAndEmpty(invoiceId, userId, db)
   }
 
   return transactions.length

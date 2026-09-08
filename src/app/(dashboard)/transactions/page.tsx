@@ -34,6 +34,12 @@ interface BankAccountOption {
   type: "CHECKING" | "SAVINGS" | "DIGITAL" | "CASH" | "INVESTMENT" | "BENEFIT"
 }
 
+interface CardOption {
+  id: string
+  name: string
+  dueDay: number | null
+}
+
 interface InvoiceOption {
   id: string
   month: string
@@ -82,6 +88,7 @@ export default function TransactionsPage() {
 
   const { categories } = useCategories()
   const [bankAccounts, setBankAccounts] = useState<BankAccountOption[]>([])
+  const [cards, setCards] = useState<CardOption[]>([])
   const [invoices, setInvoices] = useState<InvoiceOption[]>([])
 
   useEffect(() => {
@@ -89,10 +96,25 @@ export default function TransactionsPage() {
       .then((res) => res.json())
       .then((data) => setBankAccounts(data))
       .catch(() => {})
+    fetch("/api/cards")
+      .then((res) => res.json())
+      .then((data: CardOption[]) => setCards(data))
+      .catch(() => {})
     fetch("/api/invoices")
       .then((res) => res.json())
       .then((data: InvoiceOption[]) => setInvoices(data.filter((invoice) => ["ESTIMATED", "OPEN"].includes(invoice.lifecycleStatus))))
       .catch(() => {})
+
+    // Listener para atualizar invoices quando uma nova é criada pelo form
+    function handleInvoiceCreated(e: Event) {
+      const customEvent = e as CustomEvent<InvoiceOption>
+      setInvoices((prev) => {
+        if (prev.some((inv) => inv.id === customEvent.detail.id)) return prev
+        return [...prev, customEvent.detail]
+      })
+    }
+    window.addEventListener("invoice-created", handleInvoiceCreated)
+    return () => window.removeEventListener("invoice-created", handleInvoiceCreated)
   }, [])
 
   const [formOpen, setFormOpen] = useState(false)
@@ -334,8 +356,9 @@ export default function TransactionsPage() {
         onSubmit={editing ? handleUpdate : handleCreate}
         categories={categories}
         bankAccounts={bankAccounts}
+        cards={cards}
         invoices={invoices}
-        activeMonth={searchParams.get("month")}
+        activeMonth={month}
         initial={
           editing
             ? {

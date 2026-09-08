@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { auth } from "@/lib/auth"
-import { batchDeleteTransactions } from "@/features/transactions/transactions.service"
+import { batchDeleteTransactions, permanentBatchDeleteTransactions } from "@/features/transactions/transactions.service"
 
 const batchSchema = z.object({
   ids: z.array(z.string().min(1)).min(1).max(500),
@@ -22,7 +22,12 @@ export async function POST(request: Request) {
     )
   }
 
-  const deleted = await batchDeleteTransactions(parsed.data.ids, session.user.id)
+  const url = new URL(request.url)
+  const permanent = url.searchParams.get("permanent") === "true"
+
+  const deleted = permanent
+    ? await permanentBatchDeleteTransactions(parsed.data.ids, session.user.id)
+    : await batchDeleteTransactions(parsed.data.ids, session.user.id)
 
   return NextResponse.json({ deleted })
 }

@@ -36,10 +36,11 @@ function getCurrentMonth() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
 }
 
+const MONTH_ABBR = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+
 function formatMonth(month: string) {
   const [year, m] = month.split("-")
-  const date = new Date(Number(year), Number(m) - 1)
-  return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
+  return `${MONTH_ABBR[Number(m) - 1]} ${year}`
 }
 
 export default function BudgetsPage() {
@@ -135,7 +136,7 @@ export default function BudgetsPage() {
           <Button variant="outline" size="icon" onClick={prevMonth}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="text-sm font-medium capitalize">{formatMonth(month)}</span>
+          <span className="text-sm font-medium">{formatMonth(month)}</span>
           <Button variant="outline" size="icon" onClick={nextMonth}>
             <ChevronRight className="h-4 w-4" />
           </Button>

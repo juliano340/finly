@@ -17,6 +17,11 @@ enum TransactionType {
   EXPENSE
 }
 
+enum TransactionStatus {
+  ACTIVE
+  REVERSED
+}
+
 enum FinancialMonthStatus {
   OPEN
   CLOSED
@@ -196,6 +201,7 @@ model Transaction {
   id            String          @id @default(cuid())
   amount        Decimal
   type          TransactionType
+  status        TransactionStatus @default(ACTIVE)
   description   String?
   date          DateTime        @default(now())
   categoryId    String
@@ -305,6 +311,7 @@ model CardInvoice {
   calculationMode       InvoiceCalculationMode @default(ENTERED_TOTAL)
   lifecycleStatus       InvoiceLifecycleStatus @default(OPEN)
   enteredTotal          Decimal?
+  autoCreated           Boolean                @default(false)
   closedAt              DateTime?
   paidAt                DateTime?
   paymentMethod         String?

@@ -8,6 +8,7 @@ const mockTx: TransactionWithRelations = {
   id: "tx_1",
   amount: 150.5,
   type: "EXPENSE" as const,
+  status: "ACTIVE" as const,
   description: "Supermercado",
   date: new Date("2026-06-04T12:00:00"),
   categoryId: "cat_1",

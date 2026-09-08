@@ -2,6 +2,17 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.27] - 2026-09-08
+
+### Adicionado
+
+- Excluir transação virou estorno: o lançamento some da lista e tem saldo e fatura ajustados, mas fica registrado como estornado para auditoria.
+- Lançar despesa no cartão cria a fatura do mês sozinha quando ela não existe; se a fatura do mês já fechou, o valor cai na próxima fatura aberta.
+
+### Corrigido
+
+- Navegação entre meses mostra formato curto ("Set 2026") no lugar de "Setembro De 2026".
+
 ## [0.2.26] - 2026-09-07
 
 ### Adicionado

@@ -172,10 +172,15 @@ describe("Transactions Service", () => {
     const deleted = await deleteTransaction(tx.id, userAId, testPrisma)
     expect(deleted).toBe(true)
 
+    // Estorno: linha mantida como REVERSED para auditoria
     const exists = await testPrisma.transaction.findUnique({
       where: { id: tx.id },
     })
-    expect(exists).toBeNull()
+    expect(exists?.status).toBe("REVERSED")
+
+    // ...mas some da listagem padrão (só ACTIVE)
+    const listed = await getTransactions(userAId, { id: tx.id }, testPrisma)
+    expect(listed.transactions).toEqual([])
   })
 
   it("tenant isolation — User B não vê transações do User A", async () => {
@@ -325,6 +330,10 @@ describe("Transactions Service", () => {
         },
       })
       expect(movementAfter).toBeNull()
+
+      // Linha da transação mantida como REVERSED para auditoria
+      const reversed = await testPrisma.transaction.findUnique({ where: { id: tx.id } })
+      expect(reversed?.status).toBe("REVERSED")
     })
 
     it("edita transação e troca de conta bancária", async () => {

@@ -2,6 +2,7 @@ export type TransactionWithRelations = {
   id: string
   amount: number
   type: "INCOME" | "EXPENSE"
+  status: "ACTIVE" | "REVERSED"
   description: string | null
   date: Date
   categoryId: string

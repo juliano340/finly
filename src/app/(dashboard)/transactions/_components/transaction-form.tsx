@@ -1,7 +1,7 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { CalendarDays, Tag } from "lucide-react"
+import { CalendarDays, Tag, Trash2 } from "lucide-react"
 import {
   Sheet,
   SheetContent,
@@ -35,10 +35,17 @@ interface BankAccountOption {
   type: "CHECKING" | "SAVINGS" | "DIGITAL" | "CASH" | "INVESTMENT" | "BENEFIT"
 }
 
+interface CardOption {
+  id: string
+  name: string
+  dueDay: number | null
+}
+
 interface InvoiceOption {
   id: string
   month: string
   calculationMode: "CALCULATED" | "ENTERED_TOTAL"
+  lifecycleStatus?: "ESTIMATED" | "OPEN" | "CLOSED" | "PAID"
   card: { id: string; name: string }
 }
 
@@ -48,6 +55,7 @@ interface TransactionFormProps {
   onSubmit: (input: TransactionInput) => Promise<void>
   categories: CategoryWithCount[]
   bankAccounts?: BankAccountOption[]
+  cards?: CardOption[]
   invoices?: InvoiceOption[]
   activeMonth?: string | null
   initial?: Partial<TransactionInput>
@@ -61,6 +69,7 @@ export function TransactionForm({
   onSubmit,
   categories,
   bankAccounts = [],
+  cards = [],
   invoices = [],
   activeMonth,
   initial,
@@ -84,42 +93,124 @@ export function TransactionForm({
   )
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
+  const [creatingInvoice, setCreatingInvoice] = useState(false)
+  const [createdInvoices, setCreatedInvoices] = useState<InvoiceOption[]>([])
+  const [invoiceNotice, setInvoiceNotice] = useState("")
   const inFlightRef = useRef(false)
 
   const filteredCategories = categories.filter((c) => c.type === type)
-  const availableCards = Array.from(
-    new Map(invoices.map((invoice) => [invoice.card.id, invoice.card])).values(),
-  )
-  const selectedInvoice = invoices.find((invoice) => invoice.id === invoiceId)
+  const availableCards = cards
+  const allInvoices = [...createdInvoices.filter((ci) => !invoices.some((i) => i.id === ci.id)), ...invoices]
+  const selectedInvoice = allInvoices.find((invoice) => invoice.id === invoiceId)
   const effectiveCardId = cardId || selectedInvoice?.card.id || ""
-  const cardInvoices = invoices.filter((invoice) => invoice.card.id === effectiveCardId)
+  const cardInvoices = allInvoices.filter((invoice) => invoice.card.id === effectiveCardId)
 
   function changeType(nextType: "INCOME" | "EXPENSE") {
     setType(nextType)
     setCategoryId("")
     if (nextType === "INCOME" && destinationType === "CARD") changeDestinationType("NONE")
+    clearError("category")
   }
 
   function changeDestinationType(value: "NONE" | "ACCOUNT" | "CARD") {
     setDestinationType(value)
+    setInvoiceNotice("")
     if (value !== "ACCOUNT") setBankAccountId("")
     if (value !== "CARD") {
       setCardId("")
       setInvoiceId("")
     }
+    clearError("account")
+    clearError("invoice")
   }
 
-  function selectCard(value: string) {
+  async function selectCard(value: string) {
     setCardId(value)
-    const matchingInvoices = invoices.filter((invoice) => invoice.card.id === value)
-    const preferredInvoice = matchingInvoices.find((invoice) => invoice.month === activeMonth) ?? matchingInvoices[0]
-    setInvoiceId(preferredInvoice?.id ?? "")
+    setInvoiceNotice("")
+    clearError("invoice")
+    const matchingInvoices = allInvoices.filter((invoice) => invoice.card.id === value)
+    // Prioriza o mês ativo; senão, a próxima fatura aberta/estimada (ex: mês ativo já fechado)
+    const upcoming = matchingInvoices
+      .filter((invoice) => !activeMonth || invoice.month >= activeMonth)
+      .sort((a, b) => a.month.localeCompare(b.month))
+    const preferredInvoice = matchingInvoices.find((invoice) => invoice.month === activeMonth) ?? upcoming[0]
+
+    if (preferredInvoice) {
+      setInvoiceId(preferredInvoice.id)
+      if (activeMonth && preferredInvoice.month !== activeMonth) {
+        setInvoiceNotice(`Fatura de ${formatMonth(activeMonth)} fechada — lançando em ${formatMonth(preferredInvoice.month)}`)
+      }
+      return
+    }
+    if (!activeMonth) return
+
+    // Nenhuma fatura aberta: auto-criar (no mês ativo, ou no próximo se o ativo já está fechado/pago)
+    const card = cards.find((c) => c.id === value)
+    if (!card) return
+
+    setCreatingInvoice(true)
+    try {
+      // Revalida no servidor: pode existir fatura fora da lista local (fechada/paga)
+      let targetMonth = activeMonth
+      const listRes = await fetch(`/api/invoices?month=${activeMonth}`)
+      if (listRes.ok) {
+        const serverInvoices: InvoiceOption[] = await listRes.json()
+        const existing = serverInvoices.find((inv) => inv.card.id === value)
+        if (existing) {
+          if (existing.lifecycleStatus === "ESTIMATED" || existing.lifecycleStatus === "OPEN") {
+            setCreatedInvoices((prev) => prev.some((i) => i.id === existing.id) ? prev : [...prev, existing])
+            setInvoiceId(existing.id)
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("invoice-created", { detail: existing }))
+            }
+            return
+          }
+          targetMonth = addMonths(activeMonth, 1)
+          setInvoiceNotice(`Fatura de ${formatMonth(activeMonth)} fechada — lançando em ${formatMonth(targetMonth)}`)
+        }
+      }
+
+      const [year, month] = targetMonth.split("-").map(Number)
+      const dueDay = card.dueDay ?? 10
+      const dueDate = new Date(year, month - 1, dueDay)
+
+      const res = await fetch("/api/invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cardId: value,
+          month: targetMonth,
+          dueDate: dueDate.toISOString(),
+          amount: 0,
+          lifecycleStatus: "OPEN",
+          autoCreated: true,
+        }),
+      })
+
+      if (res.ok) {
+        const newInvoice = await res.json()
+        setCreatedInvoices((prev) => prev.some((i) => i.id === newInvoice.id) ? prev : [...prev, newInvoice])
+        setInvoiceId(newInvoice.id)
+        // Atualizar lista de invoices no parent
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("invoice-created", { detail: newInvoice }))
+        }
+      } else {
+        const err = await res.json().catch(() => null)
+        setErrors((prev) => ({ ...prev, invoice: err?.error ?? "Não foi possível criar a fatura" }))
+      }
+    } catch {
+      setErrors((prev) => ({ ...prev, invoice: "Não foi possível criar a fatura" }))
+    } finally {
+      setCreatingInvoice(false)
+    }
   }
 
   function clearError(field: string) {
     setErrors((prev) => {
       const next = { ...prev }
       delete next[field]
+      if (field !== "submit") delete next.submit
       return next
     })
   }
@@ -165,8 +256,20 @@ export function TransactionForm({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-md">
-        <SheetHeader>
+        <SheetHeader className="flex flex-row items-center justify-between gap-2 pr-10">
           <SheetTitle>{title}</SheetTitle>
+          {onDelete && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={onDelete}
+              aria-label="Excluir transação"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </SheetHeader>
         <form className="flex-1 overflow-y-auto px-4 pb-4" onSubmit={(e) => { e.preventDefault(); handleSubmit() }}>
           <div className="mt-4 space-y-6">
@@ -235,7 +338,7 @@ export function TransactionForm({
                 </Select>
               </FormField>
 
-              <FormField label="Destino" hint="Opcional" error={errors.account || errors.invoice}>
+              <FormField label="Destino" hint="Opcional" error={errors.account}>
                 <Select
                   items={DESTINATION_ITEMS}
                   value={destinationType}
@@ -283,54 +386,58 @@ export function TransactionForm({
 
               {destinationType === "CARD" && (
                 <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
-                  <FormField label="Cartão" error={errors.invoice}>
-                    <Select
-                      items={Object.fromEntries(availableCards.map((card) => [card.id, card.name]))}
-                      value={effectiveCardId || null}
-                      onValueChange={(value) => { selectCard(value ?? ""); clearError("invoice") }}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Selecione um cartão" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableCards.map((card) => <SelectItem key={card.id} value={card.id}>{card.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    {availableCards.length === 0 && (
-                      <p className="text-xs text-muted-foreground">Nenhuma fatura aberta ou estimada disponível.</p>
-                    )}
-                  </FormField>
+                  {availableCards.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Nenhum cartão com fatura aberta ou estimada.</p>
+                  ) : (
+                    <>
+                      <FormField label="Cartão" error={!effectiveCardId ? errors.invoice : undefined}>
+                        <Select
+                          items={Object.fromEntries(availableCards.map((card) => [card.id, card.name]))}
+                          value={effectiveCardId || null}
+                          onValueChange={(value) => { selectCard(value ?? ""); clearError("invoice") }}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Selecione um cartão" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableCards.map((card) => <SelectItem key={card.id} value={card.id}>{card.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </FormField>
 
-                  {effectiveCardId && (
-                    <FormField label="Fatura">
-                      <Select
-                        items={Object.fromEntries(
-                          cardInvoices.map((invoice) => [
-                            invoice.id,
-                            `${formatMonth(invoice.month)}${invoice.month === activeMonth ? " • mês selecionado" : ""}`,
-                          ]),
-                        )}
-                        value={invoiceId || null}
-                        onValueChange={(value) => setInvoiceId(value ?? "")}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Selecione a fatura" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {cardInvoices.map((invoice) => (
-                            <SelectItem key={invoice.id} value={invoice.id}>
-                              {formatMonth(invoice.month)}{invoice.month === activeMonth ? " • mês selecionado" : ""}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormField>
-                  )}
+                      {effectiveCardId && (
+                        <FormField label="Fatura" error={errors.invoice} hint={invoiceNotice || undefined}>
+                          <Select
+                            items={Object.fromEntries(
+                              cardInvoices.map((invoice) => [
+                                invoice.id,
+                                `${formatMonth(invoice.month)}${invoice.month === activeMonth ? " • mês selecionado" : ""}`,
+                              ]),
+                            )}
+                            value={invoiceId || null}
+                            onValueChange={(value) => setInvoiceId(value ?? "")}
+                            disabled={creatingInvoice}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder={creatingInvoice ? "Criando fatura..." : "Selecione a fatura"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {cardInvoices.map((invoice) => (
+                                <SelectItem key={invoice.id} value={invoice.id}>
+                                  {formatMonth(invoice.month)}{invoice.month === activeMonth ? " • mês selecionado" : ""}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormField>
+                      )}
 
-                  {selectedInvoice?.calculationMode === "ENTERED_TOTAL" && (
-                    <p className="text-xs text-muted-foreground">
-                      O lançamento aparecerá como previsto, mas não altera o total informado da fatura.
-                    </p>
+                      {selectedInvoice?.calculationMode === "ENTERED_TOTAL" && (
+                        <p className="text-xs text-muted-foreground">
+                          O lançamento aparecerá como previsto, mas não altera o total informado da fatura.
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
               )}
@@ -347,7 +454,7 @@ export function TransactionForm({
                 <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
               </FormField>
 
-              <FormField label="Nota" hint="Opcional">
+              <FormField label="Nota" hint={description.length > 0 ? `${description.length}/200` : "Opcional"}>
                 <Input
                   placeholder="Ex: Supermercado Extra"
                   value={description}
@@ -370,14 +477,6 @@ export function TransactionForm({
               {loading ? "Salvando..." : "Salvar"}
             </Button>
           </div>
-
-          {onDelete && (
-            <div className="mt-4 pt-4 border-t border-border">
-              <Button type="button" variant="destructive" className="w-full gap-2" onClick={onDelete}>
-                Excluir transação
-              </Button>
-            </div>
-          )}
         </form>
       </SheetContent>
     </Sheet>
@@ -387,4 +486,10 @@ export function TransactionForm({
 function formatMonth(month: string) {
   const [year, monthNumber] = month.split("-")
   return `${monthNumber}/${year}`
+}
+
+function addMonths(month: string, amount: number) {
+  const [year, monthNumber] = month.split("-").map(Number)
+  const date = new Date(year, monthNumber - 1 + amount, 1)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
 }

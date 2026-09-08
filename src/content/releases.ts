@@ -24,9 +24,18 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.26"
+export const CURRENT_VERSION = "0.2.27"
 
 export const releases = [
+  {
+    version: "0.2.27",
+    date: "2026-09-08",
+    changes: [
+      { type: "feat", description: "Excluir transação virou estorno: o lançamento some da lista e tem saldo e fatura ajustados, mas fica registrado como estornado para auditoria." },
+      { type: "feat", description: "Lançar despesa no cartão cria a fatura do mês sozinha quando ela não existe; se a fatura do mês já fechou, o valor cai na próxima fatura aberta." },
+      { type: "fix", description: "Navegação entre meses mostra formato curto (\"Set 2026\") no lugar de \"Setembro De 2026\"." },
+    ],
+  },
   {
     version: "0.2.26",
     date: "2026-09-07",

@@ -53,7 +53,7 @@ export function TypeToggle({ value, onChange, disabled, className }: TypeToggleP
               "disabled:cursor-not-allowed disabled:opacity-50",
               isActive
                 ? option.activeClass
-                : "border-border bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                : "border-border/60 bg-muted/50 text-muted-foreground hover:bg-muted/70 hover:text-foreground"
             )}
           >
             <Icon className={cn("h-4 w-4", isActive && option.iconClass)} />
