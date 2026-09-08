@@ -70,17 +70,5 @@ next-env.d.ts
 logs/
 scripts/seed-accounts.ts
 
-# graphify (knowledge graph)
-# Manter versionado: graph.html, GRAPH_REPORT.md, graph.json
-# Ignorar: temporários, caches e específicos de máquina
-graphify-out/.graphify_python
-graphify-out/.graphify_root
-graphify-out/.graphify_manifest.json
-graphify-out/.graphify_cached.json
-graphify-out/.graphify_*.json
-graphify-out/cost.json
-graphify-out/manifest.json
-graphify-out/cache/
-graphify-out/*.sig
-# backups datados gerados pelo hook pós-commit
-graphify-out/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/
+# graphify (knowledge graph) — descontinuado
+graphify-out/
