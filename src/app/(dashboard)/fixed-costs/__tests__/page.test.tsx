@@ -118,10 +118,10 @@ describe("FixedCostsPage", () => {
     let amount = document.querySelector<HTMLInputElement>('input[name="amount"]')!
     const scopeFieldset = screen.getByText("Aplicar alteração em").closest("fieldset")!
     expect(scopeFieldset.compareDocumentPosition(amount) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(screen.getByRole("button", { name: "Salvar somente agosto de 2026" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Salvar somente Ago 2026" })).toBeInTheDocument()
     await user.clear(amount)
     await user.type(amount, "150")
-    await user.click(screen.getByRole("button", { name: "Salvar somente agosto de 2026" }))
+    await user.click(screen.getByRole("button", { name: "Salvar somente Ago 2026" }))
 
     await waitFor(() => {
       const request = fetchMock.mock.calls.find(([url, init]) => String(url) === "/api/fixed-costs/occurrence-1" && init?.method === "PUT")
@@ -136,11 +136,11 @@ describe("FixedCostsPage", () => {
 
     await user.click(screen.getByRole("button", { name: "Editar custo fixo" }))
     await user.click(screen.getByRole("radio", { name: /esta ocorrência e as próximas/i }))
-    expect(screen.getByRole("button", { name: "Salvar agosto de 2026 e próximos" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Salvar Ago 2026 e próximos" })).toBeInTheDocument()
     amount = document.querySelector<HTMLInputElement>('input[name="amount"]')!
     await user.clear(amount)
     await user.type(amount, "175")
-    await user.click(screen.getByRole("button", { name: "Salvar agosto de 2026 e próximos" }))
+    await user.click(screen.getByRole("button", { name: "Salvar Ago 2026 e próximos" }))
 
     await user.click(screen.getByRole("button", { name: "Editar custo fixo" }))
     await user.click(screen.getByRole("radio", { name: "Toda a série" }))
