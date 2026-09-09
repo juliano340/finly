@@ -5,6 +5,7 @@ import { Wallet, ChevronLeft, ChevronRight } from "lucide-react"
 import { AddButton } from "@/components/ui/add-button"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { formatMonth, getCurrentMonth } from "@/components/month-navigator"
 import { toast } from "sonner"
 import { BudgetCard } from "./_components/budget-card"
 import { BudgetForm } from "./_components/budget-form"
@@ -29,18 +30,6 @@ interface BudgetSummary {
   spent: number
   remaining: number
   percentage: number
-}
-
-function getCurrentMonth() {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
-}
-
-const MONTH_ABBR = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
-
-function formatMonth(month: string) {
-  const [year, m] = month.split("-")
-  return `${MONTH_ABBR[Number(m) - 1]} ${year}`
 }
 
 export default function BudgetsPage() {

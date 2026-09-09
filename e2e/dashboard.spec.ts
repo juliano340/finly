@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test"
+import { formatMonth, getCurrentMonth } from "../src/lib/months"
 import { markEmailVerified } from "./utils/db"
 
 test.describe("Dashboard", () => {
@@ -37,9 +38,8 @@ test.describe("Dashboard", () => {
     await expect(page.locator('main :visible:text("Receitas do mês")').first()).toBeVisible()
     await expect(page.locator('main :visible:text("Despesas do mês")').first()).toBeVisible()
 
-    const now = new Date()
-    const monthName = now.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
-    await expect(page.locator(`text=${monthName}`)).toBeVisible()
+    const monthLabel = formatMonth(getCurrentMonth())
+    await expect(page.locator(`text=${monthLabel}`)).toBeVisible()
 
     await expect(page.locator("text=Receitas vs Despesas")).toBeVisible()
     await expect(page.locator("text=Gastos por Categoria")).toBeVisible()
