@@ -24,9 +24,17 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.28"
+export const CURRENT_VERSION = "0.2.29"
 
 export const releases = [
+  {
+    version: "0.2.29",
+    date: "2026-09-12",
+    changes: [
+      { type: "fix", description: "O botão de entrar com o Google no login e no cadastro agora mostra \"Redirecionando...\" com indicador de carregamento e fica desabilitado durante a conexão, evitando cliques repetidos." },
+      { type: "fix", description: "Se a conexão com o Google falhar antes do redirecionamento, o botão volta ao normal e um aviso explica a falha." },
+    ],
+  },
   {
     version: "0.2.28",
     date: "2026-09-12",

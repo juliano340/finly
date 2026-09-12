@@ -2,6 +2,13 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.29] - 2026-09-12
+
+### Corrigido
+
+- O botão de entrar com o Google no login e no cadastro agora mostra "Redirecionando..." com indicador de carregamento e fica desabilitado durante a conexão, evitando cliques repetidos.
+- Se a conexão com o Google falhar antes do redirecionamento, o botão volta ao normal e um aviso explica a falha.
+
 ## [0.2.28] - 2026-09-12
 
 ### Adicionado
