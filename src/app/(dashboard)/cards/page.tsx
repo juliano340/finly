@@ -1,18 +1,16 @@
 "use client"
 
-import { Suspense, useEffect, useRef, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { CreditCard, Loader2, Settings, Trash2 } from "lucide-react"
+import { CreditCard, Loader2, Settings } from "lucide-react"
 import { toast } from "sonner"
 import { AddButton } from "@/components/ui/add-button"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { InvoicesTab } from "@/features/invoices/invoices-tab"
+import { CardForm } from "./_components/card-form"
+import type { CardInput } from "@/features/cards/cards.schema"
 import {
   CARDS_TAB_STORAGE_KEY,
   isCardsTab,
@@ -48,13 +46,8 @@ export default function CardsPage() {
   const [creating, setCreating] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<CardsTab>("cards")
   const [tabReady, setTabReady] = useState(false)
-  const [createBankAccountId, setCreateBankAccountId] = useState("")
-  const [editBankAccountId, setEditBankAccountId] = useState("")
-
-  const safeSet = (setter: (v: string) => void) => (v: string | null) => setter(v ?? "")
 
   useEffect(() => {
     const urlTab = searchParams.get("tab")
@@ -72,8 +65,6 @@ export default function CardsPage() {
     window.localStorage.setItem(CARDS_TAB_STORAGE_KEY, tab)
     router.push(`${pathname}?${withCardsTab(new URLSearchParams(searchParams.toString()), tab)}`, { scroll: false })
   }
-  const inFlightUpdateRef = useRef(false)
-  const editFormRef = useRef<HTMLFormElement>(null)
 
   const fetchData = async () => {
     try {
@@ -92,59 +83,32 @@ export default function CardsPage() {
     fetchData()
   }, [])
 
-  const handleCreate = async (formData: FormData) => {
+  const handleCreate = async (input: CardInput) => {
     const res = await fetch("/api/cards", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: formData.get("name"),
-        brand: formData.get("brand") || null,
-        color: formData.get("color") || "#22C55E",
-        closingDay: formData.get("closingDay") || null,
-        dueDay: formData.get("dueDay") || null,
-        bankAccountId: createBankAccountId || null,
-      }),
+      body: JSON.stringify(input),
     })
-    setCreating(false)
-    setCreateBankAccountId("")
-    if (res.ok) {
-      toast.success("Cartão criado com sucesso.")
-    } else {
+    if (!res.ok) {
       const err = await res.json().catch(() => ({}))
-      toast.error(err.error ?? "Não foi possível criar o cartão.")
+      throw new Error(err.error ?? "Não foi possível criar o cartão.")
     }
+    toast.success("Cartão criado com sucesso.")
     fetchData()
   }
 
-  const handleUpdate = async (cardId: string, formData: FormData) => {
-    if (inFlightUpdateRef.current) return
-    inFlightUpdateRef.current = true
-    setUpdatingId(cardId)
-    try {
-      const res = await fetch(`/api/cards/${cardId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formData.get("name"),
-          brand: formData.get("brand") || null,
-          color: formData.get("color") || "#22C55E",
-          closingDay: formData.get("closingDay") || null,
-          dueDay: formData.get("dueDay") || null,
-          bankAccountId: editBankAccountId || null,
-        }),
-      })
-      if (res.ok) {
-        toast.success("Cartão atualizado com sucesso.")
-        setSelectedCard(null)
-      } else {
-        const err = await res.json().catch(() => ({}))
-        toast.error(err.error ?? "Não foi possível atualizar o cartão.")
-      }
-      fetchData()
-    } finally {
-      setUpdatingId(null)
-      inFlightUpdateRef.current = false
+  const handleUpdate = async (cardId: string, input: CardInput) => {
+    const res = await fetch(`/api/cards/${cardId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error ?? "Não foi possível atualizar o cartão.")
     }
+    toast.success("Cartão atualizado com sucesso.")
+    fetchData()
   }
 
   const handleDelete = async (cardId: string) => {
@@ -210,7 +174,7 @@ export default function CardsPage() {
             ) : cards.map((card) => (
               <tr key={card.id} className="border-b transition-colors hover:bg-muted/50">
                 <td className="px-4 py-3">
-                  <button type="button" onClick={() => { setSelectedCard(card); setEditBankAccountId(card.bankAccountId ?? "") }} className="flex items-center gap-3 text-left font-medium hover:underline">
+                  <button type="button" onClick={() => setSelectedCard(card)} className="flex items-center gap-3 text-left font-medium hover:underline">
                     <span className="flex h-9 w-9 items-center justify-center rounded-full text-white" style={{ backgroundColor: card.color }}>
                       <CreditCard className="h-4 w-4" />
                     </span>
@@ -226,7 +190,7 @@ export default function CardsPage() {
                     size="icon"
                     variant="ghost"
                     aria-label="Editar cartão"
-                    onClick={() => { setSelectedCard(card); setEditBankAccountId(card.bankAccountId ?? "") }}
+                    onClick={() => setSelectedCard(card)}
                   >
                     <Settings className="h-4 w-4" />
                   </Button>
@@ -257,7 +221,7 @@ export default function CardsPage() {
         ) : cards.map((card) => (
           <div key={card.id} className="rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50">
             <div className="flex items-center gap-3">
-              <button type="button" onClick={() => { setSelectedCard(card); setEditBankAccountId(card.bankAccountId ?? "") }} className="flex flex-1 items-center gap-3 text-left min-w-0">
+              <button type="button" onClick={() => setSelectedCard(card)} className="flex flex-1 items-center gap-3 text-left min-w-0">
                 <span className="shrink-0 rounded-lg p-2 text-white" style={{ backgroundColor: card.color }}><CreditCard className="h-4 w-4" /></span>
                 <div className="min-w-0 flex-1">
                   <p className="font-medium truncate">{card.name}</p>
@@ -270,7 +234,7 @@ export default function CardsPage() {
                 variant="ghost"
                 className="h-8 w-8 shrink-0"
                 aria-label="Editar cartão"
-                onClick={() => { setSelectedCard(card); setEditBankAccountId(card.bankAccountId ?? "") }}
+                onClick={() => setSelectedCard(card)}
               >
                 <Settings className="h-4 w-4" />
               </Button>
@@ -279,114 +243,20 @@ export default function CardsPage() {
         ))}
       </div>
 
-      <Sheet open={creating || !!selectedCard} onOpenChange={(open) => { if (!open) { setCreating(false); setSelectedCard(null) } }}>
-        <SheetContent className="w-full sm:max-w-md">
-          {creating ? (
-            <>
-              <SheetHeader><SheetTitle>Novo cartão</SheetTitle></SheetHeader>
-              <form action={handleCreate} className="flex-1 overflow-y-auto px-4 pb-4">
-                <div className="mt-4 grid gap-4">
-                  <div className="space-y-1.5">
-                    <Label>Nome do cartão</Label>
-                    <Input name="name" placeholder="Ex: NUBANK PLATINUM" required />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Bandeira</Label>
-                    <Input name="brand" placeholder="Ex: MASTERCARD" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Conta vinculada</Label>
-                    <Select value={createBankAccountId} items={{ "": "Sem conta vinculada", ...Object.fromEntries(bankAccounts.map((a) => [a.id, a.name])) }} onValueChange={safeSet(setCreateBankAccountId)}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Sem conta vinculada" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">Sem conta vinculada</SelectItem>
-                        {bankAccounts.map((account) => (
-                          <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium">Dia fechamento</label>
-                      <Input name="closingDay" type="number" min="1" max="31" placeholder="Ex: 15" />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium">Dia vencimento</label>
-                      <Input name="dueDay" type="number" min="1" max="31" placeholder="Ex: 10" />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium">Cor:</label>
-                    <Input name="color" type="color" defaultValue="#22C55E" className="w-16" />
-                  </div>
-                </div>
-                <Button type="submit" className="mt-6 w-full">Salvar</Button>
-              </form>
-            </>
-          ) : selectedCard ? (
-            <>
-              <SheetHeader>
-                <SheetTitle className="flex items-center gap-2">
-                  <span className="rounded-lg p-1.5 text-white" style={{ backgroundColor: selectedCard.color }}><CreditCard className="h-4 w-4" /></span>
-                  {selectedCard.name}
-                </SheetTitle>
-              </SheetHeader>
-              <div className="flex-1 overflow-y-auto px-4 pb-4">
-                <form ref={editFormRef} className="mt-4 space-y-4">
-                  <div className="grid gap-4">
-                    <div className="space-y-1.5">
-                      <Label>Nome do cartão</Label>
-                      <Input name="name" defaultValue={selectedCard.name} required />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Bandeira</Label>
-                      <Input name="brand" defaultValue={selectedCard.brand ?? ""} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Conta vinculada</Label>
-                      <Select value={editBankAccountId} items={{ "": "Sem conta vinculada", ...Object.fromEntries(bankAccounts.map((a) => [a.id, a.name])) }} onValueChange={safeSet(setEditBankAccountId)}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Sem conta vinculada" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="">Sem conta vinculada</SelectItem>
-                          {bankAccounts.map((account) => (
-                            <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <Label>Dia fechamento</Label>
-                        <Input name="closingDay" type="number" min="1" max="31" defaultValue={selectedCard.closingDay ?? ""} placeholder="Ex: 15" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Dia vencimento</Label>
-                        <Input name="dueDay" type="number" min="1" max="31" defaultValue={selectedCard.dueDay ?? ""} placeholder="Ex: 10" />
-                        <p className="text-xs text-muted-foreground">Ao alterar, faturas abertas deste mês em diante passam a vencer no novo dia. Faturas fechadas/pagas não mudam.</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label className="text-sm font-medium">Cor:</label>
-                      <Input name="color" type="color" defaultValue={selectedCard.color} className="w-16" />
-                    </div>
-                  </div>
-                  <Button type="button" className="w-full" disabled={updatingId === selectedCard.id} onClick={() => handleUpdate(selectedCard.id, new FormData(editFormRef.current!))}>
-                    {updatingId === selectedCard.id ? "Salvando..." : "Salvar alterações"}
-                  </Button>
-                </form>
-                <Button type="button" variant="destructive" className="mt-4 w-full" onClick={() => setConfirmDelete(selectedCard.id)}>
-                  <Trash2 className="mr-2 h-4 w-4" />Excluir cartão
-                </Button>
-              </div>
-            </>
-          ) : null}
-        </SheetContent>
-      </Sheet>
+      <CardForm
+        key={selectedCard?.id ?? "new"}
+        open={creating || !!selectedCard}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCreating(false)
+            setSelectedCard(null)
+          }
+        }}
+        card={selectedCard}
+        bankAccounts={bankAccounts}
+        onSubmit={selectedCard ? (input) => handleUpdate(selectedCard.id, input) : handleCreate}
+        onDelete={selectedCard ? () => setConfirmDelete(selectedCard.id) : undefined}
+      />
 
       <ConfirmDialog
         open={!!confirmDelete}
