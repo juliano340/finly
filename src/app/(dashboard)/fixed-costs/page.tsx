@@ -14,42 +14,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import {
+  FixedCostForm,
+  type FixedCostFormInitial,
+  type FixedCostFormValues,
+} from "./_components/fixed-cost-form"
+import {
+  OccurrenceAmountForm,
+  type OccurrenceAmountValues,
+} from "./_components/occurrence-amount-form"
 import { cn, dueLabel, formatCurrency, isOverdue } from "@/lib/utils"
-
-const PAYMENT_METHOD_ITEMS: Record<string, string> = {
-  PIX: "Pix",
-  BANK_SLIP: "Boleto",
-  DEBIT: "Débito",
-  CASH: "Dinheiro",
-}
-const FREQUENCY_ITEMS: Record<string, string> = {
-  DAILY: "Diária",
-  WEEKLY: "Semanal",
-  BIWEEKLY: "Quinzenal",
-  MONTHLY: "Mensal",
-  BIMONTHLY: "Bimestral",
-  QUARTERLY: "Trimestral",
-  SEMIANNUAL: "Semestral",
-  ANNUAL: "Anual",
-}
-const REC_UNIT_ITEMS: Record<string, string> = {
-  DAYS: "Dias",
-  WEEKS: "Semanas",
-  MONTHS: "Meses",
-  YEARS: "Anos",
-}
-const REC_END_ITEMS: Record<string, string> = {
-  NONE: "Sem data final",
-  DATE: "Encerrar em uma data",
-  COUNT: "Após N ocorrências",
-}
 import { ariaSort, sortButtonLabel } from "@/lib/accessible-sort"
-import { MonthNavigator, changeMonth, formatMonth, getCurrentMonth } from "@/components/month-navigator"
+import { MonthNavigator, changeMonth, getCurrentMonth } from "@/components/month-navigator"
 import { useMonthParam } from "@/hooks/use-month-param"
 import { useTableSelection } from "@/components/data-table/use-table-selection"
 import { DataTableContainer } from "@/components/data-table/data-table-container"
@@ -73,8 +51,6 @@ interface Occurrence {
   updatedAt: string
   fixedCost: FixedCostData
 }
-
-type FixedCostEditScope = "THIS_MONTH" | "THIS_AND_FUTURE" | "ENTIRE_SERIES"
 
 type OccurrenceSortField = "name" | "category" | "source" | "dueDate" | "amount" | "status"
 
@@ -154,44 +130,18 @@ function FixedCostsPageInner() {
   const [activeTab, setActiveTab] = useState<"EXPENSE" | "INCOME">("EXPENSE")
   const [selectedOccurrence, setSelectedOccurrence] = useState<Occurrence | null>(null)
   const [creating, setCreating] = useState(false)
-  const [insideCard, setInsideCard] = useState(false)
-  const [updateError, setUpdateError] = useState("")
-  const [createError, setCreateError] = useState("")
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [recStartDate, setRecStartDate] = useState("")
-  const [recFrequency, setRecFrequency] = useState("MONTHLY")
-  const [recFrequencyType, setRecFrequencyType] = useState<"standard" | "custom">("standard")
-  const [recCustomInterval, setRecCustomInterval] = useState("")
-  const [recCustomUnit, setRecCustomUnit] = useState("MONTHS")
-  const [recEndType, setRecEndType] = useState("NONE")
-  const [recEndDate, setRecEndDate] = useState("")
-  const [recEndAfterCount, setRecEndAfterCount] = useState("")
   const [payingId, setPayingId] = useState<string | null>(null)
   const [unpayingId, setUnpayingId] = useState<string | null>(null)
   const [payingCardId, setPayingCardId] = useState<string | null>(null)
   const [unpayingCardId, setUnpayingCardId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [updatingId, setUpdatingId] = useState<string | null>(null)
-  const [editScope, setEditScope] = useState<FixedCostEditScope>("THIS_MONTH")
   const [editMode, setEditMode] = useState<"AMOUNT" | "SERIES">("AMOUNT")
-  const [creatingLoading, setCreatingLoading] = useState(false)
   const [sortField, setSortField] = useState<OccurrenceSortField>("dueDate")
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
-  const [createCategoryId, setCreateCategoryId] = useState("")
-  const [createPaymentMethod, setCreatePaymentMethod] = useState("PIX")
-  const [createCardId, setCreateCardId] = useState("")
-  const [createBankAccountId, setCreateBankAccountId] = useState("")
 
-  const handleSelectChange = (setter: (v: string) => void, fallback: string) => (value: string | null) => {
-    setter(value ?? fallback)
-  }
-
-  const inFlightUpdateRef = useRef(false)
-  const inFlightCreateRef = useRef(false)
   const fetchRequestIdRef = useRef(0)
-  const editFormRef = useRef<HTMLFormElement>(null)
-  const createFormRef = useRef<HTMLFormElement>(null)
 
   const filteredOccurrences = occurrences.filter((o) => o.fixedCost.type === activeTab)
   const { selectedIds, toggleSelect, selectAll, clearSelection, allSelected, totalSelected, confirmBatchDelete, setConfirmBatchDelete, batchDeleting, setBatchDeleting } = useTableSelection(filteredOccurrences, (o) => o.amount, { storageKey: `fixed-costs:selection:${month}:${activeTab}` })
@@ -305,132 +255,51 @@ function FixedCostsPageInner() {
 
   const filteredCategories = categories.filter((c) => c.type === activeTab)
 
-  const handleCreate = async (formData: FormData) => {
-    if (inFlightCreateRef.current) return
-    inFlightCreateRef.current = true
-    setCreatingLoading(true)
-    const paidInsideCard = activeTab === "EXPENSE" && formData.get("paidInsideCard") === "on"
-    setCreateError("")
-    try {
-      const res = await fetch("/api/fixed-costs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formData.get("name"),
-          type: activeTab,
-          defaultAmount: String(formData.get("defaultAmount") ?? "").replace(",", "."),
-          categoryId: createCategoryId,
-          paymentMethod: paidInsideCard ? "CREDIT_CARD" : createPaymentMethod,
-          dueDay: formData.get("dueDay") || null,
-          paidInsideCard,
-          cardId: paidInsideCard ? createCardId : null,
-          bankAccountId: createBankAccountId || null,
-          active: true,
-          startDate: recStartDate,
-          frequency: recFrequencyType === "custom" ? "CUSTOM" : recFrequency,
-          customInterval: recFrequencyType === "custom" ? (Number(recCustomInterval) || null) : null,
-          customUnit: recFrequencyType === "custom" ? recCustomUnit : null,
-          endType: recEndType,
-          endDate: recEndType === "DATE" ? recEndDate : null,
-          endAfterCount: recEndType === "COUNT" ? (Number(recEndAfterCount) || null) : null,
-        }),
-      })
-      if (!res.ok) {
-        const err = await res.json()
-        setCreateError(err.error ?? "Erro ao salvar")
-        toast.error(err.error ?? "Erro ao criar custo fixo")
-        return
-      }
-      toast.success(activeTab === "EXPENSE" ? "Custo fixo criado com sucesso." : "Receita fixa criada com sucesso.")
-      setCreating(false)
-      setCreateCategoryId("")
-      setCreatePaymentMethod("PIX")
-      setCreateCardId("")
-      setCreateBankAccountId("")
-      await fetchData()
-    } finally {
-      setCreatingLoading(false)
-      inFlightCreateRef.current = false
+  const handleCreate = async (values: FixedCostFormValues) => {
+    const res = await fetch("/api/fixed-costs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(values),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error ?? "Erro ao criar lançamento fixo")
     }
+    toast.success(activeTab === "EXPENSE" ? "Custo fixo criado com sucesso." : "Receita fixa criada com sucesso.")
+    setCreating(false)
+    await fetchData()
   }
 
-  const handleUpdate = async (occurrence: Occurrence, formData: FormData) => {
-    if (inFlightUpdateRef.current) return
-    inFlightUpdateRef.current = true
-    setUpdateError("")
-    setUpdatingId(occurrence.id)
-    try {
-      const res = await fetch(`/api/fixed-costs/${occurrence.fixedCostId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          occurrenceId: occurrence.id,
-          month: occurrence.month,
-          scope: editScope,
-          amount: String(formData.get("amount") ?? "").replace(",", "."),
-          expectedUpdatedAt: occurrence.updatedAt,
-        }),
-      })
-      if (!res.ok) {
-        const err = await res.json()
-        setUpdateError(err.error ?? "Erro ao salvar")
-        toast.error(err.error ?? "Erro ao atualizar custo fixo")
-        return
-      }
-      const result = await res.json() as { affected: number; skipped: { paid: number; closed: number; deleted: number } }
-      const skipped = result.skipped.paid + result.skipped.closed + result.skipped.deleted
-      toast.success(`${result.affected} ocorrência${result.affected === 1 ? "" : "s"} atualizada${result.affected === 1 ? "" : "s"}.${skipped > 0 ? ` ${skipped} preservada${skipped === 1 ? "" : "s"}.` : ""}`)
-      setSelectedOccurrence(null)
-      await fetchData()
-    } finally {
-      setUpdatingId(null)
-      inFlightUpdateRef.current = false
+  const handleUpdate = async (occurrence: Occurrence, values: OccurrenceAmountValues) => {
+    const res = await fetch(`/api/fixed-costs/${occurrence.fixedCostId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(values),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error ?? "Erro ao atualizar valor")
     }
+    const result = await res.json() as { affected: number; skipped: { paid: number; closed: number; deleted: number } }
+    const skipped = result.skipped.paid + result.skipped.closed + result.skipped.deleted
+    toast.success(`${result.affected} ocorrência${result.affected === 1 ? "" : "s"} atualizada${result.affected === 1 ? "" : "s"}.${skipped > 0 ? ` ${skipped} preservada${skipped === 1 ? "" : "s"}.` : ""}`)
+    setSelectedOccurrence(null)
+    await fetchData()
   }
 
-  const handleSeriesUpdate = async (occurrence: Occurrence, formData: FormData) => {
-    if (inFlightUpdateRef.current) return
-    inFlightUpdateRef.current = true
-    const item = occurrence.fixedCost
-    const paidInsideCard = item.type === "EXPENSE" && formData.get("paidInsideCard") === "on"
-    setUpdateError("")
-    setUpdatingId(occurrence.id)
-    try {
-      const res = await fetch(`/api/fixed-costs/${occurrence.fixedCostId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formData.get("name"),
-          type: item.type,
-          categoryId: formData.get("categoryId"),
-          paymentMethod: paidInsideCard ? "CREDIT_CARD" : formData.get("paymentMethod") || "PIX",
-          dueDay: formData.get("dueDay") || null,
-          paidInsideCard,
-          cardId: paidInsideCard ? formData.get("cardId") : null,
-          bankAccountId: formData.get("bankAccountId") || null,
-          active: formData.get("active") === "on",
-          startDate: recStartDate,
-          frequency: recFrequencyType === "custom" ? "CUSTOM" : recFrequency,
-          customInterval: recFrequencyType === "custom" ? (Number(recCustomInterval) || null) : null,
-          customUnit: recFrequencyType === "custom" ? recCustomUnit : null,
-          endType: recEndType,
-          endDate: recEndType === "DATE" ? recEndDate : null,
-          endAfterCount: recEndType === "COUNT" ? (Number(recEndAfterCount) || null) : null,
-        }),
-      })
-      if (!res.ok) {
-        const err = await res.json()
-        setUpdateError(err.error ?? "Erro ao salvar")
-        toast.error(err.error ?? "Erro ao atualizar configurações da série")
-        return
-      }
-      toast.success("Configurações da série atualizadas.")
-      setSelectedOccurrence(null)
-      await fetchData()
-    } finally {
-      setUpdatingId(null)
-      inFlightUpdateRef.current = false
+  const handleSeriesUpdate = async (occurrence: Occurrence, values: FixedCostFormValues) => {
+    const res = await fetch(`/api/fixed-costs/${occurrence.fixedCostId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(values),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error ?? "Erro ao atualizar configurações da série")
     }
+    toast.success("Configurações da série atualizadas.")
+    setSelectedOccurrence(null)
+    await fetchData()
   }
 
   const handleDelete = async (itemId: string) => {
@@ -467,26 +336,28 @@ function FixedCostsPageInner() {
 
   const openEditSheet = (occurrence: Occurrence) => {
     setSelectedOccurrence(occurrence)
-    setEditScope("THIS_MONTH")
     setEditMode("AMOUNT")
-    setInsideCard(occurrence.fixedCost.paidInsideCard)
-    setRecStartDate(occurrence.fixedCost.startDate?.split("T")[0] ?? new Date().toISOString().split("T")[0])
-    setRecFrequency(occurrence.fixedCost.frequency ?? "MONTHLY")
-    setRecFrequencyType(occurrence.fixedCost.frequency === "CUSTOM" ? "custom" : "standard")
-    setRecCustomInterval(occurrence.fixedCost.customInterval?.toString() ?? "")
-    setRecCustomUnit(occurrence.fixedCost.customUnit ?? "MONTHS")
-    setRecEndType(occurrence.fixedCost.endType ?? "NONE")
-    setRecEndDate(occurrence.fixedCost.endDate?.split("T")[0] ?? "")
-    setRecEndAfterCount(occurrence.fixedCost.endAfterCount?.toString() ?? "")
   }
 
   const selectedTemplate = selectedOccurrence?.fixedCost ?? null
-  const selectedMonthLabel = selectedOccurrence ? formatMonth(selectedOccurrence.month) : ""
-  const saveEditLabel = editScope === "THIS_MONTH"
-    ? `Salvar somente ${selectedMonthLabel}`
-    : editScope === "THIS_AND_FUTURE"
-      ? `Salvar ${selectedMonthLabel} e próximos`
-      : "Salvar toda a série"
+  const seriesInitial: FixedCostFormInitial | null = selectedTemplate
+    ? {
+        name: selectedTemplate.name,
+        categoryId: selectedTemplate.categoryId,
+        paymentMethod: selectedTemplate.paymentMethod,
+        dueDay: selectedTemplate.dueDay,
+        cardId: selectedTemplate.cardId,
+        bankAccountId: selectedTemplate.bankAccountId,
+        active: selectedTemplate.active,
+        startDate: selectedTemplate.startDate,
+        frequency: selectedTemplate.frequency,
+        customInterval: selectedTemplate.customInterval,
+        customUnit: selectedTemplate.customUnit,
+        endType: selectedTemplate.endType,
+        endDate: selectedTemplate.endDate,
+        endAfterCount: selectedTemplate.endAfterCount,
+      }
+    : null
   const totalPending = filteredOccurrences.filter((o) => o.status === "PENDING").reduce((s, o) => s + o.amount, 0)
   const totalPaid = filteredOccurrences.filter((o) => o.status === "PAID").reduce((s, o) => s + o.amount, 0)
   const totalAll = totalPending + totalPaid
@@ -532,18 +403,7 @@ function FixedCostsPageInner() {
           <MonthNavigator month={month} onMonthChange={setMonth} />
           <AddButton
             label={`Novo ${activeTab === "EXPENSE" ? "custo fixo" : "receita fixa"}`}
-            onClick={() => {
-              setInsideCard(false)
-              setCreating(true)
-              setRecStartDate(new Date().toISOString().split("T")[0])
-              setRecFrequency("MONTHLY")
-              setRecFrequencyType("standard")
-              setRecCustomInterval("")
-              setRecCustomUnit("MONTHS")
-              setRecEndType("NONE")
-              setRecEndDate("")
-              setRecEndAfterCount("")
-            }}
+            onClick={() => setCreating(true)}
           />
         </div>
       </div>
@@ -868,174 +728,16 @@ function FixedCostsPageInner() {
           {creating ? (
             <>
               <SheetHeader><SheetTitle>Novo {activeTab === "EXPENSE" ? "custo fixo" : "receita fixa"}</SheetTitle></SheetHeader>
-              <form ref={createFormRef} className="flex-1 overflow-y-auto px-4 pb-4">
-                <div className="mt-4 grid gap-4">
-                  <div className="space-y-1.5">
-                    <Label>Nome</Label>
-                    <Input name="name" placeholder="Ex: INTERNET" required />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Valor padrão</Label>
-                    <Input name="defaultAmount" type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*" placeholder="0,00" required />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Dia de vencimento</Label>
-                    <Input name="dueDay" type="number" min="1" max="31" placeholder="Ex: 10" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Categoria</Label>
-                    <Select value={createCategoryId} items={Object.fromEntries(filteredCategories.map((c) => [c.id, c.name]))} onValueChange={handleSelectChange(setCreateCategoryId, "")}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Selecione..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {filteredCategories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {activeTab === "EXPENSE" && (
-                    <>
-                      <label className="flex items-center gap-2 text-sm">
-                        <input type="checkbox" checked={insideCard} onChange={(e) => setInsideCard(e.target.checked)} name="paidInsideCard" />
-                        Dentro do cartão
-                      </label>
-                      {!insideCard && (
-                        <div className="space-y-1.5">
-                          <Label>Método de pagamento</Label>
-                          <Select value={createPaymentMethod} items={PAYMENT_METHOD_ITEMS} onValueChange={handleSelectChange(setCreatePaymentMethod, "PIX")}>
-                            <SelectTrigger className="w-full">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="PIX">Pix</SelectItem>
-                              <SelectItem value="BANK_SLIP">Boleto</SelectItem>
-                              <SelectItem value="DEBIT">Débito</SelectItem>
-                              <SelectItem value="CASH">Dinheiro</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-                      {insideCard && (
-                        <div className="space-y-1.5">
-                          <Label>Cartão</Label>
-                          <Select value={createCardId} items={Object.fromEntries(cards.map((c) => [c.id, c.name]))} onValueChange={handleSelectChange(setCreateCardId, "")}>
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Selecione um cartão" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {cards.map((card) => (
-                                <SelectItem key={card.id} value={card.id}>{card.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-                    </>
-                  )}
-                  <div className="space-y-1.5">
-                    <Label>Conta prevista (débito)</Label>
-                    <Select value={createBankAccountId} items={{ "": "Sem conta prevista", ...Object.fromEntries(bankAccounts.map((a) => [a.id, a.name])) }} onValueChange={handleSelectChange(setCreateBankAccountId, "")}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Sem conta prevista" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">Sem conta prevista</SelectItem>
-                        {bankAccounts.map((account) => (
-                          <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="border-t pt-4">
-                    <p className="mb-3 text-sm font-medium">Recorrência</p>
-                    <div className="space-y-3">
-                      <div className="space-y-1.5">
-                        <Label>Data de início</Label>
-                        <input type="date" className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recStartDate} onChange={(e) => setRecStartDate(e.target.value)} required />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Tipo</Label>
-                        <div className="flex gap-2">
-                          <button type="button" onClick={() => setRecFrequencyType("standard")} className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${recFrequencyType === "standard" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>Padrão</button>
-                          <button type="button" onClick={() => setRecFrequencyType("custom")} className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${recFrequencyType === "custom" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>Personalizada</button>
-                        </div>
-                      </div>
-                      {recFrequencyType === "standard" ? (
-                        <div className="space-y-1.5">
-                          <Label>Frequência</Label>
-                          <Select value={recFrequency} items={FREQUENCY_ITEMS} onValueChange={handleSelectChange(setRecFrequency, "MONTHLY")}>
-                            <SelectTrigger className="w-full">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="DAILY">Diária</SelectItem>
-                              <SelectItem value="WEEKLY">Semanal</SelectItem>
-                              <SelectItem value="BIWEEKLY">Quinzenal</SelectItem>
-                              <SelectItem value="MONTHLY">Mensal</SelectItem>
-                              <SelectItem value="BIMONTHLY">Bimestral</SelectItem>
-                              <SelectItem value="QUARTERLY">Trimestral</SelectItem>
-                              <SelectItem value="SEMIANNUAL">Semestral</SelectItem>
-                              <SelectItem value="ANNUAL">Anual</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      ) : (
-                        <div className="flex gap-2">
-                          <div className="flex-1 space-y-1.5">
-                            <Label>A cada</Label>
-                            <Input type="number" min="1" className="w-full" value={recCustomInterval} onChange={(e) => setRecCustomInterval(e.target.value)} placeholder="1" />
-                          </div>
-                          <div className="flex-[2] space-y-1.5">
-                            <Label>Unidade</Label>
-                            <Select value={recCustomUnit} items={REC_UNIT_ITEMS} onValueChange={handleSelectChange(setRecCustomUnit, "MONTHS")}>
-                              <SelectTrigger className="w-full">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="DAYS">Dias</SelectItem>
-                                <SelectItem value="WEEKS">Semanas</SelectItem>
-                                <SelectItem value="MONTHS">Meses</SelectItem>
-                                <SelectItem value="YEARS">Anos</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      )}
-                      <div className="space-y-1.5">
-                        <Label>Término</Label>
-                        <Select value={recEndType} items={REC_END_ITEMS} onValueChange={handleSelectChange(setRecEndType, "NONE")}>
-                          <SelectTrigger className="w-full">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="NONE">Sem data final</SelectItem>
-                            <SelectItem value="DATE">Encerrar em uma data</SelectItem>
-                            <SelectItem value="COUNT">Após N ocorrências</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      {recEndType === "DATE" && (
-                        <div className="space-y-1.5">
-                          <Label>Data de término</Label>
-                          <input type="date" className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recEndDate} onChange={(e) => setRecEndDate(e.target.value)} />
-                        </div>
-                      )}
-                      {recEndType === "COUNT" && (
-                        <div className="space-y-1.5">
-                          <Label>Número de ocorrências</Label>
-                          <Input type="number" min="1" className="w-full" value={recEndAfterCount} onChange={(e) => setRecEndAfterCount(e.target.value)} placeholder="Ex: 12" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                {createError && <p className="text-sm text-destructive">{createError}</p>}
-                <Button type="button" className="mt-6 w-full" disabled={creatingLoading} onClick={() => handleCreate(new FormData(createFormRef.current!))}>
-                  {creatingLoading ? "Salvando..." : "Salvar"}
-                </Button>
-              </form>
+              <FixedCostForm
+                key={`create-${activeTab}`}
+                mode="create"
+                type={activeTab}
+                categories={filteredCategories}
+                cards={cards}
+                bankAccounts={bankAccounts}
+                onSubmit={handleCreate}
+                onClose={() => setCreating(false)}
+              />
             </>
           ) : selectedOccurrence && selectedTemplate ? (
             <>
@@ -1045,201 +747,26 @@ function FixedCostsPageInner() {
               <div className="flex-1 overflow-y-auto px-4 pb-4">
                 <div className="mt-4 space-y-4">
                   {editMode === "AMOUNT" ? (
-                    <form ref={editFormRef} className="space-y-4">
-                      <fieldset className="space-y-2">
-                        <legend className="text-sm font-medium">Aplicar alteração em</legend>
-                        {([
-                          ["THIS_MONTH", `Somente esta ocorrência (${formatMonth(selectedOccurrence.month)})`],
-                          ["THIS_AND_FUTURE", `Esta ocorrência e as próximas, a partir de ${formatMonth(selectedOccurrence.month)}`],
-                          ["ENTIRE_SERIES", "Toda a série"],
-                        ] as const).map(([scope, label]) => (
-                          <label key={scope} className="flex cursor-pointer items-start gap-2 rounded-md border p-3 text-sm">
-                            <input type="radio" name="scope" value={scope} checked={editScope === scope} onChange={() => setEditScope(scope)} />
-                            <span>{label}</span>
-                          </label>
-                        ))}
-                      </fieldset>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="occurrence-amount">Novo valor</Label>
-                        <Input id="occurrence-amount" name="amount" type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*" defaultValue={selectedOccurrence.amount} required />
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {editScope === "THIS_MONTH"
-                          ? "Somente o valor desta ocorrência será alterado."
-                          : editScope === "THIS_AND_FUTURE"
-                            ? "O novo valor será usado nesta ocorrência, nas próximas ocorrências abertas e como padrão para novas ocorrências."
-                            : "O novo valor será aplicado às ocorrências abertas da série e usado como padrão. Valores pagos, meses fechados e ocorrências excluídas serão preservados."}
-                      </p>
-                      {updateError && <p className="text-sm text-destructive">{updateError}</p>}
-                      <Button type="button" className="w-full" disabled={updatingId === selectedOccurrence.id} onClick={() => handleUpdate(selectedOccurrence, new FormData(editFormRef.current!))}>
-                        {updatingId === selectedOccurrence.id ? "Salvando..." : saveEditLabel}
-                      </Button>
-                      <Button type="button" variant="outline" className="w-full" onClick={() => { setUpdateError(""); setEditMode("SERIES") }}>
-                        Editar configurações da série
-                      </Button>
-                    </form>
+                    <OccurrenceAmountForm
+                      key={`amount-${selectedOccurrence.id}`}
+                      occurrence={selectedOccurrence}
+                      onSubmit={(values) => handleUpdate(selectedOccurrence, values)}
+                      onClose={() => setSelectedOccurrence(null)}
+                      onEditSeries={() => setEditMode("SERIES")}
+                    />
                   ) : (
-                    <form ref={editFormRef} className="space-y-4">
-                      <p className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300">
-                        Estas configurações pertencem à série e afetam todos os meses que exibem este cadastro. O valor é alterado separadamente por escopo.
-                      </p>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="series-name">Nome</Label>
-                        <Input id="series-name" name="name" defaultValue={selectedTemplate.name} required />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="series-due-day">Dia de vencimento</Label>
-                        <Input id="series-due-day" name="dueDay" type="number" min="1" max="31" defaultValue={selectedTemplate.dueDay ?? ""} placeholder="Ex: 10" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="series-category">Categoria</Label>
-                        <Select name="categoryId" defaultValue={selectedTemplate.categoryId} items={Object.fromEntries(categories.filter((category) => category.type === selectedTemplate.type).map((cat) => [cat.id, cat.name]))}>
-                          <SelectTrigger className="w-full">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {categories.filter((category) => category.type === selectedTemplate.type).map((cat) => (
-                              <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      {selectedTemplate.type === "EXPENSE" && (
-                        <>
-                          <label className="flex items-center gap-2 text-sm">
-                            <input type="checkbox" checked={insideCard} name="paidInsideCard" onChange={(event) => setInsideCard(event.target.checked)} />
-                            Dentro do cartão
-                          </label>
-                          {!insideCard ? (
-                            <div className="space-y-1.5">
-                              <Label htmlFor="series-payment-method">Método de pagamento</Label>
-                              <Select name="paymentMethod" defaultValue={selectedTemplate.paymentMethod} items={PAYMENT_METHOD_ITEMS}>
-                                <SelectTrigger className="w-full">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="PIX">Pix</SelectItem>
-                                  <SelectItem value="BANK_SLIP">Boleto</SelectItem>
-                                  <SelectItem value="DEBIT">Débito</SelectItem>
-                                  <SelectItem value="CASH">Dinheiro</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          ) : (
-                            <div className="space-y-1.5">
-                              <Label htmlFor="series-card">Cartão</Label>
-                              <Select name="cardId" defaultValue={selectedTemplate.cardId ?? ""} items={Object.fromEntries(cards.map((card) => [card.id, card.name]))}>
-                                <SelectTrigger className="w-full">
-                                  <SelectValue placeholder="Selecione um cartão" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {cards.map((card) => (
-                                    <SelectItem key={card.id} value={card.id}>{card.name}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          )}
-                        </>
-                      )}
-                      <div className="space-y-1.5">
-                        <Label htmlFor="series-bank-account">Conta prevista (débito)</Label>
-                        <Select name="bankAccountId" defaultValue={selectedTemplate.bankAccountId ?? ""} items={{ "": "Sem conta prevista", ...Object.fromEntries(bankAccounts.map((account) => [account.id, account.name])) }}>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Sem conta prevista" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="">Sem conta prevista</SelectItem>
-                            {bankAccounts.map((account) => (
-                              <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-3 border-t pt-4">
-                        <p className="text-sm font-medium">Recorrência</p>
-                        <div className="space-y-1.5">
-                          <Label htmlFor="series-start-date">Data de início</Label>
-                          <input id="series-start-date" type="date" className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recStartDate} onChange={(event) => setRecStartDate(event.target.value)} required />
-                        </div>
-                        <div className="flex gap-2">
-                          <Button type="button" variant={recFrequencyType === "standard" ? "default" : "secondary"} className="flex-1" onClick={() => setRecFrequencyType("standard")}>Padrão</Button>
-                          <Button type="button" variant={recFrequencyType === "custom" ? "default" : "secondary"} className="flex-1" onClick={() => setRecFrequencyType("custom")}>Personalizada</Button>
-                        </div>
-                        {recFrequencyType === "standard" ? (
-                          <div className="space-y-1.5">
-                            <Label htmlFor="series-frequency">Frequência</Label>
-                          <Select value={recFrequency} items={FREQUENCY_ITEMS} onValueChange={handleSelectChange(setRecFrequency, "MONTHLY")}>
-                              <SelectTrigger className="w-full">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="DAILY">Diária</SelectItem>
-                                <SelectItem value="WEEKLY">Semanal</SelectItem>
-                                <SelectItem value="BIWEEKLY">Quinzenal</SelectItem>
-                                <SelectItem value="MONTHLY">Mensal</SelectItem>
-                                <SelectItem value="BIMONTHLY">Bimestral</SelectItem>
-                                <SelectItem value="QUARTERLY">Trimestral</SelectItem>
-                                <SelectItem value="SEMIANNUAL">Semestral</SelectItem>
-                                <SelectItem value="ANNUAL">Anual</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        ) : (
-                          <div className="flex gap-2">
-                            <div className="flex-1 space-y-1.5">
-                              <Label htmlFor="series-interval">A cada</Label>
-                              <Input id="series-interval" type="number" min="1" value={recCustomInterval} onChange={(event) => setRecCustomInterval(event.target.value)} />
-                            </div>
-                            <div className="flex-[2] space-y-1.5">
-                              <Label htmlFor="series-unit">Unidade</Label>
-                              <Select value={recCustomUnit} items={REC_UNIT_ITEMS} onValueChange={handleSelectChange(setRecCustomUnit, "MONTHS")}>
-                                <SelectTrigger className="w-full">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="DAYS">Dias</SelectItem>
-                                  <SelectItem value="WEEKS">Semanas</SelectItem>
-                                  <SelectItem value="MONTHS">Meses</SelectItem>
-                                  <SelectItem value="YEARS">Anos</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                        )}
-                        <div className="space-y-1.5">
-                          <Label htmlFor="series-end-type">Término</Label>
-                          <Select value={recEndType} items={REC_END_ITEMS} onValueChange={handleSelectChange(setRecEndType, "NONE")}>
-                            <SelectTrigger className="w-full">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="NONE">Sem data final</SelectItem>
-                              <SelectItem value="DATE">Encerrar em uma data</SelectItem>
-                              <SelectItem value="COUNT">Após N ocorrências</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        {recEndType === "DATE" && (
-                          <div className="space-y-1.5">
-                            <Label htmlFor="series-end-date">Data de término</Label>
-                            <input id="series-end-date" type="date" className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={recEndDate} onChange={(event) => setRecEndDate(event.target.value)} />
-                          </div>
-                        )}
-                        {recEndType === "COUNT" && (
-                          <div className="space-y-1.5">
-                            <Label htmlFor="series-end-count">Número de ocorrências</Label>
-                            <Input id="series-end-count" type="number" min="1" value={recEndAfterCount} onChange={(event) => setRecEndAfterCount(event.target.value)} />
-                          </div>
-                        )}
-                      </div>
-                      <label className="flex items-center gap-2 text-sm"><input type="checkbox" defaultChecked={selectedTemplate.active} name="active" />Ativo</label>
-                      {updateError && <p className="text-sm text-destructive">{updateError}</p>}
-                      <Button type="button" className="w-full" disabled={updatingId === selectedOccurrence.id} onClick={() => handleSeriesUpdate(selectedOccurrence, new FormData(editFormRef.current!))}>
-                        {updatingId === selectedOccurrence.id ? "Salvando..." : "Salvar configurações da série"}
-                      </Button>
-                      <Button type="button" variant="outline" className="w-full" onClick={() => { setUpdateError(""); setEditMode("AMOUNT") }}>Voltar para valor e escopo</Button>
-                    </form>
+                    <FixedCostForm
+                      key={`series-${selectedTemplate.id}`}
+                      mode="series"
+                      type={selectedTemplate.type}
+                      categories={categories.filter((category) => category.type === selectedTemplate.type)}
+                      cards={cards}
+                      bankAccounts={bankAccounts}
+                      initial={seriesInitial}
+                      onSubmit={(values) => handleSeriesUpdate(selectedOccurrence, values)}
+                      onClose={() => setSelectedOccurrence(null)}
+                      onBack={() => setEditMode("AMOUNT")}
+                    />
                   )}
                   <Button type="button" variant="destructive" className="w-full" onClick={() => setConfirmDelete(selectedTemplate.id)}>
                     <Trash2 className="mr-2 h-4 w-4" />Excluir lançamento fixo

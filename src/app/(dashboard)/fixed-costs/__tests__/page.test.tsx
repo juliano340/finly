@@ -115,7 +115,7 @@ describe("FixedCostsPage", () => {
     await user.click(screen.getByRole("button", { name: "Editar custo fixo" }))
 
     expect(screen.getByRole("radio", { name: /somente esta ocorrência/i })).toBeChecked()
-    let amount = document.querySelector<HTMLInputElement>('input[name="amount"]')!
+    let amount = screen.getByLabelText(/novo valor/i)
     const scopeFieldset = screen.getByText("Aplicar alteração em").closest("fieldset")!
     expect(scopeFieldset.compareDocumentPosition(amount) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(screen.getByRole("button", { name: "Salvar somente Ago 2026" })).toBeInTheDocument()
@@ -129,7 +129,7 @@ describe("FixedCostsPage", () => {
         occurrenceId: "occurrence-1",
         month: "2026-08",
         scope: "THIS_MONTH",
-        amount: "150",
+        amount: 150,
         expectedUpdatedAt: "2026-08-01T12:00:00.000Z",
       })
     })
@@ -137,7 +137,7 @@ describe("FixedCostsPage", () => {
     await user.click(screen.getByRole("button", { name: "Editar custo fixo" }))
     await user.click(screen.getByRole("radio", { name: /esta ocorrência e as próximas/i }))
     expect(screen.getByRole("button", { name: "Salvar Ago 2026 e próximos" })).toBeInTheDocument()
-    amount = document.querySelector<HTMLInputElement>('input[name="amount"]')!
+    amount = screen.getByLabelText(/novo valor/i)
     await user.clear(amount)
     await user.type(amount, "175")
     await user.click(screen.getByRole("button", { name: "Salvar Ago 2026 e próximos" }))
@@ -145,7 +145,7 @@ describe("FixedCostsPage", () => {
     await user.click(screen.getByRole("button", { name: "Editar custo fixo" }))
     await user.click(screen.getByRole("radio", { name: "Toda a série" }))
     expect(screen.getByRole("button", { name: "Salvar toda a série" })).toBeInTheDocument()
-    amount = document.querySelector<HTMLInputElement>('input[name="amount"]')!
+    amount = screen.getByLabelText(/novo valor/i)
     await user.clear(amount)
     await user.type(amount, "200")
     await user.click(screen.getByRole("button", { name: "Salvar toda a série" }))
@@ -155,9 +155,9 @@ describe("FixedCostsPage", () => {
         .filter(([url, init]) => String(url) === "/api/fixed-costs/occurrence-1" && init?.method === "PUT")
         .map(([, init]) => JSON.parse(String(init?.body)))
       expect(payloads.map((payload) => ({ scope: payload.scope, amount: payload.amount }))).toEqual([
-        { scope: "THIS_MONTH", amount: "150" },
-        { scope: "THIS_AND_FUTURE", amount: "175" },
-        { scope: "ENTIRE_SERIES", amount: "200" },
+        { scope: "THIS_MONTH", amount: 150 },
+        { scope: "THIS_AND_FUTURE", amount: 175 },
+        { scope: "ENTIRE_SERIES", amount: 200 },
       ])
     })
   })
@@ -180,7 +180,7 @@ describe("FixedCostsPage", () => {
     await user.click(screen.getByRole("button", { name: "Editar custo fixo" }))
     await user.click(screen.getByRole("button", { name: "Editar configurações da série" }))
 
-    const name = screen.getByRole("textbox", { name: "Nome" })
+    const name = screen.getByRole("textbox", { name: /nome/i })
     await user.clear(name)
     await user.type(name, "Internet residencial")
     await user.click(screen.getByRole("button", { name: "Salvar configurações da série" }))
