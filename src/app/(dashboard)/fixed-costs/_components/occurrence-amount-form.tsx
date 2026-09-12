@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { MoneyInput } from "@/components/ui/money-input"
 import { SubmitButton } from "@/components/ui/submit-button"
 import { mapZodErrors } from "@/lib/forms"
-import { parseAmount } from "@/lib/amount"
+import { normalizeAmount, parseAmount } from "@/lib/amount"
 import { formatMonth } from "@/lib/months"
 import { fixedCostOccurrenceAmountUpdateSchema } from "@/features/fixed-costs/fixed-costs.schema"
 
@@ -46,7 +46,7 @@ export function OccurrenceAmountForm({
   onEditSeries,
 }: OccurrenceAmountFormProps) {
   const [scope, setScope] = useState<FixedCostEditScope>("THIS_MONTH")
-  const [amount, setAmount] = useState(occurrence.amount.toString())
+  const [amount, setAmount] = useState(normalizeAmount(occurrence.amount.toString()) ?? "")
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
 
