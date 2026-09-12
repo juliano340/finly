@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.30"
+export const CURRENT_VERSION = "0.2.31"
 
 export const releases = [
+  {
+    version: "0.2.31",
+    date: "2026-09-12",
+    changes: [
+      { type: "chore", description: "Testes end-to-end de orçamentos, categorias, fechamento mensal e transações voltaram a passar após a refatoração dos formulários: agora usam locators acessíveis em vez de seletores legados." },
+    ],
+  },
   {
     version: "0.2.30",
     date: "2026-09-12",

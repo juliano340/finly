@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.31] - 2026-09-12
+
+### Manutenção
+
+- Testes end-to-end de orçamentos, categorias, fechamento mensal e transações voltaram a passar após a refatoração dos formulários: agora usam locators acessíveis em vez de seletores legados.
+
 ## [0.2.30] - 2026-09-12
 
 ### Manutenção
