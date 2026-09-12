@@ -2,6 +2,13 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.32] - 2026-09-12
+
+### Adicionado
+
+- Cada ocorrência de lançamento fixo pode ter forma de pagamento, cartão e conta próprios, sem alterar a série — pagar uma parcela com outro cartão ou conta não muda os demais meses.
+- Ocorrências que fogem do padrão da série ganham a marcação "personalizado" na lista de lançamentos fixos.
+
 ## [0.2.31] - 2026-09-12
 
 ### Manutenção

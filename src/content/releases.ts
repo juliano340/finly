@@ -24,9 +24,17 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.31"
+export const CURRENT_VERSION = "0.2.32"
 
 export const releases = [
+  {
+    version: "0.2.32",
+    date: "2026-09-12",
+    changes: [
+      { type: "feat", description: "Cada ocorrência de lançamento fixo pode ter forma de pagamento, cartão e conta próprios, sem alterar a série — pagar uma parcela com outro cartão ou conta não muda os demais meses." },
+      { type: "feat", description: "Ocorrências que fogem do padrão da série ganham a marcação \"personalizado\" na lista de lançamentos fixos." },
+    ],
+  },
   {
     version: "0.2.31",
     date: "2026-09-12",
