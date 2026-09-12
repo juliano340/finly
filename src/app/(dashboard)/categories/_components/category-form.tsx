@@ -18,7 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { CategoryInput } from "@/features/categories/categories.schema"
+import { FormActions } from "@/components/ui/form-actions"
+import { FormField } from "@/components/ui/form-field"
+import { mapZodErrors } from "@/lib/forms"
+import { categorySchema, type CategoryInput } from "@/features/categories/categories.schema"
 
 interface CategoryFormProps {
   open: boolean
@@ -54,6 +57,13 @@ const colorOptions = [
   { value: "#EC4899", label: "Rosa" },
 ]
 
+const TYPE_ITEMS: Record<string, string> = {
+  EXPENSE: "Despesa",
+  INCOME: "Receita",
+}
+
+const ICON_ITEMS = Object.fromEntries(iconOptions.map((option) => [option.value, option.label]))
+
 export function CategoryForm({
   open,
   onOpenChange,
@@ -63,26 +73,28 @@ export function CategoryForm({
   onDelete,
 }: CategoryFormProps) {
   const [name, setName] = useState(initial?.name ?? "")
-  const [type, setType] = useState<"Despesa" | "Receita">(initial?.type === "INCOME" ? "Receita" : "Despesa")
+  const [type, setType] = useState<"INCOME" | "EXPENSE">(initial?.type ?? "EXPENSE")
   const [icon, setIcon] = useState(initial?.icon ?? "wallet")
   const [color, setColor] = useState(initial?.color ?? "#0EA882")
-  const [error, setError] = useState("")
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim()) {
-      setError("Nome é obrigatório")
+
+    const parsed = categorySchema.safeParse({ name: name.trim(), type, icon, color })
+    if (!parsed.success) {
+      setErrors(mapZodErrors(parsed.error, { name: "name" }))
       return
     }
-    setError("")
+
+    setErrors({})
     setLoading(true)
     try {
-      await onSubmit({ name: name.trim(), type: type === "Receita" ? "INCOME" : "EXPENSE", icon, color })
+      await onSubmit(parsed.data)
       onOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao salvar")
-    } finally {
+      setErrors({ submit: err instanceof Error ? err.message : "Erro ao salvar" })
       setLoading(false)
     }
   }
@@ -95,37 +107,41 @@ export function CategoryForm({
         </SheetHeader>
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-4 pb-4">
           <div className="mt-4 space-y-4">
-            <div className="space-y-1">
-              <Label htmlFor="cat-name">Nome</Label>
+            <FormField label="Nome" required error={errors.name}>
               <Input
-                id="cat-name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value)
+                  setErrors((prev) => {
+                    const next = { ...prev }
+                    delete next.name
+                    delete next.submit
+                    return next
+                  })
+                }}
                 placeholder="Ex: Alimentação"
                 maxLength={50}
               />
-            </div>
-            <div className="space-y-1">
-              <Label>Tipo</Label>
-              <Select value={type} onValueChange={(v) => setType((v ?? "EXPENSE") as typeof type)}>
-                <SelectTrigger>
+            </FormField>
+            <FormField label="Tipo">
+              <Select
+                items={TYPE_ITEMS}
+                value={type}
+                onValueChange={(value) => setType((value ?? "EXPENSE") as typeof type)}
+              >
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Despesa">Despesa</SelectItem>
-                  <SelectItem value="Receita">Receita</SelectItem>
+                  <SelectItem value="EXPENSE">Despesa</SelectItem>
+                  <SelectItem value="INCOME">Receita</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-1">
-              <Label>Ícone</Label>
-              <Select value={icon} onValueChange={(value) => setIcon(value ?? "wallet")}>
-                <SelectTrigger>
-                  <SelectValue>
-                    {(value: string | null) =>
-                      value ? iconOptions.find((o) => o.value === value)?.label ?? "Selecione..." : "Selecione..."
-                    }
-                  </SelectValue>
+            </FormField>
+            <FormField label="Ícone">
+              <Select items={ICON_ITEMS} value={icon} onValueChange={(value) => setIcon(value ?? "wallet")}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent>
                   {iconOptions.map((o) => (
@@ -135,14 +151,17 @@ export function CategoryForm({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-1">
+            </FormField>
+            <div className="space-y-1.5">
               <Label>Cor</Label>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Cor da categoria">
                 {colorOptions.map((c) => (
                   <button
                     key={c.value}
                     type="button"
+                    role="radio"
+                    aria-checked={color === c.value}
+                    aria-label={c.label}
                     className={`h-8 w-8 rounded-full border-2 transition-all ${
                       color === c.value ? "border-foreground scale-110" : "border-transparent"
                     }`}
@@ -154,20 +173,10 @@ export function CategoryForm({
               </div>
             </div>
           </div>
-          {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
-          <div className="mt-6 flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" className="flex-1" disabled={loading || !name.trim()}>
-              {loading ? "Salvando..." : "Salvar"}
-            </Button>
-          </div>
+          {errors.submit && (
+            <p className="mt-3 text-sm text-destructive" role="alert">{errors.submit}</p>
+          )}
+          <FormActions onCancel={() => onOpenChange(false)} loading={loading} />
           {onDelete && (
             <Button
               type="button"
