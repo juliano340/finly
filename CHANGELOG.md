@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.35] - 2026-09-12
+
+### Alterado
+
+- Espaçamento dos formulários padronizados corrigido: transações, cartões, lançamentos fixos e categorias ficam com o mesmo espaço entre as seções, sem o vão extra que deixava o topo do painel alto demais.
+
 ## [0.2.34] - 2026-09-12
 
 ### Alterado

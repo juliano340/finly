@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.34"
+export const CURRENT_VERSION = "0.2.35"
 
 export const releases = [
+  {
+    version: "0.2.35",
+    date: "2026-09-12",
+    changes: [
+      { type: "refactor", description: "Espaçamento dos formulários padronizados corrigido: transações, cartões, lançamentos fixos e categorias ficam com o mesmo espaço entre as seções, sem o vão extra que deixava o topo do painel alto demais." },
+    ],
+  },
   {
     version: "0.2.34",
     date: "2026-09-12",
