@@ -352,7 +352,7 @@ export function FixedCostForm({
 
   return (
     <form className="flex-1 overflow-y-auto px-4 pb-4" onSubmit={handleSubmit}>
-        <div className="mt-4 space-y-6">
+        <div className="space-y-6">
           <FormSection icon={Tag} title="Lançamento">
             <FormField label="Nome" required error={errors.name}>
               <Input

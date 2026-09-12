@@ -127,7 +127,7 @@ export function CardForm({
           </SheetTitle>
         </SheetHeader>
         <form className="flex-1 overflow-y-auto px-4 pb-4" onSubmit={handleSubmit}>
-          <div className="mt-4 space-y-6">
+          <div className="space-y-6">
             <FormSection icon={CreditCard} title="Cartão">
               <FormField label="Nome do cartão" required error={errors.name}>
                 <Input

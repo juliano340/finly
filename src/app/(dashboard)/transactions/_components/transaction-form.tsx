@@ -184,7 +184,7 @@ export function TransactionForm({
           )}
         </SheetHeader>
         <form className="flex-1 overflow-y-auto px-4 pb-4" onSubmit={(e) => { e.preventDefault(); handleSubmit() }}>
-          <div className="mt-4 space-y-6">
+          <div className="space-y-6">
             {/* Tipo */}
             <TypeToggle value={type} onChange={changeType} />
 
