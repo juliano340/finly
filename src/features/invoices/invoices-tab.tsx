@@ -46,6 +46,7 @@ import {
 import { toast } from "sonner";
 import { cn, dueLabel, formatCurrency, formatDate } from "@/lib/utils";
 import { isAccountNegative, getAvailableBalance } from "@/lib/balance";
+import { dueDateIsoForMonth } from "@/lib/dates";
 import { ImportPdfDialog } from "./import-pdf-dialog";
 import {
   MonthNavigator,
@@ -82,6 +83,7 @@ interface CardItem {
   id: string;
   name: string;
   color: string;
+  dueDay: number | null;
 }
 interface BankAccountItem {
   id: string;
@@ -370,6 +372,7 @@ export function InvoicesTab() {
     "CALCULATED" | "ENTERED_TOTAL"
   >("ENTERED_TOTAL");
   const [createCardId, setCreateCardId] = useState("");
+  const [createDueDate, setCreateDueDate] = useState("");
   const [createLifecycleStatus, setCreateLifecycleStatus] = useState("OPEN");
   const [itemOccurrenceId, setItemOccurrenceId] = useState("");
   const [itemKind, setItemKind] = useState("MANUAL");
@@ -794,6 +797,7 @@ export function InvoicesTab() {
             size="sm"
             onClick={() => {
               setCreateCardId("");
+              setCreateDueDate("");
               setCreateLifecycleStatus("OPEN");
               setCreating(true);
             }}
@@ -1522,7 +1526,12 @@ export function InvoicesTab() {
                         cards.map((card) => [card.id, card.name]),
                       )}
                       value={createCardId}
-                      onValueChange={(v) => setCreateCardId(v ?? "")}
+                      onValueChange={(v) => {
+                        const value = v ?? "";
+                        setCreateCardId(value);
+                        const card = cards.find((item) => item.id === value);
+                        setCreateDueDate(dueDateIsoForMonth(card?.dueDay ?? null, month) ?? "");
+                      }}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Selecione um cartão" />
@@ -1538,7 +1547,13 @@ export function InvoicesTab() {
                   </div>
                   <div className="space-y-1.5">
                     <Label>Data de vencimento</Label>
-                    <Input name="dueDate" type="date" required />
+                    <Input
+                      name="dueDate"
+                      type="date"
+                      required
+                      value={createDueDate}
+                      onChange={(event) => setCreateDueDate(event.target.value)}
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label>Como calcular</Label>
