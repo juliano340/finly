@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.35"
+export const CURRENT_VERSION = "0.2.36"
 
 export const releases = [
+  {
+    version: "0.2.36",
+    date: "2026-09-12",
+    changes: [
+      { type: "refactor", description: "Formulário de nova fatura padronizado com seções (Cartão e vencimento, Cálculo e Etapa), campos com dicas de preenchimento e espaçamento alinhado aos demais painéis do app." },
+    ],
+  },
   {
     version: "0.2.35",
     date: "2026-09-12",

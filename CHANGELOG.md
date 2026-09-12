@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.36] - 2026-09-12
+
+### Alterado
+
+- Formulário de nova fatura padronizado com seções (Cartão e vencimento, Cálculo e Etapa), campos com dicas de preenchimento e espaçamento alinhado aos demais painéis do app.
+
 ## [0.2.35] - 2026-09-12
 
 ### Alterado
