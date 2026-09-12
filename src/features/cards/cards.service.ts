@@ -1,5 +1,6 @@
 import { prisma as defaultPrisma } from "@/lib/prisma"
 import type { PrismaClient } from "@/generated/prisma/client"
+import { dueDateIsoForMonth } from "@/lib/dates"
 import type { CardInput } from "./cards.schema"
 
 export async function getCards(userId: string, client?: PrismaClient) {
@@ -105,9 +106,8 @@ export async function updateCard(
 }
 
 function dueDateWithDay(month: string, day: number) {
-  const [year, m] = month.split("-").map(Number)
-  const lastDay = new Date(Date.UTC(year, m, 0)).getUTCDate()
-  return new Date(Date.UTC(year, m - 1, Math.min(day, lastDay)))
+  const iso = dueDateIsoForMonth(day, month) ?? `${month}-01`
+  return new Date(`${iso}T00:00:00.000Z`)
 }
 
 export async function deleteCard(

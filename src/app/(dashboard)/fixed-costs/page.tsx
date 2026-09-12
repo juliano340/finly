@@ -26,6 +26,7 @@ import {
   type OccurrenceAmountValues,
 } from "./_components/occurrence-amount-form"
 import { isOccurrenceCustomized, resolveOccurrencePayment } from "@/features/fixed-costs/occurrence-payment"
+import { dueDateIsoForMonth } from "@/lib/dates"
 import { cn, dueLabel, formatCurrency, isOverdue } from "@/lib/utils"
 import { ariaSort, sortButtonLabel } from "@/lib/accessible-sort"
 import { MonthNavigator, changeMonth, getCurrentMonth } from "@/components/month-navigator"
@@ -119,13 +120,6 @@ function formatDueDate(dueDay: number | null, month: string) {
 
 function formatCalendarDate(value: string) {
   return new Date(value).toLocaleDateString("pt-BR", { timeZone: "UTC" })
-}
-
-function dueDayIso(dueDay: number | null, month: string) {
-  if (!dueDay) return null
-  const [year, m] = month.split("-").map(Number)
-  const lastDay = new Date(year, m, 0).getDate()
-  return `${year}-${String(m).padStart(2, "0")}-${String(Math.min(dueDay, lastDay)).padStart(2, "0")}`
 }
 
 function FixedCostsPageInner() {
@@ -631,7 +625,7 @@ function FixedCostsPageInner() {
           const sourceLabel = payment.paidInsideCard
             ? `Cartão ${(occ.cardOverride ?? occ.fixedCost.card)?.name ?? "-"}`
             : "Fora do cartão"
-          const dueDateIso = occ.dueDate ?? dueDayIso(occ.fixedCost.dueDay, occ.month)
+          const dueDateIso = occ.dueDate ?? dueDateIsoForMonth(occ.fixedCost.dueDay, occ.month)
           const dueTextLabel = dueLabel(dueDateIso)
           const dueOverdue = occ.status === "PENDING" && isOverdue(dueDateIso)
           return (

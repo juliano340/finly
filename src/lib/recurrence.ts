@@ -8,6 +8,7 @@ import {
   parseISO,
   format,
 } from "date-fns"
+import { dueDateIsoForMonth } from "@/lib/dates"
 
 export type Frequency = "DAILY" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM"
 export type IntervalUnit = "DAYS" | "WEEKS" | "MONTHS" | "YEARS"
@@ -88,8 +89,6 @@ export function monthKey(date: Date): string {
 }
 
 export function fixCostOccurrenceDueDate(dueDay: number | null, month: string): Date {
-  const [year, m] = month.split("-").map(Number)
-  const lastDay = new Date(year, m, 0).getDate()
-  const day = dueDay ? Math.min(dueDay, lastDay) : 1
-  return new Date(year, m - 1, day)
+  const iso = dueDateIsoForMonth(dueDay ?? 1, month) ?? `${month}-01`
+  return new Date(`${iso}T00:00:00`)
 }
