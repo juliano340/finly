@@ -95,7 +95,7 @@ export default function BudgetsPage() {
       setEditBudget(null)
       fetchData()
     } else {
-      toast.error("Erro ao salvar orçamento")
+      throw new Error("Erro ao salvar orçamento")
     }
   }
 

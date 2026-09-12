@@ -2,15 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import {
   Select,
   SelectContent,
@@ -18,6 +10,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { FormField } from "@/components/ui/form-field"
+import { MoneyInput } from "@/components/ui/money-input"
+import { SubmitButton } from "@/components/ui/submit-button"
+import { mapZodErrors } from "@/lib/forms"
+import { parseAmount } from "@/lib/amount"
+import { budgetSchema } from "@/features/budgets/budgets.schema"
 
 interface Category {
   id: string
@@ -34,7 +32,7 @@ interface BudgetFormProps {
     amount: number
     categoryId: string
   }
-  onSubmit: (data: { amount: number; categoryId: string; month: string }) => void
+  onSubmit: (data: { amount: number; categoryId: string; month: string }) => Promise<void> | void
   month: string
 }
 
@@ -48,17 +46,31 @@ export function BudgetForm({
 }: BudgetFormProps) {
   const [amount, setAmount] = useState(initialData?.amount?.toString() ?? "")
   const [categoryId, setCategoryId] = useState(initialData?.categoryId ?? "")
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSubmit({
-      amount: parseFloat(amount),
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+
+    const parsed = budgetSchema.safeParse({
+      amount: parseAmount(amount),
       categoryId,
       month,
     })
-    setAmount("")
-    setCategoryId("")
-    onOpenChange(false)
+    if (!parsed.success) {
+      setErrors(mapZodErrors(parsed.error, { amount: "amount", categoryId: "category", month: "month" }))
+      return
+    }
+
+    setErrors({})
+    setLoading(true)
+    try {
+      await onSubmit(parsed.data)
+      onOpenChange(false)
+    } catch (err) {
+      setErrors({ submit: err instanceof Error ? err.message : "Erro ao salvar" })
+      setLoading(false)
+    }
   }
 
   return (
@@ -70,23 +82,36 @@ export function BudgetForm({
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="amount">Valor mensal (R$)</Label>
-            <Input
-              id="amount"
-              type="number"
-              step="0.01"
-              min="0.01"
-              placeholder="0,00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Categoria</Label>
-            <Select items={Object.fromEntries(categories.map((c) => [c.id, c.name]))} value={categoryId} onValueChange={(value) => setCategoryId(value ?? "")} required>
-              <SelectTrigger>
+          <MoneyInput
+            label="Valor mensal"
+            required
+            error={errors.amount}
+            value={amount}
+            onValueChange={(value) => {
+              setAmount(value)
+              setErrors((prev) => {
+                const next = { ...prev }
+                delete next.amount
+                delete next.submit
+                return next
+              })
+            }}
+          />
+          <FormField label="Categoria" required error={errors.category}>
+            <Select
+              items={Object.fromEntries(categories.map((c) => [c.id, c.name]))}
+              value={categoryId}
+              onValueChange={(value) => {
+                setCategoryId(value ?? "")
+                setErrors((prev) => {
+                  const next = { ...prev }
+                  delete next.category
+                  delete next.submit
+                  return next
+                })
+              }}
+            >
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecione..." />
               </SelectTrigger>
               <SelectContent>
@@ -103,14 +128,17 @@ export function BudgetForm({
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </FormField>
+          {errors.submit && (
+            <p className="text-sm text-destructive" role="alert">{errors.submit}</p>
+          )}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit">
+            <SubmitButton loading={loading}>
               {initialData ? "Salvar" : "Criar"}
-            </Button>
+            </SubmitButton>
           </DialogFooter>
         </form>
       </DialogContent>
