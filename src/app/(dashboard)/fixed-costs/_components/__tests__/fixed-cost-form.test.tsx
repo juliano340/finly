@@ -126,6 +126,33 @@ describe("FixedCostForm", () => {
     expect(screen.queryByLabelText(/mês de início/i)).toBeNull()
   })
 
+  it("cria com dia 01 quando o início é por mês", async () => {
+    const { onSubmit } = renderForm({
+      initial: {
+        name: "Internet",
+        categoryId: "cat_1",
+        paymentMethod: "PIX",
+        dueDay: 10,
+        cardId: null,
+        bankAccountId: null,
+        active: true,
+        startDate: "2026-09-12T00:00:00.000Z",
+        frequency: "MONTHLY",
+        customInterval: null,
+        customUnit: null,
+        endType: "NONE",
+        endDate: null,
+        endAfterCount: null,
+      },
+    })
+
+    await userEvent.type(screen.getByLabelText(/valor padrão/i), "50")
+    await userEvent.click(screen.getByRole("button", { name: /^salvar$/i }))
+
+    await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
+    expect(onSubmit.mock.calls[0][0]).toMatchObject({ startDate: "2026-09-01" })
+  })
+
   it("preserva o dia armazenado quando o mês não muda", async () => {
     const { onSubmit } = renderForm({
       mode: "series",

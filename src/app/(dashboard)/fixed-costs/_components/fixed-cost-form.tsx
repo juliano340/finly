@@ -272,6 +272,16 @@ export function FixedCostForm({
   }
 
   function buildPayload(): FixedCostFormValues {
+    const initialStartDate = initial?.startDate?.split("T")[0] ?? null
+    const startMonth = startDate.slice(0, 7)
+    const preserveStoredDay =
+      mode === "series" && initialStartDate !== null && initialStartDate.slice(0, 7) === startMonth
+    const effectiveStartDate = monthBasedStart
+      ? preserveStoredDay
+        ? initialStartDate
+        : `${startMonth}-01`
+      : startDate
+
     const base: FixedCostFormValues = {
       name: name.trim(),
       type,
@@ -282,7 +292,7 @@ export function FixedCostForm({
       cardId: paidInsideCard && cardId ? cardId : null,
       bankAccountId: !paidInsideCard && bankAccountId !== NO_ACCOUNT ? bankAccountId : null,
       active,
-      startDate,
+      startDate: effectiveStartDate,
       frequency: frequencyMode === "custom" ? "CUSTOM" : frequency,
       customInterval:
         frequencyMode === "custom" && customInterval.trim() !== "" ? Number(customInterval) : null,
