@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Trash2 } from "lucide-react"
+import { Palette, Tag, Trash2 } from "lucide-react"
 import {
   Sheet,
   SheetContent,
@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -20,6 +19,7 @@ import {
 } from "@/components/ui/select"
 import { FormActions } from "@/components/ui/form-actions"
 import { FormField } from "@/components/ui/form-field"
+import { FormSection } from "@/components/ui/form-section"
 import { mapZodErrors } from "@/lib/forms"
 import { categorySchema, type CategoryInput } from "@/features/categories/categories.schema"
 
@@ -106,72 +106,76 @@ export function CategoryForm({
           <SheetTitle>{title}</SheetTitle>
         </SheetHeader>
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-4 pb-4">
-          <div className="mt-4 space-y-4">
-            <FormField label="Nome" required error={errors.name}>
-              <Input
-                value={name}
-                onChange={(e) => {
-                  setName(e.target.value)
-                  setErrors((prev) => {
-                    const next = { ...prev }
-                    delete next.name
-                    delete next.submit
-                    return next
-                  })
-                }}
-                placeholder="Ex: Alimentação"
-                maxLength={50}
-              />
-            </FormField>
-            <FormField label="Tipo">
-              <Select
-                items={TYPE_ITEMS}
-                value={type}
-                onValueChange={(value) => setType((value ?? "EXPENSE") as typeof type)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="EXPENSE">Despesa</SelectItem>
-                  <SelectItem value="INCOME">Receita</SelectItem>
-                </SelectContent>
-              </Select>
-            </FormField>
-            <FormField label="Ícone">
-              <Select items={ICON_ITEMS} value={icon} onValueChange={(value) => setIcon(value ?? "wallet")}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {iconOptions.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
+          <div className="mt-4 space-y-6">
+            <FormSection icon={Tag} title="Identidade">
+              <FormField label="Nome" required error={errors.name}>
+                <Input
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value)
+                    setErrors((prev) => {
+                      const next = { ...prev }
+                      delete next.name
+                      delete next.submit
+                      return next
+                    })
+                  }}
+                  placeholder="Ex: Alimentação"
+                  maxLength={50}
+                />
+              </FormField>
+              <FormField label="Tipo">
+                <Select
+                  items={TYPE_ITEMS}
+                  value={type}
+                  onValueChange={(value) => setType((value ?? "EXPENSE") as typeof type)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="EXPENSE">Despesa</SelectItem>
+                    <SelectItem value="INCOME">Receita</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FormField>
+            </FormSection>
+
+            <FormSection icon={Palette} title="Aparência">
+              <FormField label="Ícone">
+                <Select items={ICON_ITEMS} value={icon} onValueChange={(value) => setIcon(value ?? "wallet")}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {iconOptions.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormField>
+              <FormField label="Cor">
+                <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Cor da categoria">
+                  {colorOptions.map((c) => (
+                    <button
+                      key={c.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={color === c.value}
+                      aria-label={c.label}
+                      className={`h-8 w-8 rounded-full border-2 transition-all ${
+                        color === c.value ? "border-foreground scale-110" : "border-transparent"
+                      }`}
+                      style={{ backgroundColor: c.value }}
+                      onClick={() => setColor(c.value)}
+                      title={c.label}
+                    />
                   ))}
-                </SelectContent>
-              </Select>
-            </FormField>
-            <div className="space-y-1.5">
-              <Label>Cor</Label>
-              <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Cor da categoria">
-                {colorOptions.map((c) => (
-                  <button
-                    key={c.value}
-                    type="button"
-                    role="radio"
-                    aria-checked={color === c.value}
-                    aria-label={c.label}
-                    className={`h-8 w-8 rounded-full border-2 transition-all ${
-                      color === c.value ? "border-foreground scale-110" : "border-transparent"
-                    }`}
-                    style={{ backgroundColor: c.value }}
-                    onClick={() => setColor(c.value)}
-                    title={c.label}
-                  />
-                ))}
-              </div>
-            </div>
+                </div>
+              </FormField>
+            </FormSection>
           </div>
           {errors.submit && (
             <p className="mt-3 text-sm text-destructive" role="alert">{errors.submit}</p>
