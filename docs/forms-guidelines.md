@@ -57,6 +57,7 @@ Regras:
 | Data | `DateInput` |
 | Seleção | `Select` com a prop `items` preenchida |
 | Toggle binário (tipo) | `TypeToggle` ou `radiogroup` próprio |
+| Escolha entre 2-3 modos | `SegmentedControl` |
 
 Regras:
 
@@ -64,6 +65,8 @@ Regras:
 - Marque obrigatórios com `required` no `FormField` (asterisco) e valide via schema — não confie no `required` nativo do HTML para regras de negócio.
 - Hint curto vai em `hint`; texto de apoio longo (explicação de comportamento) fica após o campo.
 - Moeda sempre via `MoneyInput` + `parseAmount` no submit; nunca `type="number"` para dinheiro.
+- Campos condicionais: mostre apenas o que se aplica à escolha atual (ex: cartão selecionado esconde conta prevista; término só aparece conforme o tipo). Evite desabilitar campos irrelevantes.
+- Quando o efeito das escolhas não for óbvio, renderize um resumo em texto (ex: preview da recorrência).
 
 ## 4. Validação
 
