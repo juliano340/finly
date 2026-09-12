@@ -33,7 +33,7 @@ test.describe("Orçamentos", () => {
 
     await page.goto("/categories")
     await page.click('button:has-text("Nova categoria")')
-    await page.fill('input[id="cat-name"]', "Alimentação E2E")
+    await page.getByLabel(/Nome/).fill("Alimentação E2E")
     await page.click('button:has-text("Salvar")')
     await expect(page.getByRole("cell", { name: /Alimentação E2E/ })).toBeVisible({ timeout: 10000 })
 
@@ -43,8 +43,7 @@ test.describe("Orçamentos", () => {
     await expect(page.locator("text=Nenhum orçamento definido")).toBeVisible()
 
     await page.click('button:has-text("Novo Orçamento")')
-    await page.waitForSelector('input[id="amount"]', { timeout: 5000 })
-    await page.fill('input[id="amount"]', "500")
+    await page.getByLabel(/Valor mensal/).fill("500")
     await page.click('button:has-text("Selecione...")')
     await page.getByText("Alimentação E2E", { exact: true }).click()
     await page.click('button:has-text("Criar")')

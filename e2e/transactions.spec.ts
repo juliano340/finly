@@ -33,7 +33,7 @@ test.describe("Transações", () => {
 
     await page.goto("/categories")
     await page.click('button:has-text("Nova categoria")')
-    await page.fill('input[id="cat-name"]', "E2E Cat")
+    await page.getByLabel(/Nome/).fill("E2E Cat")
     await page.click('button:has-text("Salvar")')
     await expect(page.getByRole("cell", { name: /E2E Cat/ })).toBeVisible({ timeout: 10000 })
 

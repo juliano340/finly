@@ -35,14 +35,14 @@ test.describe("Categorias", () => {
     await expect(page.locator("h1")).toContainText("Categorias")
 
     await page.click('button:has-text("Nova categoria")')
-    await page.fill('input[id="cat-name"]', "Lazer E2E")
+    await page.getByLabel(/Nome/).fill("Lazer E2E")
     await page.click('button:has-text("Salvar")')
 
     await expect(page.getByRole("cell", { name: /Lazer E2E/ })).toBeVisible({ timeout: 10000 })
 
     await page.getByRole("row", { name: /Lazer E2E/ }).getByRole("button").first().click()
 
-    await page.fill('input[id="cat-name"]', "Lazer Editado")
+    await page.getByLabel(/Nome/).fill("Lazer Editado")
     await page.click('button:has-text("Salvar")')
 
     await expect(page.getByRole("cell", { name: /Lazer Editado/ })).toBeVisible({ timeout: 10000 })

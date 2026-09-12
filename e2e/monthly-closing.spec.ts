@@ -33,20 +33,20 @@ test.describe("Fechamento Mensal", () => {
 
     await page.goto("/categories")
     await page.click('button:has-text("Nova categoria")')
-    await page.fill('input[id="cat-name"]', "Fechamento E2E")
+    await page.getByLabel(/Nome/).fill("Fechamento E2E")
     await page.click('button:has-text("Salvar")')
     await expect(page.getByRole("cell", { name: /Fechamento E2E/ })).toBeVisible({ timeout: 10000 })
 
     await page.goto("/cards")
     await page.getByRole("button", { name: /Novo cartão/ }).click()
-    await page.fill('input[name="name"]', "Cartão E2E")
-    await page.fill('input[name="brand"]', "Visa")
+    await page.getByLabel(/Nome do cartão/).fill("Cartão E2E")
+    await page.getByLabel(/Bandeira/).fill("Visa")
     await page.click('button:has-text("Salvar")')
     await expect(page.getByRole("button", { name: "Cartão E2E" })).toBeVisible({ timeout: 10000 })
 
     await page.goto("/fixed-costs")
     await page.getByRole("button", { name: /Novo custo fixo/ }).click()
-    await page.getByLabel(/nome/i).fill("Internet E2E")
+    await page.getByRole("textbox", { name: /nome/i }).fill("Internet E2E")
     await page.getByLabel(/valor padrão/i).fill("120")
     await page.getByRole("combobox", { name: /categoria/i }).click()
     await page.getByRole("option", { name: "Fechamento E2E" }).click()
@@ -56,7 +56,7 @@ test.describe("Fechamento Mensal", () => {
 
     await page.getByRole("button", { name: /Novo custo fixo/ }).click()
     await expect(page.getByRole("heading", { name: /Novo custo fixo/ })).toBeVisible({ timeout: 10000 })
-    await page.getByLabel(/nome/i).fill("Streaming E2E")
+    await page.getByRole("textbox", { name: /nome/i }).fill("Streaming E2E")
     await page.getByLabel(/valor padrão/i).fill("50")
     await page.getByRole("combobox", { name: /categoria/i }).click()
     await page.getByRole("option", { name: "Fechamento E2E" }).click()
@@ -72,6 +72,7 @@ test.describe("Fechamento Mensal", () => {
 
     await page.goto("/invoices")
     await page.getByRole("button", { name: "Nova fatura" }).click()
+    await page.getByRole("dialog").waitFor()
     await page.getByRole("dialog").getByRole("combobox").first().click()
     await page.getByRole("option", { name: "Cartão E2E" }).click()
     await page.fill('input[name="dueDate"]', invoiceDueDate)
