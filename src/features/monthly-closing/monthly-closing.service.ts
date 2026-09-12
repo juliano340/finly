@@ -1,4 +1,4 @@
-import { endOfMonth, parseISO } from "date-fns"
+import { endOfMonth, parseISO, startOfDay } from "date-fns"
 import { prisma as defaultPrisma } from "@/lib/prisma"
 import { Prisma, type PrismaClient } from "@/generated/prisma/client"
 import { ensureFinancialMonth } from "@/features/financial-months/financial-months.service"
@@ -469,8 +469,11 @@ export async function ensureFixedCostOccurrencesForMonths(
       endAfterCount: fc.endAfterCount,
     }
     const dates = computeRecurrenceDates(config, maxDate)
+    const start = startOfDay(parseISO(config.startDate))
     for (const date of dates) {
       const due = occurrenceDueDate(date, fc.dueDay)
+      // Vencimento nunca antes do início: se cair antes, a primeira ocorrência vai para o mês seguinte
+      if (due.getTime() < start.getTime()) continue
       const m = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, "0")}`
       if (months.some((item) => item.month === m)) {
         allDates.push({ fixedCostId: fc.id, scheduledDate: date, dueDate: due, month: m })

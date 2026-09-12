@@ -269,6 +269,41 @@ describe("monthly-closing.service", () => {
     expect(rebuilt.some((item) => item.scheduledDate?.getTime() === removedScheduledDate?.getTime())).toBe(true)
   })
 
+  it("não gera ocorrência com vencimento anterior à data de início", async () => {
+    const month = "2029-09"
+    const fixedCost = await prisma.fixedCost.create({
+      data: {
+        name: `Assinatura ${Date.now()}`,
+        defaultAmount: 30,
+        categoryId,
+        paymentMethod: "PIX",
+        dueDay: 10,
+        startDate: new Date("2029-09-12T12:00:00"),
+        frequency: "MONTHLY",
+        endType: "NONE",
+        userId,
+      },
+    })
+    const financialMonth = await prisma.financialMonth.create({ data: { month, userId } })
+
+    await ensureFixedCostOccurrences(userId, month, financialMonth.id, prisma)
+
+    const september = await prisma.fixedCostOccurrence.findMany({
+      where: { fixedCostId: fixedCost.id, month, userId },
+    })
+    expect(september).toHaveLength(0)
+
+    const nextMonth = "2029-10"
+    const nextFinancialMonth = await prisma.financialMonth.create({ data: { month: nextMonth, userId } })
+    await ensureFixedCostOccurrences(userId, nextMonth, nextFinancialMonth.id, prisma)
+
+    const october = await prisma.fixedCostOccurrence.findMany({
+      where: { fixedCostId: fixedCost.id, month: nextMonth, userId },
+    })
+    expect(october).toHaveLength(1)
+    expect(october[0].dueDate).toEqual(new Date(2029, 9, 10))
+  })
+
   it("preserva ocorrência legada e cria somente as datas recorrentes ausentes", async () => {
     const month = "2027-03"
     const fixedCost = await prisma.fixedCost.create({
