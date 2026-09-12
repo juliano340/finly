@@ -1512,7 +1512,23 @@ export function InvoicesTab() {
         }}
       >
         <SheetContent className="w-full sm:max-w-md">
-          {creating ? (
+          {creating && cards.length === 0 ? (
+            <>
+              <SheetHeader>
+                <SheetTitle>Nova fatura</SheetTitle>
+              </SheetHeader>
+              <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 pb-8 text-center">
+                <CreditCard className="h-10 w-10 text-muted-foreground" aria-hidden="true" />
+                <p className="text-sm font-medium">Nenhum cartão cadastrado</p>
+                <p className="text-xs text-muted-foreground">
+                  Cadastre um cartão com dia de vencimento para criar faturas.
+                </p>
+                <Button onClick={() => router.push("/cards?tab=cards")}>
+                  Cadastrar cartão
+                </Button>
+              </div>
+            </>
+          ) : creating ? (
             <>
               <SheetHeader>
                 <SheetTitle>Nova fatura</SheetTitle>
