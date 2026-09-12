@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.30] - 2026-09-12
+
+### Manutenção
+
+- Helper de banco dos testes end-to-end passa a usar o banco de desenvolvimento (dev.db) do servidor local por padrão, sem exigir variável de ambiente extra.
+
 ## [0.2.29] - 2026-09-12
 
 ### Corrigido

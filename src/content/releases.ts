@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.29"
+export const CURRENT_VERSION = "0.2.30"
 
 export const releases = [
+  {
+    version: "0.2.30",
+    date: "2026-09-12",
+    changes: [
+      { type: "chore", description: "Helper de banco dos testes end-to-end passa a usar o banco de desenvolvimento (dev.db) do servidor local por padrão, sem exigir variável de ambiente extra." },
+    ],
+  },
   {
     version: "0.2.29",
     date: "2026-09-12",
