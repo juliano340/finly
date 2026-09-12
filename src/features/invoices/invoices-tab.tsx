@@ -8,6 +8,7 @@ import {
   Check,
   CheckCircle2,
   Copy,
+  CreditCard,
   FileText,
   Loader2,
   RotateCcw,
@@ -24,6 +25,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { FormField } from "@/components/ui/form-field";
+import { FormSection } from "@/components/ui/form-section";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -1518,106 +1521,111 @@ export function InvoicesTab() {
                 action={handleCreate}
                 className="flex-1 overflow-y-auto px-4 pb-4"
               >
-                <div className="mt-4 grid gap-4">
-                  <div className="space-y-1.5">
-                    <Label>Cartão</Label>
-                    <Select
-                      items={Object.fromEntries(
-                        cards.map((card) => [card.id, card.name]),
-                      )}
-                      value={createCardId}
-                      onValueChange={(v) => {
-                        const value = v ?? "";
-                        setCreateCardId(value);
-                        const card = cards.find((item) => item.id === value);
-                        setCreateDueDate(dueDateIsoForMonth(card?.dueDay ?? null, month) ?? "");
-                      }}
+                <div className="space-y-6">
+                  <FormSection icon={CreditCard} title="Cartão e vencimento">
+                    <FormField label="Cartão" required>
+                      <Select
+                        items={Object.fromEntries(
+                          cards.map((card) => [card.id, card.name]),
+                        )}
+                        value={createCardId}
+                        onValueChange={(v) => {
+                          const value = v ?? "";
+                          setCreateCardId(value);
+                          const card = cards.find((item) => item.id === value);
+                          setCreateDueDate(dueDateIsoForMonth(card?.dueDay ?? null, month) ?? "");
+                        }}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Selecione um cartão" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {cards.map((card) => (
+                            <SelectItem key={card.id} value={card.id}>
+                              {card.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormField>
+                    <FormField label="Data de vencimento" required>
+                      <Input
+                        name="dueDate"
+                        type="date"
+                        required
+                        value={createDueDate}
+                        onChange={(event) => setCreateDueDate(event.target.value)}
+                      />
+                    </FormField>
+                  </FormSection>
+
+                  <FormSection icon={Calculator} title="Cálculo">
+                    <FormField
+                      label="Como calcular"
+                      hint={
+                        createMode === "ENTERED_TOTAL"
+                          ? "O valor já inclui gastos fixos pagos neste cartão."
+                          : "Soma lançamentos, parcelas e gastos fixos previstos."
+                      }
                     >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Selecione um cartão" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {cards.map((card) => (
-                          <SelectItem key={card.id} value={card.id}>
-                            {card.name}
+                      <Select
+                        items={CALCULATION_MODE_ITEMS}
+                        value={createMode}
+                        onValueChange={(v) =>
+                          setCreateMode(
+                            (v ?? "ENTERED_TOTAL") as typeof createMode,
+                          )
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ENTERED_TOTAL">
+                            Informar valor total da fatura
                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Data de vencimento</Label>
-                    <Input
-                      name="dueDate"
-                      type="date"
-                      required
-                      value={createDueDate}
-                      onChange={(event) => setCreateDueDate(event.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Como calcular</Label>
-                    <Select
-                      items={CALCULATION_MODE_ITEMS}
-                      value={createMode}
-                      onValueChange={(v) =>
-                        setCreateMode(
-                          (v ?? "ENTERED_TOTAL") as typeof createMode,
-                        )
+                          <SelectItem value="CALCULATED">
+                            Calcular pelos lançamentos
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormField>
+                    <FormField
+                      label="Valor total"
+                      hint={
+                        createMode === "CALCULATED"
+                          ? "Opcional, preservado para conferência"
+                          : undefined
                       }
                     >
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ENTERED_TOTAL">
-                          Informar valor total da fatura
-                        </SelectItem>
-                        <SelectItem value="CALCULATED">
-                          Calcular pelos lançamentos
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      {createMode === "ENTERED_TOTAL"
-                        ? "O valor já inclui gastos fixos pagos neste cartão."
-                        : "Soma lançamentos, parcelas e gastos fixos previstos."}
-                    </p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>
-                      Valor total{" "}
-                      {createMode === "CALCULATED" &&
-                        "(opcional, preservado para conferência)"}
-                    </Label>
-                    <Input
-                      name="amount"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="0,00"
-                      required={createMode === "ENTERED_TOTAL"}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Etapa da fatura</Label>
-                    <Select
-                      items={LIFECYCLE_ITEMS}
-                      value={createLifecycleStatus}
-                      onValueChange={(v) =>
-                        setCreateLifecycleStatus(v ?? "OPEN")
-                      }
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ESTIMATED">Estimada</SelectItem>
-                        <SelectItem value="OPEN">Aberta</SelectItem>
-                        <SelectItem value="CLOSED">Fechada</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                      <Input
+                        name="amount"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0,00"
+                        required={createMode === "ENTERED_TOTAL"}
+                      />
+                    </FormField>
+                    <FormField label="Etapa da fatura">
+                      <Select
+                        items={LIFECYCLE_ITEMS}
+                        value={createLifecycleStatus}
+                        onValueChange={(v) =>
+                          setCreateLifecycleStatus(v ?? "OPEN")
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ESTIMATED">Estimada</SelectItem>
+                          <SelectItem value="OPEN">Aberta</SelectItem>
+                          <SelectItem value="CLOSED">Fechada</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormField>
+                  </FormSection>
                 </div>
                 <Button type="submit" className="mt-6 w-full">
                   Salvar
@@ -1630,7 +1638,7 @@ export function InvoicesTab() {
                 <SheetTitle>{selectedInvoice.card.name}</SheetTitle>
               </SheetHeader>
               <div className="flex-1 overflow-y-auto px-4 pb-4">
-                <div className="mt-4 space-y-4">
+                <div className="space-y-4">
                   <div className="rounded-lg bg-muted p-4">
                     <p className="text-xs text-muted-foreground">Valor</p>
                     <p className="text-2xl font-bold">
