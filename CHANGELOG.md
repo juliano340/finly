@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.37] - 2026-09-12
+
+### Corrigido
+
+- Nova fatura sem nenhum cartão cadastrado agora mostra uma orientação com atalho para cadastrar o cartão, em vez de um formulário quebrado.
+
 ## [0.2.36] - 2026-09-12
 
 ### Alterado

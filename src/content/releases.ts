@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.36"
+export const CURRENT_VERSION = "0.2.37"
 
 export const releases = [
+  {
+    version: "0.2.37",
+    date: "2026-09-12",
+    changes: [
+      { type: "fix", description: "Nova fatura sem nenhum cartão cadastrado agora mostra uma orientação com atalho para cadastrar o cartão, em vez de um formulário quebrado." },
+    ],
+  },
   {
     version: "0.2.36",
     date: "2026-09-12",
