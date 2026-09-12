@@ -379,4 +379,46 @@ describe("monthly-closing.service", () => {
     expect(pendingOccurrence?.status).toBe("PENDING")
     expect(pendingOccurrence?.paidAt).toBeNull()
   })
+
+  it("sincroniza fatura considerando cartão personalizado na ocorrência", async () => {
+    const month = "2026-12"
+    const card = await prisma.card.create({ data: { name: `Cartao Override ${Date.now()}`, userId } })
+    const financialMonth = await prisma.financialMonth.create({ data: { month, userId } })
+    const fixedCost = await prisma.fixedCost.create({
+      data: {
+        name: `Internet Override ${Date.now()}`,
+        defaultAmount: 120,
+        categoryId,
+        paymentMethod: "PIX",
+        paidInsideCard: false,
+        startDate: new Date("2026-12-01T12:00:00"),
+        userId,
+      },
+    })
+    const invoice = await prisma.cardInvoice.create({
+      data: { cardId: card.id, financialMonthId: financialMonth.id, month, dueDate: new Date("2026-12-10T12:00:00"), amount: 120, userId },
+    })
+
+    await ensureFixedCostOccurrences(userId, month, financialMonth.id, prisma)
+    const occurrence = await prisma.fixedCostOccurrence.findFirstOrThrow({
+      where: { fixedCostId: fixedCost.id, month, userId },
+    })
+
+    await markCardInvoiceFixedCostsPaid(userId, invoice, new Date("2026-12-09T12:00:00"), prisma)
+    const beforeCustomization = await prisma.fixedCostOccurrence.findUniqueOrThrow({ where: { id: occurrence.id } })
+    expect(beforeCustomization.status).toBe("PENDING")
+
+    await prisma.fixedCostOccurrence.update({
+      where: { id: occurrence.id },
+      data: { paymentMethodOverride: "CREDIT_CARD", cardIdOverride: card.id },
+    })
+
+    await markCardInvoiceFixedCostsPaid(userId, invoice, new Date("2026-12-09T12:00:00"), prisma)
+    const afterCustomization = await prisma.fixedCostOccurrence.findUniqueOrThrow({ where: { id: occurrence.id } })
+    expect(afterCustomization.status).toBe("PAID")
+
+    await markCardInvoiceFixedCostsPending(userId, invoice, prisma)
+    const backToPending = await prisma.fixedCostOccurrence.findUniqueOrThrow({ where: { id: occurrence.id } })
+    expect(backToPending.status).toBe("PENDING")
+  })
 })

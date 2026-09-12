@@ -29,7 +29,7 @@ export async function exportData(userId: string, client: PrismaClient = defaultP
   const bankAccountMovements = await client.bankAccountMovement.findMany({ where: { userId }, select: { id: true, bankAccountId: true, amount: true, type: true, description: true, date: true } })
   const fixedCosts = await client.fixedCost.findMany({ where: { userId }, select: { id: true, name: true, type: true, defaultAmount: true, categoryId: true, paymentMethod: true, dueDay: true, paidInsideCard: true, cardId: true, bankAccountId: true, active: true, startDate: true, frequency: true, customInterval: true, customUnit: true, endType: true, endDate: true, endAfterCount: true } })
   const cardInvoices = await client.cardInvoice.findMany({ where: { userId }, select: { id: true, cardId: true, financialMonthId: true, month: true, dueDate: true, amount: true, status: true, calculationMode: true, lifecycleStatus: true, enteredTotal: true, closedAt: true, paidAt: true, paymentMethod: true, paymentBankAccountId: true, bankAccountMovementId: true } })
-  const fixedCostOccurrences = await client.fixedCostOccurrence.findMany({ where: { userId, deletedAt: null }, select: { id: true, fixedCostId: true, financialMonthId: true, month: true, dueDate: true, amount: true, status: true, paidAt: true } })
+  const fixedCostOccurrences = await client.fixedCostOccurrence.findMany({ where: { userId, deletedAt: null }, select: { id: true, fixedCostId: true, financialMonthId: true, month: true, dueDate: true, amount: true, status: true, paidAt: true, paymentMethodOverride: true, cardIdOverride: true, bankAccountIdOverride: true, dueDateOverridden: true } })
   const cardInvoiceItems = await client.cardInvoiceItem.findMany({ where: { userId }, select: { id: true, invoiceId: true, kind: true, postingStatus: true, description: true, amount: true, fixedCostOccurrenceId: true, transactionId: true, installmentGroupId: true, installmentNumber: true, installmentCount: true } })
 
   return {
@@ -252,7 +252,20 @@ async function insertAll(
       if (existing) { fixedCostOccurrenceMap.set(item.id, existing.id); continue }
     }
     const created = await db.fixedCostOccurrence.create({
-      data: { fixedCostId, financialMonthId, month: item.month, dueDate: item.dueDate, amount: item.amount, status: item.status, paidAt: item.paidAt, userId },
+      data: {
+        fixedCostId,
+        financialMonthId,
+        month: item.month,
+        dueDate: item.dueDate,
+        amount: item.amount,
+        status: item.status,
+        paidAt: item.paidAt,
+        paymentMethodOverride: item.paymentMethodOverride ?? null,
+        cardIdOverride: item.cardIdOverride ? idMaps.card.get(item.cardIdOverride) ?? null : null,
+        bankAccountIdOverride: item.bankAccountIdOverride ? idMaps.bankAccount.get(item.bankAccountIdOverride) ?? null : null,
+        dueDateOverridden: item.dueDateOverridden ?? false,
+        userId,
+      },
     })
     fixedCostOccurrenceMap.set(item.id, created.id)
     counts.fixedCostOccurrences++

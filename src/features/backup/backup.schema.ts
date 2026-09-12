@@ -113,6 +113,10 @@ export const backupSchema = z.object({
       amount: z.number(),
       status: z.enum(["PENDING", "PAID"]).default("PENDING"),
       paidAt: isoDate.nullable().optional(),
+      paymentMethodOverride: z.enum(["PIX", "BANK_SLIP", "DEBIT", "CREDIT_CARD", "CASH"]).nullable().optional(),
+      cardIdOverride: z.string().nullable().optional(),
+      bankAccountIdOverride: z.string().nullable().optional(),
+      dueDateOverridden: z.boolean().optional(),
     })).max(50000),
     cardInvoiceItems: z.array(z.object({
       id: z.string(),

@@ -81,7 +81,36 @@ export const fixedCostOccurrenceAmountUpdateSchema = z.object({
   scope: fixedCostEditScopeSchema,
   amount: z.coerce.number().positive("Valor deve ser maior que zero"),
   expectedUpdatedAt: z.string().datetime(),
+  paymentMethod: fixedCostShape.paymentMethod.optional().nullable(),
+  cardId: z.string().optional().nullable(),
+  bankAccountId: z.string().optional().nullable(),
+  dueDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida")
+    .optional()
+    .nullable(),
 }).strict()
+  .refine(
+    (data) => data.scope === "THIS_MONTH" || (
+      data.paymentMethod === undefined &&
+      data.cardId === undefined &&
+      data.bankAccountId === undefined &&
+      data.dueDate === undefined
+    ),
+    { message: "Personalização disponível apenas para esta ocorrência", path: ["scope"] }
+  )
+  .refine(
+    (data) => data.paymentMethod !== "CREDIT_CARD" || !!data.cardId,
+    { message: "Cartão é obrigatório para pagamento no cartão", path: ["cardId"] }
+  )
+  .refine(
+    (data) => data.paymentMethod === undefined || data.paymentMethod === null || data.paymentMethod === "CREDIT_CARD" || !data.cardId,
+    { message: "Cartão só se aplica a pagamento no cartão", path: ["cardId"] }
+  )
+  .refine(
+    (data) => !data.dueDate || data.dueDate.startsWith(data.month),
+    { message: "Data deve pertencer ao mês da ocorrência", path: ["dueDate"] }
+  )
 
 export type FixedCostInput = z.infer<typeof fixedCostSchema>
 export type FixedCostOccurrenceAmountUpdateInput = z.infer<typeof fixedCostOccurrenceAmountUpdateSchema>

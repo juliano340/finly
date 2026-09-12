@@ -3,6 +3,7 @@ import { prisma as defaultPrisma } from "@/lib/prisma"
 import { Prisma, type PrismaClient } from "@/generated/prisma/client"
 import { ensureFinancialMonth } from "@/features/financial-months/financial-months.service"
 import { computeRecurrenceDates, occurrenceDueDate, type RecurrenceConfig } from "@/lib/recurrence"
+import { resolveOccurrencePayment } from "@/features/fixed-costs/occurrence-payment"
 import { validateExpenseLimit } from "@/features/bank-accounts/bank-accounts.service"
 import { moneyToNumber, sumMoney, type MoneyValue } from "@/lib/money"
 import { composeMonthlyFinancialSources } from "@/features/monthly-plan/monthly-plan.sources"
@@ -74,24 +75,31 @@ export async function getMonthlyClosing(
     }),
     db.fixedCostOccurrence.findMany({
       where: { userId, month, deletedAt: null },
-      include: { fixedCost: { include: { category: true, card: true, bankAccount: true } } },
+      include: {
+        fixedCost: { include: { category: true, card: true, bankAccount: true } },
+        cardOverride: true,
+        bankAccountOverride: true,
+      },
       orderBy: { fixedCost: { name: "asc" } },
     }),
     getLooseExpenseTransactions(userId, month, db),
     getLooseIncomeTransactions(userId, month, db),
   ])
 
+  const paymentById = new Map(occurrences.map((item) => [item.id, resolveOccurrencePayment(item)]))
+  const paymentOf = (item: (typeof occurrences)[number]) => paymentById.get(item.id)!
+
   const expenseOccurrences = occurrences.filter((item) => item.fixedCost.type === "EXPENSE")
   const incomeOccurrences = occurrences.filter((item) => item.fixedCost.type === "INCOME")
   const fixedCostsTotal = sum(expenseOccurrences.map((item) => item.amount))
   const fixedIncomeTotal = sum(incomeOccurrences.map((item) => item.amount))
   const looseExpenses = sum(looseExpenseItems.map((item) => item.amount))
-  const insideCard = expenseOccurrences.filter((item) => item.fixedCost.paidInsideCard)
-  const outsideCard = expenseOccurrences.filter((item) => !item.fixedCost.paidInsideCard)
+  const insideCard = expenseOccurrences.filter((item) => paymentOf(item).paidInsideCard)
+  const outsideCard = expenseOccurrences.filter((item) => !paymentOf(item).paidInsideCard)
   const invoicesWithTotals = invoices.map((invoice) => {
     const totals = calculateInvoiceTotals({
       ...invoice,
-      fixedOccurrences: insideCard.filter((item) => item.fixedCost.cardId === invoice.cardId),
+      fixedOccurrences: insideCard.filter((item) => paymentOf(item).cardId === invoice.cardId),
     })
     return {
       ...invoice,
@@ -103,7 +111,7 @@ export async function getMonthlyClosing(
   const cardInvoicesTotal = sum(invoicesWithTotals.filter((inv) => inv.status === "PENDING").map((inv) => inv.amount))
   const fixedCostsInsideCardTotal = sum(insideCard.map((item) => item.amount))
   const invoiceCardIds = new Set(invoices.map((invoice) => invoice.cardId))
-  const cardForecastsWithoutInvoiceTotal = sum(insideCard.filter((item) => !item.fixedCost.cardId || !invoiceCardIds.has(item.fixedCost.cardId)).map((item) => item.amount))
+  const cardForecastsWithoutInvoiceTotal = sum(insideCard.filter((item) => !paymentOf(item).cardId || !invoiceCardIds.has(paymentOf(item).cardId!)).map((item) => item.amount))
   const fixedCostsOutsideCardTotal = sum(outsideCard.filter((item) => item.status === "PENDING").map((item) => item.amount))
   const fixedCostsOutsideCardTotalAll = sum(outsideCard.map((item) => item.amount))
   const totalToPay = cardInvoicesTotal + cardForecastsWithoutInvoiceTotal + fixedCostsOutsideCardTotal + looseExpenses
@@ -157,7 +165,14 @@ export async function getMonthlyClosing(
       totalToPay,
       totalSpent,
       projectedBalance: totalIncome - totalSpent,
-      estimatedInvoicesByCard: buildInvoiceEstimates(invoicesWithTotals, insideCard),
+      estimatedInvoicesByCard: buildInvoiceEstimates(
+        invoicesWithTotals,
+        insideCard.map((item) => ({
+          amount: item.amount,
+          cardId: paymentOf(item).cardId,
+          cardName: (item.cardOverride ?? item.fixedCost.card)?.name ?? null,
+        })),
+      ),
       incomeItems,
     } satisfies MonthlyClosingSummary,
   }
@@ -191,22 +206,40 @@ export async function getMonthlyClosingSummary(
         id: true,
         amount: true,
         status: true,
-        fixedCost: { select: { type: true, paidInsideCard: true, cardId: true } },
+        month: true,
+        scheduledDate: true,
+        dueDate: true,
+        paymentMethodOverride: true,
+        cardIdOverride: true,
+        bankAccountIdOverride: true,
+        fixedCost: {
+          select: {
+            type: true,
+            paidInsideCard: true,
+            cardId: true,
+            bankAccountId: true,
+            paymentMethod: true,
+            dueDay: true,
+          },
+        },
       },
     }),
     aggregateTransactions(userId, month, "EXPENSE", db),
     aggregateTransactions(userId, month, "INCOME", db),
   ])
 
+  const paymentById = new Map(occurrences.map((item) => [item.id, resolveOccurrencePayment(item)]))
+  const paymentOf = (item: (typeof occurrences)[number]) => paymentById.get(item.id)!
+
   const expenseOccurrences = occurrences.filter((item) => item.fixedCost.type === "EXPENSE")
   const incomeOccurrences = occurrences.filter((item) => item.fixedCost.type === "INCOME")
-  const insideCard = expenseOccurrences.filter((item) => item.fixedCost.paidInsideCard)
-  const outsideCard = expenseOccurrences.filter((item) => !item.fixedCost.paidInsideCard)
+  const insideCard = expenseOccurrences.filter((item) => paymentOf(item).paidInsideCard)
+  const outsideCard = expenseOccurrences.filter((item) => !paymentOf(item).paidInsideCard)
   const invoicesWithTotals = invoices.map((invoice) => {
     const totals = calculateInvoiceTotals({
       ...invoice,
       items: invoice.items.map((item) => ({ ...item, postingStatus: "POSTED" as const })),
-      fixedOccurrences: insideCard.filter((item) => item.fixedCost.cardId === invoice.cardId),
+      fixedOccurrences: insideCard.filter((item) => paymentOf(item).cardId === invoice.cardId),
     })
     return { ...invoice, amount: totals.effectiveTotal }
   })
@@ -217,7 +250,7 @@ export async function getMonthlyClosingSummary(
   const receivedIncomeTotal = sum(incomeOccurrences.filter((item) => item.status === "PAID").map((item) => item.amount)) + income
   const fixedCostsInsideCardTotal = sum(insideCard.map((item) => item.amount))
   const invoiceCardIds = new Set(invoices.map((invoice) => invoice.cardId))
-  const cardForecastsWithoutInvoiceTotal = sum(insideCard.filter((item) => !item.fixedCost.cardId || !invoiceCardIds.has(item.fixedCost.cardId)).map((item) => item.amount))
+  const cardForecastsWithoutInvoiceTotal = sum(insideCard.filter((item) => !paymentOf(item).cardId || !invoiceCardIds.has(paymentOf(item).cardId!)).map((item) => item.amount))
   const fixedCostsOutsideCardTotal = sum(outsideCard.filter((item) => item.status === "PENDING").map((item) => item.amount))
   const fixedCostsOutsideCardTotalAll = sum(outsideCard.map((item) => item.amount))
   const totalToPay = cardInvoicesTotal + cardForecastsWithoutInvoiceTotal + fixedCostsOutsideCardTotal + looseExpenses
@@ -264,9 +297,11 @@ export async function payFixedCostOccurrence(
   if (!occurrence || occurrence.userId !== userId || occurrence.deletedAt) return null
   if (occurrence.status === "PAID") return occurrence
 
-  if (occurrence.fixedCost.type === "EXPENSE" && occurrence.fixedCost.bankAccountId) {
+  const payment = resolveOccurrencePayment(occurrence)
+
+  if (occurrence.fixedCost.type === "EXPENSE" && payment.bankAccountId) {
     const check = await validateExpenseLimit(
-      occurrence.fixedCost.bankAccountId,
+      payment.bankAccountId,
       userId,
       moneyToNumber(occurrence.amount),
       client
@@ -289,10 +324,10 @@ export async function payFixedCostOccurrence(
     }
 
     let bankAccountMovementId: string | null = null
-    if (occurrence.fixedCost.bankAccountId) {
+    if (payment.bankAccountId) {
       const movement = await tx.bankAccountMovement.create({
         data: {
-          bankAccountId: occurrence.fixedCost.bankAccountId,
+          bankAccountId: payment.bankAccountId,
           amount: occurrence.amount,
           type: occurrence.fixedCost.type,
           description: `PAGAMENTO ${occurrence.fixedCost.name}`,
@@ -324,6 +359,8 @@ export async function unpayFixedCostOccurrence(
   if (!occurrence || occurrence.userId !== userId || occurrence.deletedAt) return null
   if (occurrence.status !== "PAID") return occurrence
 
+  const payment = resolveOccurrencePayment(occurrence)
+
   try {
     return await db.$transaction(async (tx) => {
       const claimed = await tx.fixedCostOccurrence.updateMany({
@@ -342,11 +379,11 @@ export async function unpayFixedCostOccurrence(
         await tx.bankAccountMovement.deleteMany({
           where: { id: occurrence.bankAccountMovementId, userId },
         })
-      } else if (occurrence.fixedCost.bankAccountId) {
+      } else if (payment.bankAccountId) {
         const description = `PAGAMENTO ${occurrence.fixedCost.name}`
         const legacyMovements = await tx.bankAccountMovement.findMany({
           where: {
-            bankAccountId: occurrence.fixedCost.bankAccountId,
+            bankAccountId: payment.bankAccountId,
             amount: occurrence.amount,
             type: occurrence.fixedCost.type,
             description,
@@ -386,7 +423,7 @@ export async function payFixedCostOccurrenceWithCard(
   })
   if (!occurrence || occurrence.userId !== userId || occurrence.deletedAt) return null
   if (occurrence.status === "PAID") return occurrence
-  if (!occurrence.fixedCost.paidInsideCard) return null
+  if (!resolveOccurrencePayment(occurrence).paidInsideCard) return null
 
   return db.fixedCostOccurrence.update({
     where: { id: occurrenceId },
@@ -407,7 +444,7 @@ export async function unpayFixedCostOccurrenceWithCard(
   })
   if (!occurrence || occurrence.userId !== userId || occurrence.deletedAt) return null
   if (occurrence.status !== "PAID") return occurrence
-  if (!occurrence.fixedCost.paidInsideCard || !occurrence.paidViaCard) return null
+  if (!resolveOccurrencePayment(occurrence).paidInsideCard || !occurrence.paidViaCard) return null
 
   return db.fixedCostOccurrence.update({
     where: { id: occurrenceId },
@@ -572,18 +609,11 @@ export async function markCardInvoiceFixedCostsPaid(
 ) {
   await ensureFixedCostOccurrences(userId, invoice.month, invoice.financialMonthId, client)
 
+  const ids = await occurrenceIdsPaidInsideCard(client, userId, invoice.month, invoice.cardId)
+  if (ids.length === 0) return { count: 0 }
+
   return client.fixedCostOccurrence.updateMany({
-    where: {
-      userId,
-      month: invoice.month,
-      status: "PENDING",
-      deletedAt: null,
-      fixedCost: {
-        paidInsideCard: true,
-        cardId: invoice.cardId,
-        type: "EXPENSE",
-      },
-    },
+    where: { id: { in: ids }, userId, status: "PENDING", deletedAt: null },
     data: { status: "PAID", paidAt },
   })
 }
@@ -595,21 +625,49 @@ export async function markCardInvoiceFixedCostsPending(
 ) {
   await ensureFixedCostOccurrences(userId, invoice.month, invoice.financialMonthId, client)
 
+  const ids = await occurrenceIdsPaidInsideCard(client, userId, invoice.month, invoice.cardId)
+  if (ids.length === 0) return { count: 0 }
+
   return client.fixedCostOccurrence.updateMany({
-    where: {
-      userId,
-      month: invoice.month,
-      status: "PAID",
-      paidViaCard: false,
-      deletedAt: null,
-      fixedCost: {
-        paidInsideCard: true,
-        cardId: invoice.cardId,
-        type: "EXPENSE",
-      },
-    },
+    where: { id: { in: ids }, userId, status: "PAID", paidViaCard: false, deletedAt: null },
     data: { status: "PENDING", paidAt: null },
   })
+}
+
+async function occurrenceIdsPaidInsideCard(
+  client: FixedCostOccurrenceClient,
+  userId: string,
+  month: string,
+  cardId: string
+) {
+  const candidates = await client.fixedCostOccurrence.findMany({
+    where: { userId, month, deletedAt: null, fixedCost: { type: "EXPENSE" } },
+    select: {
+      id: true,
+      month: true,
+      scheduledDate: true,
+      dueDate: true,
+      paymentMethodOverride: true,
+      cardIdOverride: true,
+      bankAccountIdOverride: true,
+      fixedCost: {
+        select: {
+          paymentMethod: true,
+          paidInsideCard: true,
+          cardId: true,
+          bankAccountId: true,
+          dueDay: true,
+        },
+      },
+    },
+  })
+
+  return candidates
+    .filter((item) => {
+      const payment = resolveOccurrencePayment(item)
+      return payment.paidInsideCard && payment.cardId === cardId
+    })
+    .map((item) => item.id)
 }
 
 async function aggregateTransactions(
@@ -688,7 +746,7 @@ async function getLooseIncomeTransactions(
 
 function buildInvoiceEstimates(
   invoices: { cardId: string; amount: MoneyValue; card: { name: string } }[],
-  insideCard: { amount: MoneyValue; fixedCost: { cardId: string | null; card: { name: string } | null } }[]
+  insideCard: { amount: MoneyValue; cardId: string | null; cardName: string | null }[]
 ) {
   const byCard = new Map<string, { cardName: string; estimatedAmount: number; invoiceAmount: number }>()
 
@@ -701,15 +759,14 @@ function buildInvoiceEstimates(
   }
 
   for (const item of insideCard) {
-    const cardId = item.fixedCost.cardId
-    if (!cardId || !item.fixedCost.card) continue
-    const current = byCard.get(cardId) ?? {
-      cardName: item.fixedCost.card.name,
+    if (!item.cardId || !item.cardName) continue
+    const current = byCard.get(item.cardId) ?? {
+      cardName: item.cardName,
       estimatedAmount: 0,
       invoiceAmount: 0,
     }
     current.estimatedAmount = sumMoney([current.estimatedAmount, item.amount])
-    byCard.set(cardId, current)
+    byCard.set(item.cardId, current)
   }
 
   return Array.from(byCard.entries()).map(([cardId, item]) => ({

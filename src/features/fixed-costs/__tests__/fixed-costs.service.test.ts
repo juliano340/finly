@@ -2,7 +2,8 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest"
 import { getTestClient } from "@/__tests__/prisma"
 import { registerUser } from "@/features/auth/auth.service"
-import { createFixedCost, resetExpenseFixedCosts, StaleFixedCostOccurrenceError, updateFixedCost, updateFixedCostOccurrenceAmount } from "../fixed-costs.service"
+import { createFixedCost, resetExpenseFixedCosts, OccurrenceOverrideNotAllowedError, StaleFixedCostOccurrenceError, updateFixedCost, updateFixedCostOccurrenceAmount } from "../fixed-costs.service"
+import { resolveOccurrencePayment } from "../occurrence-payment"
 import { ensureFinancialMonth } from "@/features/financial-months/financial-months.service"
 import { ensureFixedCostOccurrences } from "@/features/monthly-closing/monthly-closing.service"
 
@@ -140,6 +141,304 @@ describe("fixed-costs.service - update amount propagation", () => {
     })
     expect(occ?.amount.toNumber()).toBe(50)
     expect(occ?.status).toBe("PAID")
+  })
+
+  it("personaliza pagamento e vencimento somente na ocorrência selecionada", async () => {
+    const name = uniqueName()
+    const created = await createFixedCost(userId, {
+      name,
+      type: "EXPENSE",
+      defaultAmount: 100,
+      categoryId,
+      paymentMethod: "PIX",
+      dueDay: 10,
+      paidInsideCard: false,
+      bankAccountId,
+      active: true,
+      startDate: `${month}-01`,
+      frequency: "MONTHLY",
+      endType: "NONE",
+    }, prisma)
+    expect(created).not.toBeNull()
+    if (!created) return
+
+    const card = await prisma.card.create({
+      data: { name: uniqueName(), userId },
+    })
+    const occurrence = await prisma.fixedCostOccurrence.findFirstOrThrow({
+      where: { fixedCostId: created.id, month, userId },
+      include: { fixedCost: { select: { paymentMethod: true, paidInsideCard: true, cardId: true, bankAccountId: true, dueDay: true } } },
+    })
+
+    const result = await updateFixedCostOccurrenceAmount(created.id, userId, {
+      occurrenceId: occurrence.id,
+      month,
+      scope: "THIS_MONTH",
+      amount: 100,
+      expectedUpdatedAt: occurrence.updatedAt.toISOString(),
+      paymentMethod: "CREDIT_CARD",
+      cardId: card.id,
+      bankAccountId: null,
+      dueDate: `${month}-20`,
+    }, prisma)
+    expect(result?.affected).toBe(1)
+
+    const customized = await prisma.fixedCostOccurrence.findUniqueOrThrow({
+      where: { id: occurrence.id },
+      include: { fixedCost: { select: { paymentMethod: true, paidInsideCard: true, cardId: true, bankAccountId: true, dueDay: true } } },
+    })
+    expect(customized.paymentMethodOverride).toBe("CREDIT_CARD")
+    expect(customized.cardIdOverride).toBe(card.id)
+    expect(customized.bankAccountIdOverride).toBeNull()
+    expect(customized.dueDate).toEqual(new Date(`${month}-20T00:00:00`))
+    expect(customized.dueDateOverridden).toBe(true)
+    expect(resolveOccurrencePayment(customized)).toMatchObject({
+      paymentMethod: "CREDIT_CARD",
+      paidInsideCard: true,
+      cardId: card.id,
+    })
+
+    // Restaurar o padrão da série recomputa o vencimento pelo dueDay
+    const restored = await updateFixedCostOccurrenceAmount(created.id, userId, {
+      occurrenceId: occurrence.id,
+      month,
+      scope: "THIS_MONTH",
+      amount: 100,
+      expectedUpdatedAt: customized.updatedAt.toISOString(),
+      dueDate: null,
+    }, prisma)
+    expect(restored?.affected).toBe(1)
+
+    const backToDefault = await prisma.fixedCostOccurrence.findUniqueOrThrow({
+      where: { id: occurrence.id },
+    })
+    expect(backToDefault.dueDate).toEqual(new Date(`${month}-10T00:00:00`))
+    expect(backToDefault.dueDateOverridden).toBe(false)
+    expect(backToDefault.paymentMethodOverride).toBe("CREDIT_CARD")
+  })
+
+  it("rejeita personalização fora do escopo desta ocorrência", async () => {
+    const name = uniqueName()
+    const created = await createFixedCost(userId, {
+      name,
+      type: "EXPENSE",
+      defaultAmount: 100,
+      categoryId,
+      paymentMethod: "PIX",
+      dueDay: 10,
+      paidInsideCard: false,
+      bankAccountId,
+      active: true,
+      startDate: `${month}-01`,
+      frequency: "MONTHLY",
+      endType: "NONE",
+    }, prisma)
+    expect(created).not.toBeNull()
+    if (!created) return
+
+    const occurrence = await prisma.fixedCostOccurrence.findFirstOrThrow({
+      where: { fixedCostId: created.id, month, userId },
+    })
+
+    await expect(
+      updateFixedCostOccurrenceAmount(created.id, userId, {
+        occurrenceId: occurrence.id,
+        month,
+        scope: "ENTIRE_SERIES",
+        amount: 100,
+        expectedUpdatedAt: occurrence.updatedAt.toISOString(),
+        paymentMethod: "CASH",
+      }, prisma),
+    ).rejects.toBeInstanceOf(OccurrenceOverrideNotAllowedError)
+  })
+
+  it("rejeita cartão em receita fixa e cartão inexistente", async () => {
+    const name = uniqueName()
+    const created = await createFixedCost(userId, {
+      name,
+      type: "INCOME",
+      defaultAmount: 100,
+      categoryId,
+      paymentMethod: "PIX",
+      dueDay: 10,
+      paidInsideCard: false,
+      bankAccountId,
+      active: true,
+      startDate: `${month}-01`,
+      frequency: "MONTHLY",
+      endType: "NONE",
+    }, prisma)
+    expect(created).not.toBeNull()
+    if (!created) return
+
+    const occurrence = await prisma.fixedCostOccurrence.findFirstOrThrow({
+      where: { fixedCostId: created.id, month, userId },
+    })
+
+    await expect(
+      updateFixedCostOccurrenceAmount(created.id, userId, {
+        occurrenceId: occurrence.id,
+        month,
+        scope: "THIS_MONTH",
+        amount: 100,
+        expectedUpdatedAt: occurrence.updatedAt.toISOString(),
+        paymentMethod: "CREDIT_CARD",
+        cardId: "card-inexistente",
+      }, prisma),
+    ).rejects.toMatchObject({ reason: "INCOME" })
+
+    const expense = await createFixedCost(userId, {
+      name: uniqueName(),
+      type: "EXPENSE",
+      defaultAmount: 100,
+      categoryId,
+      paymentMethod: "PIX",
+      dueDay: 10,
+      paidInsideCard: false,
+      bankAccountId,
+      active: true,
+      startDate: `${month}-01`,
+      frequency: "MONTHLY",
+      endType: "NONE",
+    }, prisma)
+    if (!expense) return
+    const expenseOccurrence = await prisma.fixedCostOccurrence.findFirstOrThrow({
+      where: { fixedCostId: expense.id, month, userId },
+    })
+
+    await expect(
+      updateFixedCostOccurrenceAmount(expense.id, userId, {
+        occurrenceId: expenseOccurrence.id,
+        month,
+        scope: "THIS_MONTH",
+        amount: 100,
+        expectedUpdatedAt: expenseOccurrence.updatedAt.toISOString(),
+        paymentMethod: "CREDIT_CARD",
+        cardId: "card-inexistente",
+      }, prisma),
+    ).rejects.toMatchObject({ reason: "CARD" })
+  })
+
+  it("troca somente o cartão quando a série já é paga no cartão", async () => {
+    const name = uniqueName()
+    const seriesCard = await prisma.card.create({ data: { name: uniqueName(), userId } })
+    const otherCard = await prisma.card.create({ data: { name: uniqueName(), userId } })
+    const created = await createFixedCost(userId, {
+      name,
+      type: "EXPENSE",
+      defaultAmount: 100,
+      categoryId,
+      paymentMethod: "CREDIT_CARD",
+      dueDay: 10,
+      paidInsideCard: true,
+      cardId: seriesCard.id,
+      active: true,
+      startDate: `${month}-01`,
+      frequency: "MONTHLY",
+      endType: "NONE",
+    }, prisma)
+    expect(created).not.toBeNull()
+    if (!created) return
+
+    const occurrence = await prisma.fixedCostOccurrence.findFirstOrThrow({
+      where: { fixedCostId: created.id, month, userId },
+      include: { fixedCost: { select: { paymentMethod: true, paidInsideCard: true, cardId: true, bankAccountId: true, dueDay: true } } },
+    })
+
+    const result = await updateFixedCostOccurrenceAmount(created.id, userId, {
+      occurrenceId: occurrence.id,
+      month,
+      scope: "THIS_MONTH",
+      amount: 100,
+      expectedUpdatedAt: occurrence.updatedAt.toISOString(),
+      paymentMethod: null,
+      cardId: otherCard.id,
+    }, prisma)
+    expect(result?.affected).toBe(1)
+
+    const customized = await prisma.fixedCostOccurrence.findUniqueOrThrow({
+      where: { id: occurrence.id },
+      include: { fixedCost: { select: { paymentMethod: true, paidInsideCard: true, cardId: true, bankAccountId: true, dueDay: true } } },
+    })
+    expect(customized.paymentMethodOverride).toBeNull()
+    expect(customized.cardIdOverride).toBe(otherCard.id)
+    expect(resolveOccurrencePayment(customized)).toMatchObject({
+      paidInsideCard: true,
+      cardId: otherCard.id,
+    })
+  })
+
+  it("rejeita cartão quando a forma efetiva não é cartão", async () => {
+    const name = uniqueName()
+    const created = await createFixedCost(userId, {
+      name,
+      type: "EXPENSE",
+      defaultAmount: 100,
+      categoryId,
+      paymentMethod: "PIX",
+      dueDay: 10,
+      paidInsideCard: false,
+      bankAccountId,
+      active: true,
+      startDate: `${month}-01`,
+      frequency: "MONTHLY",
+      endType: "NONE",
+    }, prisma)
+    expect(created).not.toBeNull()
+    if (!created) return
+
+    const card = await prisma.card.create({ data: { name: uniqueName(), userId } })
+    const occurrence = await prisma.fixedCostOccurrence.findFirstOrThrow({
+      where: { fixedCostId: created.id, month, userId },
+    })
+
+    await expect(
+      updateFixedCostOccurrenceAmount(created.id, userId, {
+        occurrenceId: occurrence.id,
+        month,
+        scope: "THIS_MONTH",
+        amount: 100,
+        expectedUpdatedAt: occurrence.updatedAt.toISOString(),
+        paymentMethod: null,
+        cardId: card.id,
+      }, prisma),
+    ).rejects.toMatchObject({ reason: "CARD_METHOD" })
+  })
+
+  it("rejeita vencimento fora do mês da ocorrência", async () => {
+    const name = uniqueName()
+    const created = await createFixedCost(userId, {
+      name,
+      type: "EXPENSE",
+      defaultAmount: 100,
+      categoryId,
+      paymentMethod: "PIX",
+      dueDay: 10,
+      paidInsideCard: false,
+      bankAccountId,
+      active: true,
+      startDate: `${month}-01`,
+      frequency: "MONTHLY",
+      endType: "NONE",
+    }, prisma)
+    expect(created).not.toBeNull()
+    if (!created) return
+
+    const occurrence = await prisma.fixedCostOccurrence.findFirstOrThrow({
+      where: { fixedCostId: created.id, month, userId },
+    })
+    const nextMonth = monthOf(new Date(current.getFullYear(), current.getMonth() + 1, 1))
+
+    await expect(
+      updateFixedCostOccurrenceAmount(created.id, userId, {
+        occurrenceId: occurrence.id,
+        month,
+        scope: "THIS_MONTH",
+        amount: 100,
+        expectedUpdatedAt: occurrence.updatedAt.toISOString(),
+        dueDate: `${nextMonth}-05`,
+      }, prisma),
+    ).rejects.toMatchObject({ reason: "DUE_DATE" })
   })
 
   it("aplica valor a partir da ocorrência selecionada e preserva histórico protegido", async () => {

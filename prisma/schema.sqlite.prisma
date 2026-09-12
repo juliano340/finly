@@ -250,6 +250,7 @@ model Card {
   bankAccount BankAccount?  @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
   invoices    CardInvoice[]
   fixedCosts  FixedCost[]
+  fixedCostOccurrenceOverrides FixedCostOccurrence[] @relation("FixedCostOccurrenceCard")
 
   @@unique([name, userId])
   @@index([userId, name])
@@ -274,6 +275,7 @@ model BankAccount {
   fixedCosts   FixedCost[]
   movements    BankAccountMovement[]
   transactions Transaction[]
+  fixedCostOccurrenceOverrides FixedCostOccurrence[] @relation("FixedCostOccurrenceBankAccount")
 
   @@unique([name, userId])
   @@index([userId, name])
@@ -418,6 +420,10 @@ model FixedCostOccurrence {
   status                PaymentStatus @default(PENDING)
   paidAt                DateTime?
   paidViaCard           Boolean       @default(false)
+  paymentMethodOverride FixedCostPaymentMethod?
+  cardIdOverride        String?
+  bankAccountIdOverride String?
+  dueDateOverridden     Boolean       @default(false)
   bankAccountMovementId String?       @unique
   deletedAt             DateTime?
   userId                String
@@ -427,6 +433,8 @@ model FixedCostOccurrence {
   fixedCost           FixedCost            @relation(fields: [fixedCostId], references: [id], onDelete: Cascade)
   financialMonth      FinancialMonth       @relation(fields: [financialMonthId], references: [id], onDelete: Cascade)
   bankAccountMovement BankAccountMovement? @relation(fields: [bankAccountMovementId], references: [id], onDelete: SetNull)
+  cardOverride        Card?                @relation("FixedCostOccurrenceCard", fields: [cardIdOverride], references: [id], onDelete: SetNull)
+  bankAccountOverride BankAccount?         @relation("FixedCostOccurrenceBankAccount", fields: [bankAccountIdOverride], references: [id], onDelete: SetNull)
   user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   invoiceItem         CardInvoiceItem?
 

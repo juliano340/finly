@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { fixedCostOccurrenceAmountUpdateSchema, fixedCostSeriesUpdateSchema } from "@/features/fixed-costs/fixed-costs.schema"
-import { deleteFixedCost, DuplicateFixedCostNameError, ProtectedFixedCostOccurrenceError, StaleFixedCostOccurrenceError, updateFixedCost, updateFixedCostOccurrenceAmount } from "@/features/fixed-costs/fixed-costs.service"
+import { deleteFixedCost, DuplicateFixedCostNameError, OccurrenceOverrideNotAllowedError, ProtectedFixedCostOccurrenceError, StaleFixedCostOccurrenceError, updateFixedCost, updateFixedCostOccurrenceAmount } from "@/features/fixed-costs/fixed-costs.service"
 
 export async function PUT(
   request: Request,
@@ -27,6 +27,9 @@ export async function PUT(
     }
     if (err instanceof ProtectedFixedCostOccurrenceError) {
       return NextResponse.json({ error: err.message, conflict: "PROTECTED_OCCURRENCE", reason: err.reason }, { status: 409 })
+    }
+    if (err instanceof OccurrenceOverrideNotAllowedError) {
+      return NextResponse.json({ error: err.message, reason: err.reason }, { status: 400 })
     }
     console.error("[PUT /api/fixed-costs/:id] error:", err)
     return NextResponse.json({ error: "Erro interno" }, { status: 500 })

@@ -25,6 +25,7 @@ import {
   OccurrenceAmountForm,
   type OccurrenceAmountValues,
 } from "./_components/occurrence-amount-form"
+import { isOccurrenceCustomized, resolveOccurrencePayment } from "@/features/fixed-costs/occurrence-payment"
 import { cn, dueLabel, formatCurrency, isOverdue } from "@/lib/utils"
 import { ariaSort, sortButtonLabel } from "@/lib/accessible-sort"
 import { MonthNavigator, changeMonth, getCurrentMonth } from "@/components/month-navigator"
@@ -43,12 +44,19 @@ interface Occurrence {
   id: string
   fixedCostId: string
   month: string
+  scheduledDate: string | null
   dueDate: string | null
   amount: number
   status: "PENDING" | "PAID"
   paidAt: string | null
   paidViaCard: boolean
   updatedAt: string
+  paymentMethodOverride: "PIX" | "BANK_SLIP" | "DEBIT" | "CREDIT_CARD" | "CASH" | null
+  cardIdOverride: string | null
+  bankAccountIdOverride: string | null
+  dueDateOverridden: boolean
+  cardOverride: CardItem | null
+  bankAccountOverride: BankAccountItem | null
   fixedCost: FixedCostData
 }
 
@@ -372,10 +380,14 @@ function FixedCostsPageInner() {
     return 0
   }
 
-  const occurrenceSource = (occ: Occurrence) =>
-    occ.fixedCost.paidInsideCard
-      ? `Cartão ${occ.fixedCost.card?.name ?? ""}`
-      : `Fora do cartão${occ.fixedCost.bankAccount ? ` · ${occ.fixedCost.bankAccount.name}` : ""}`
+  const occurrenceSource = (occ: Occurrence) => {
+    const payment = resolveOccurrencePayment(occ)
+    if (payment.paidInsideCard) {
+      return `Cartão ${(occ.cardOverride ?? occ.fixedCost.card)?.name ?? ""}`
+    }
+    const account = occ.bankAccountOverride ?? occ.fixedCost.bankAccount
+    return `Fora do cartão${account ? ` · ${account.name}` : ""}`
+  }
 
   const sortedOccurrences = [...filteredOccurrences].sort((a, b) => {
     const dir = sortDir === "asc" ? 1 : -1
@@ -476,6 +488,8 @@ function FixedCostsPageInner() {
             ) : sortedOccurrences.map((occ) => {
               const isLoading = payingId === occ.fixedCostId || unpayingId === occ.fixedCostId
               const isLoadingCard = payingCardId === occ.fixedCostId || unpayingCardId === occ.fixedCostId
+              const payment = resolveOccurrencePayment(occ)
+              const customized = isOccurrenceCustomized(occ)
               return (
                 <tr key={occ.id} className="border-b transition-colors hover:bg-muted/50">
                   <td className="w-10 px-3 py-3 text-center">
@@ -485,19 +499,27 @@ function FixedCostsPageInner() {
                     <button type="button" onClick={() => openEditSheet(occ)} className="text-left font-medium hover:underline">
                       {occ.fixedCost.name}
                     </button>
+                    {customized && (
+                      <span
+                        title="Personalizado neste mês"
+                        className="ml-2 inline-flex h-5 items-center rounded-full bg-blue-500/10 px-2 text-[10px] font-medium uppercase tracking-wide text-blue-600"
+                      >
+                        personalizado
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{occ.fixedCost.category.name}</td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {occ.fixedCost.paidInsideCard
-                      ? <span className="font-medium text-foreground">Cartão {occ.fixedCost.card?.name}</span>
-                      : <span className="font-medium text-foreground">Fora do cartão{occ.fixedCost.bankAccount ? ` · ${occ.fixedCost.bankAccount.name}` : ""}</span>
+                    {payment.paidInsideCard
+                      ? <span className="font-medium text-foreground">Cartão {(occ.cardOverride ?? occ.fixedCost.card)?.name ?? "-"}</span>
+                      : <span className="font-medium text-foreground">Fora do cartão{(occ.bankAccountOverride ?? occ.fixedCost.bankAccount) ? ` · ${(occ.bankAccountOverride ?? occ.fixedCost.bankAccount)!.name}` : ""}</span>
                     }
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{occ.dueDate ? formatCalendarDate(occ.dueDate) : formatDueDate(occ.fixedCost.dueDay, occ.month)}</td>
                   <td className="w-[140px] px-4 py-3 text-right font-medium">{formatCurrency(occ.amount)}</td>
                   <td className="w-[160px] px-4 py-3">
                     <div className="flex min-w-[72px] items-center justify-center gap-2">
-                      {occ.fixedCost.paidInsideCard ? (
+                      {payment.paidInsideCard ? (
                         occ.status === "PAID" && occ.paidViaCard ? (
                           <StatusIconTooltip label="Pago no cartão" tone="success" icon={<CheckCircle2 className="h-3.5 w-3.5 fill-success text-white" />} />
                         ) : occ.status === "PAID" ? (
@@ -511,7 +533,7 @@ function FixedCostsPageInner() {
                         <StatusIconTooltip label="Pendente" tone="warning" icon={<Clock3 className="h-3.5 w-3.5" />} />
                       )}
 
-                      {occ.fixedCost.paidInsideCard ? (
+                      {payment.paidInsideCard ? (
                         occ.status === "PENDING" && activeTab === "EXPENSE" ? (
                           <StatusIconTooltip
                             label="Pagar com cartão"
@@ -604,7 +626,11 @@ function FixedCostsPageInner() {
         ) : filteredOccurrences.map((occ) => {
           const isLoading = payingId === occ.fixedCostId || unpayingId === occ.fixedCostId
           const isLoadingCard = payingCardId === occ.fixedCostId || unpayingCardId === occ.fixedCostId
-          const sourceLabel = occ.fixedCost.paidInsideCard ? `Cartão ${occ.fixedCost.card?.name ?? "-"}` : "Fora do cartão"
+          const payment = resolveOccurrencePayment(occ)
+          const customized = isOccurrenceCustomized(occ)
+          const sourceLabel = payment.paidInsideCard
+            ? `Cartão ${(occ.cardOverride ?? occ.fixedCost.card)?.name ?? "-"}`
+            : "Fora do cartão"
           const dueDateIso = occ.dueDate ?? dueDayIso(occ.fixedCost.dueDay, occ.month)
           const dueTextLabel = dueLabel(dueDateIso)
           const dueOverdue = occ.status === "PENDING" && isOverdue(dueDateIso)
@@ -616,6 +642,14 @@ function FixedCostsPageInner() {
                     <button type="button" onClick={() => openEditSheet(occ)} className="min-w-0 truncate text-left font-medium hover:underline">
                       {occ.fixedCost.name}
                     </button>
+                    {customized && (
+                      <span
+                        title="Personalizado neste mês"
+                        className="inline-flex h-5 items-center rounded-full bg-blue-500/10 px-2 text-[10px] font-medium uppercase tracking-wide text-blue-600"
+                      >
+                        personalizado
+                      </span>
+                    )}
                     <strong className="shrink-0 text-sm tabular-nums">{formatCurrency(occ.amount)}</strong>
                   </div>
                 <p className="mt-0.5 truncate text-xs text-muted-foreground">
@@ -629,7 +663,7 @@ function FixedCostsPageInner() {
                       </span>
                     )}
 
-                    {occ.fixedCost.paidInsideCard ? (
+                    {payment.paidInsideCard ? (
                       occ.status === "PAID" && occ.paidViaCard ? (
                         <span className="inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full bg-success/10 px-2.5 text-xs font-medium text-success">
                           <CheckCircle2 className="h-3.5 w-3.5 fill-success text-white" />
@@ -658,7 +692,7 @@ function FixedCostsPageInner() {
                       </span>
                     )}
 
-                    {occ.fixedCost.paidInsideCard && occ.status === "PENDING" && activeTab === "EXPENSE" && (
+                    {payment.paidInsideCard && occ.status === "PENDING" && activeTab === "EXPENSE" && (
                       <Button
                         type="button"
                         size="xs"
@@ -672,7 +706,7 @@ function FixedCostsPageInner() {
                       </Button>
                     )}
 
-                    {!occ.fixedCost.paidInsideCard && occ.status === "PENDING" && (
+                    {!payment.paidInsideCard && occ.status === "PENDING" && (
                       <Button
                         type="button"
                         size="xs"
@@ -700,17 +734,17 @@ function FixedCostsPageInner() {
                       <Settings className="h-4 w-4" />
                       Editar
                     </DropdownMenuItem>
-                    {((!occ.fixedCost.paidInsideCard && occ.status === "PAID") || (occ.fixedCost.paidInsideCard && occ.status === "PAID" && occ.paidViaCard)) && (
+                    {((!payment.paidInsideCard && occ.status === "PAID") || (payment.paidInsideCard && occ.status === "PAID" && occ.paidViaCard)) && (
                       <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="cursor-pointer text-success focus:text-success"
                           onClick={() => {
-                            if (occ.fixedCost.paidInsideCard) handleUnpayCard(occ.fixedCostId)
+                            if (payment.paidInsideCard) handleUnpayCard(occ.fixedCostId)
                             else handleUnpay(occ.fixedCostId)
                           }}
                         >
-                          {(occ.fixedCost.paidInsideCard ? isLoadingCard : isLoading) ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                          {(payment.paidInsideCard ? isLoadingCard : isLoading) ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
                           {activeTab === "INCOME" ? "Cancelar" : "Estornar"}
                         </DropdownMenuItem>
                       </>
@@ -750,6 +784,8 @@ function FixedCostsPageInner() {
                     <OccurrenceAmountForm
                       key={`amount-${selectedOccurrence.id}`}
                       occurrence={selectedOccurrence}
+                      cards={cards}
+                      bankAccounts={bankAccounts}
                       onSubmit={(values) => handleUpdate(selectedOccurrence, values)}
                       onClose={() => setSelectedOccurrence(null)}
                       onEditSeries={() => setEditMode("SERIES")}

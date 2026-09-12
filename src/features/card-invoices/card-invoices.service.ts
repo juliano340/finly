@@ -3,6 +3,7 @@ import type { CardInvoice, CardInvoiceItem, PrismaClient } from "@/generated/pri
 import { ensureFinancialMonth } from "@/features/financial-months/financial-months.service"
 import type { CardInvoiceInput, CardInvoiceItemInput } from "./card-invoices.schema"
 import { calculateInvoiceTotals } from "./invoice-calculation"
+import { resolveOccurrencePayment } from "@/features/fixed-costs/occurrence-payment"
 
 export class InvoiceLockedError extends Error {
   constructor(message = "Fatura fechada ou paga: reabra-a antes de editar vencimento ou valores.") {
@@ -114,10 +115,28 @@ export async function createCardInvoiceItem(
         id: input.fixedCostOccurrenceId,
         userId,
         month: invoice.month,
-        fixedCost: { cardId: invoice.cardId, paidInsideCard: true },
+        fixedCost: { type: "EXPENSE" },
+      },
+      select: {
+        month: true,
+        scheduledDate: true,
+        dueDate: true,
+        paymentMethodOverride: true,
+        cardIdOverride: true,
+        bankAccountIdOverride: true,
+        fixedCost: {
+          select: {
+            paymentMethod: true,
+            paidInsideCard: true,
+            cardId: true,
+            bankAccountId: true,
+            dueDay: true,
+          },
+        },
       },
     })
-    if (!occurrence) return null
+    const payment = occurrence ? resolveOccurrencePayment(occurrence) : null
+    if (!payment || !payment.paidInsideCard || payment.cardId !== invoice.cardId) return null
   }
   if (input.importedTransactionId) {
     const imported = await db.importedTransaction.findFirst({ where: { id: input.importedTransactionId, userId } })
@@ -245,20 +264,46 @@ async function enrichInvoices<Invoice extends CardInvoice & { items: CardInvoice
   }))
 }
 
-function fixedOccurrencesForInvoice(
+async function fixedOccurrencesForInvoice(
   invoice: { cardId: string; month: string },
   userId: string,
   db: PrismaClient,
 ) {
-  return db.fixedCostOccurrence.findMany({
+  const candidates = await db.fixedCostOccurrence.findMany({
     where: {
       userId,
       month: invoice.month,
       deletedAt: null,
-      fixedCost: { type: "EXPENSE", paidInsideCard: true, cardId: invoice.cardId },
+      fixedCost: { type: "EXPENSE" },
     },
-    select: { id: true, amount: true, fixedCost: { select: { name: true } } },
+    select: {
+      id: true,
+      amount: true,
+      month: true,
+      scheduledDate: true,
+      dueDate: true,
+      paymentMethodOverride: true,
+      cardIdOverride: true,
+      bankAccountIdOverride: true,
+      fixedCost: {
+        select: {
+          name: true,
+          paymentMethod: true,
+          paidInsideCard: true,
+          cardId: true,
+          bankAccountId: true,
+          dueDay: true,
+        },
+      },
+    },
   })
+
+  return candidates
+    .filter((item) => {
+      const payment = resolveOccurrencePayment(item)
+      return payment.paidInsideCard && payment.cardId === invoice.cardId
+    })
+    .map((item) => ({ id: item.id, amount: item.amount, fixedCost: { name: item.fixedCost.name } }))
 }
 
 function dueDateForTargetMonth(sourceDueDate: Date, targetMonth: string) {

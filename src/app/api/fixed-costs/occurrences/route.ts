@@ -33,6 +33,8 @@ export async function GET(request: Request) {
         fixedCost: {
           include: { category: true, card: true, bankAccount: true },
         },
+        cardOverride: true,
+        bankAccountOverride: true,
       },
       orderBy: { fixedCost: { name: "asc" } },
     })

@@ -4,6 +4,7 @@ import type { FixedCostInput, FixedCostOccurrenceAmountUpdateInput } from "./fix
 import { ensureFinancialMonth } from "@/features/financial-months/financial-months.service"
 import { ensureFixedCostOccurrences } from "@/features/monthly-closing/monthly-closing.service"
 import { moneyToNumber, type MoneyValue } from "@/lib/money"
+import { occurrenceDueDate } from "@/lib/recurrence"
 
 export class DuplicateFixedCostNameError extends Error {
   constructor() {
@@ -29,6 +30,24 @@ export class ProtectedFixedCostOccurrenceError extends Error {
   }
 }
 
+export class OccurrenceOverrideNotAllowedError extends Error {
+  constructor(public readonly reason: "SCOPE" | "INCOME" | "CARD" | "CARD_METHOD" | "ACCOUNT" | "DUE_DATE") {
+    super(
+      reason === "SCOPE"
+        ? "Personalização disponível apenas para esta ocorrência."
+        : reason === "INCOME"
+          ? "Receitas fixas não aceitam cartão ou forma de pagamento na ocorrência."
+          : reason === "CARD"
+            ? "Cartão não encontrado."
+            : reason === "CARD_METHOD"
+              ? "Cartão só se aplica a pagamento no cartão."
+              : reason === "ACCOUNT"
+                ? "Conta não encontrada."
+                : "Vencimento deve pertencer ao mês da ocorrência."
+    )
+  }
+}
+
 export async function updateFixedCostOccurrenceAmount(
   fixedCostId: string,
   userId: string,
@@ -36,6 +55,15 @@ export async function updateFixedCostOccurrenceAmount(
   client?: PrismaClient
 ) {
   const db = client ?? defaultPrisma
+  const hasOverrides =
+    input.paymentMethod !== undefined ||
+    input.cardId !== undefined ||
+    input.bankAccountId !== undefined ||
+    input.dueDate !== undefined
+
+  if (hasOverrides && input.scope !== "THIS_MONTH") {
+    throw new OccurrenceOverrideNotAllowedError("SCOPE")
+  }
 
   try {
     return await db.$transaction(async (tx) => {
@@ -46,7 +74,10 @@ export async function updateFixedCostOccurrenceAmount(
         userId,
         month: input.month,
       },
-      include: { financialMonth: { select: { status: true } } },
+      include: {
+        financialMonth: { select: { status: true } },
+        fixedCost: { select: { type: true, dueDay: true, paymentMethod: true } },
+      },
     })
     if (!selected) return null
     if (selected.updatedAt.getTime() !== new Date(input.expectedUpdatedAt).getTime()) {
@@ -56,6 +87,45 @@ export async function updateFixedCostOccurrenceAmount(
       if (selected.deletedAt) throw new ProtectedFixedCostOccurrenceError("DELETED")
       if (selected.status === "PAID") throw new ProtectedFixedCostOccurrenceError("PAID")
       if (selected.financialMonth.status === "CLOSED") throw new ProtectedFixedCostOccurrenceError("CLOSED")
+    }
+
+    const overrideData: {
+      paymentMethodOverride?: FixedCostOccurrenceAmountUpdateInput["paymentMethod"]
+      cardIdOverride?: string | null
+      bankAccountIdOverride?: string | null
+      dueDate?: Date
+      dueDateOverridden?: boolean
+    } = {}
+    if (hasOverrides) {
+      if (selected.fixedCost.type === "INCOME" && (input.paymentMethod !== undefined || input.cardId !== undefined)) {
+        throw new OccurrenceOverrideNotAllowedError("INCOME")
+      }
+      if (input.cardId) {
+        const effectiveMethod = input.paymentMethod ?? selected.fixedCost.paymentMethod
+        if (effectiveMethod !== "CREDIT_CARD") throw new OccurrenceOverrideNotAllowedError("CARD_METHOD")
+        const card = await tx.card.findUnique({ where: { id: input.cardId } })
+        if (!card || card.userId !== userId) throw new OccurrenceOverrideNotAllowedError("CARD")
+      }
+      if (input.bankAccountId) {
+        const account = await tx.bankAccount.findUnique({ where: { id: input.bankAccountId } })
+        if (!account || account.userId !== userId) throw new OccurrenceOverrideNotAllowedError("ACCOUNT")
+      }
+      if (input.dueDate && !input.dueDate.startsWith(selected.month)) {
+        throw new OccurrenceOverrideNotAllowedError("DUE_DATE")
+      }
+
+      if (input.paymentMethod !== undefined) overrideData.paymentMethodOverride = input.paymentMethod
+      if (input.cardId !== undefined) overrideData.cardIdOverride = input.cardId
+      if (input.bankAccountId !== undefined) overrideData.bankAccountIdOverride = input.bankAccountId
+      if (input.dueDate !== undefined) {
+        overrideData.dueDate = input.dueDate === null
+          ? occurrenceDueDate(
+              selected.scheduledDate ?? new Date(`${selected.month}-01T12:00:00`),
+              selected.fixedCost.dueDay
+            )
+          : new Date(`${input.dueDate}T00:00:00`)
+        overrideData.dueDateOverridden = input.dueDate !== null
+      }
     }
 
     const occurrences = await tx.fixedCostOccurrence.findMany({
@@ -96,7 +166,10 @@ export async function updateFixedCostOccurrenceAmount(
           deletedAt: null,
           financialMonth: { status: "OPEN" },
         },
-        data: { amount: input.amount },
+        data: {
+          amount: input.amount,
+          ...(input.scope === "THIS_MONTH" ? overrideData : {}),
+        },
       })
       affected = updated.count
     }

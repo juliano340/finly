@@ -6,6 +6,7 @@ import { ArrowUpDown, ChevronDown, ChevronUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { dueLabel, formatCurrency, formatDate } from "@/lib/utils"
+import { resolveOccurrencePayment } from "@/features/fixed-costs/occurrence-payment"
 import { MonthNavigator, changeMonth, getCurrentMonth } from "@/components/month-navigator"
 import { useMonthParam } from "@/hooks/use-month-param"
 import { useTableSelection } from "@/components/data-table/use-table-selection"
@@ -17,7 +18,20 @@ import { useTableSelection } from "@/components/data-table/use-table-selection"
     incomeItems: { name: string; amount: number; type: "FIXED" | "LOOSE"; status: "PENDING" | "PAID" }[]
   }
   invoices: { id: string; amount: number; dueDate: string; status: "PENDING" | "PAID"; card: { name: string }; items: { id: string; description: string; amount: number }[] }[]
-  fixedCosts: { id: string; dueDate: string | null; amount: number; status: "PENDING" | "PAID"; fixedCost: { name: string; type: "INCOME" | "EXPENSE"; paidInsideCard: boolean; paymentMethod: string; category: { name: string }; card: { name: string } | null; bankAccount: { name: string } | null } }[]
+  fixedCosts: {
+    id: string
+    dueDate: string | null
+    amount: number
+    status: "PENDING" | "PAID"
+    month: string
+    scheduledDate: string | null
+    paymentMethodOverride: "PIX" | "BANK_SLIP" | "DEBIT" | "CREDIT_CARD" | "CASH" | null
+    cardIdOverride: string | null
+    bankAccountIdOverride: string | null
+    cardOverride: { name: string } | null
+    bankAccountOverride: { name: string } | null
+    fixedCost: { name: string; type: "INCOME" | "EXPENSE"; paidInsideCard: boolean; paymentMethod: string; dueDay: number | null; cardId: string | null; bankAccountId: string | null; category: { name: string }; card: { name: string } | null; bankAccount: { name: string } | null }
+  }[]
   looseExpenses: { id: string; amount: number; description: string | null; category: { name: string } }[]
 }
 
@@ -78,6 +92,9 @@ function MonthlyClosingPageContent() {
     { label: "Avulsas", value: summary?.looseExpensesTotal ?? 0 },
   ]
   const invoiceCardIds = new Set((data?.invoices ?? []).map((invoice) => invoice.card.name))
+  const paymentOf = (item: ClosingData["fixedCosts"][number]) => resolveOccurrencePayment(item)
+  const effectiveCardName = (item: ClosingData["fixedCosts"][number]) =>
+    (item.cardOverride ?? item.fixedCost.card)?.name ?? null
   const expenseDetails: Record<string, ExpenseDetail[]> = {
     Faturas: (data?.invoices ?? []).map((invoice) => ({
       id: invoice.id,
@@ -87,7 +104,7 @@ function MonthlyClosingPageContent() {
       children: invoice.items.map((item) => ({ id: item.id, name: item.description, amount: item.amount })),
     })),
     "Fixos fora": (data?.fixedCosts ?? [])
-      .filter((item) => item.fixedCost.type === "EXPENSE" && !item.fixedCost.paidInsideCard)
+      .filter((item) => item.fixedCost.type === "EXPENSE" && !paymentOf(item).paidInsideCard)
       .map((item) => ({ id: item.id, name: item.fixedCost.name, amount: item.amount, status: item.status })),
     Avulsas: (data?.looseExpenses ?? []).map((item) => ({
       id: item.id,
@@ -96,7 +113,7 @@ function MonthlyClosingPageContent() {
       status: "PAID" as const,
     })),
     "Fixos no cartão sem fatura": (data?.fixedCosts ?? [])
-      .filter((item) => item.fixedCost.type === "EXPENSE" && item.fixedCost.paidInsideCard && (!item.fixedCost.card || !invoiceCardIds.has(item.fixedCost.card.name)))
+      .filter((item) => item.fixedCost.type === "EXPENSE" && paymentOf(item).paidInsideCard && (!effectiveCardName(item) || !invoiceCardIds.has(effectiveCardName(item)!)))
       .map((item) => ({ id: item.id, name: item.fixedCost.name, amount: item.amount, status: item.status })),
   }
 
@@ -119,12 +136,12 @@ function MonthlyClosingPageContent() {
         kind: "FIXED_COST" as const,
         name: item.fixedCost.name,
         category: item.fixedCost.category.name,
-        method: item.fixedCost.paidInsideCard ? `Fatura ${item.fixedCost.card?.name ?? ""}` : "Fora do cartão",
-        account: item.fixedCost.bankAccount?.name ?? "não definida",
+        method: paymentOf(item).paidInsideCard ? `Fatura ${effectiveCardName(item) ?? ""}` : "Fora do cartão",
+        account: (item.bankAccountOverride ?? item.fixedCost.bankAccount)?.name ?? "não definida",
         dueDate: item.dueDate,
         amount: item.amount,
         status: item.status,
-        payable: Boolean(item.fixedCost.bankAccount),
+        payable: Boolean(paymentOf(item).bankAccountId),
       })),
   ].sort((a, b) => (a.dueDate ?? "9999-12-31").localeCompare(b.dueDate ?? "9999-12-31"))
 

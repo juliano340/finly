@@ -131,6 +131,10 @@ describe("FixedCostsPage", () => {
         scope: "THIS_MONTH",
         amount: 150,
         expectedUpdatedAt: "2026-08-01T12:00:00.000Z",
+        paymentMethod: null,
+        cardId: null,
+        bankAccountId: null,
+        dueDate: null,
       })
     })
 
