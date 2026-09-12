@@ -1,6 +1,6 @@
 import Database from "better-sqlite3"
 
-const databaseUrl = process.env.DATABASE_URL ?? "file:./test.db"
+const databaseUrl = process.env.DATABASE_URL ?? "file:./dev.db"
 
 export function markEmailVerified(email: string) {
   const file = databaseUrl.startsWith("file:") ? databaseUrl.slice("file:".length) : databaseUrl
