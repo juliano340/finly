@@ -24,6 +24,7 @@ import { DeleteDialog } from "./_components/delete-dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { toast } from "sonner"
 import { formatCurrency } from "@/lib/utils"
+import type { CardOption, InvoiceOption } from "./_components/use-invoice-auto-create"
 import type { TransactionWithRelations } from "@/features/transactions/transactions.types"
 import type { TransactionInput } from "@/features/transactions/transactions.schema"
 
@@ -32,20 +33,6 @@ interface BankAccountOption {
   name: string
   institution: string | null
   type: "CHECKING" | "SAVINGS" | "DIGITAL" | "CASH" | "INVESTMENT" | "BENEFIT"
-}
-
-interface CardOption {
-  id: string
-  name: string
-  dueDay: number | null
-}
-
-interface InvoiceOption {
-  id: string
-  month: string
-  calculationMode: "CALCULATED" | "ENTERED_TOTAL"
-  lifecycleStatus: "ESTIMATED" | "OPEN" | "CLOSED" | "PAID"
-  card: { id: string; name: string }
 }
 
 export default function TransactionsPage() {
@@ -104,18 +91,14 @@ export default function TransactionsPage() {
       .then((res) => res.json())
       .then((data: InvoiceOption[]) => setInvoices(data.filter((invoice) => ["ESTIMATED", "OPEN"].includes(invoice.lifecycleStatus))))
       .catch(() => {})
-
-    // Listener para atualizar invoices quando uma nova é criada pelo form
-    function handleInvoiceCreated(e: Event) {
-      const customEvent = e as CustomEvent<InvoiceOption>
-      setInvoices((prev) => {
-        if (prev.some((inv) => inv.id === customEvent.detail.id)) return prev
-        return [...prev, customEvent.detail]
-      })
-    }
-    window.addEventListener("invoice-created", handleInvoiceCreated)
-    return () => window.removeEventListener("invoice-created", handleInvoiceCreated)
   }, [])
+
+  function handleInvoiceCreated(invoice: InvoiceOption) {
+    setInvoices((prev) => {
+      if (prev.some((inv) => inv.id === invoice.id)) return prev
+      return [...prev, invoice]
+    })
+  }
 
   const [formOpen, setFormOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -374,6 +357,7 @@ export default function TransactionsPage() {
         }
         title={editing ? "Editar transação" : "Nova transação"}
         onDelete={editing ? () => { setFormOpen(false); setDeleting(editing); setDeleteOpen(true) } : undefined}
+        onInvoiceCreated={handleInvoiceCreated}
       />
 
       <DeleteDialog
