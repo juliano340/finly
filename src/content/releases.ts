@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.33"
+export const CURRENT_VERSION = "0.2.34"
 
 export const releases = [
+  {
+    version: "0.2.34",
+    date: "2026-09-12",
+    changes: [
+      { type: "refactor", description: "Formulário de categorias padronizado com as seções Identidade e Aparência, seguindo o mesmo visual dos demais formulários do app." },
+    ],
+  },
   {
     version: "0.2.33",
     date: "2026-09-12",

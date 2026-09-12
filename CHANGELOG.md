@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.34] - 2026-09-12
+
+### Alterado
+
+- Formulário de categorias padronizado com as seções Identidade e Aparência, seguindo o mesmo visual dos demais formulários do app.
+
 ## [0.2.33] - 2026-09-12
 
 ### Adicionado
