@@ -2,6 +2,25 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.28] - 2026-09-12
+
+### Adicionado
+
+- Lançamentos fixos ganharam um formulário novo, organizado em Lançamento, Pagamento e Recorrência, com valor em R$ e um resumo da recorrência (valor, dia, frequência e término) antes de salvar.
+- A opção "Dentro do cartão" virou "Cartão de crédito" na Forma de pagamento: escolhendo cartão, o seletor de cartão aparece e a conta prevista some; nas demais formas, vale a conta prevista.
+- Recorrências mensais (mensal, bimestral, trimestral, semestral e anual) agora usam Mês de início; diária, semanal e quinzenal continuam com data completa.
+
+### Corrigido
+
+- O vencimento nunca cai antes do início: se o dia escolhido já passou no mês de início, a primeira ocorrência vai para o mês seguinte.
+- Criar lançamento fixo por mês grava o dia 1 e não adia mais a primeira ocorrência sem motivo.
+- Correção no banco de dados que causava erro ao abrir a tela de faturas após a atualização do estorno de transações.
+- O valor inicial do formulário de edição da ocorrência aparece formatado (ex.: 99,90) em vez de 99.9.
+
+### Alterado
+
+- Formulários de transações, categorias, orçamentos, cartões e lançamentos fixos seguem um único padrão: campos agrupados por assunto, Cancelar e Salvar no rodapé, mensagens de erro embaixo de cada campo e melhor navegação por teclado e leitor de tela.
+
 ## [0.2.27] - 2026-09-08
 
 ### Adicionado
