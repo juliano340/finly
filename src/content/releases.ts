@@ -24,9 +24,18 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.32"
+export const CURRENT_VERSION = "0.2.33"
 
 export const releases = [
+  {
+    version: "0.2.33",
+    date: "2026-09-12",
+    changes: [
+      { type: "feat", description: "Ao criar uma fatura, o vencimento já vem preenchido com o dia de vencimento cadastrado no cartão (ajustado para o último dia em meses curtos); trocar o cartão atualiza a data e o campo continua editável." },
+      { type: "fix", description: "Abrir um seletor dentro de um painel lateral não encolhe mais a largura do painel durante a escolha." },
+      { type: "refactor", description: "O cálculo do dia de vencimento em meses curtos passou a usar uma única regra em todo o sistema, evitando diferenças entre telas." },
+    ],
+  },
   {
     version: "0.2.32",
     date: "2026-09-12",

@@ -2,6 +2,20 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.33] - 2026-09-12
+
+### Adicionado
+
+- Ao criar uma fatura, o vencimento já vem preenchido com o dia de vencimento cadastrado no cartão (ajustado para o último dia em meses curtos); trocar o cartão atualiza a data e o campo continua editável.
+
+### Corrigido
+
+- Abrir um seletor dentro de um painel lateral não encolhe mais a largura do painel durante a escolha.
+
+### Alterado
+
+- O cálculo do dia de vencimento em meses curtos passou a usar uma única regra em todo o sistema, evitando diferenças entre telas.
+
 ## [0.2.32] - 2026-09-12
 
 ### Adicionado
