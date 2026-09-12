@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { fireEvent, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { FixedCostForm } from "@/app/(dashboard)/fixed-costs/_components/fixed-cost-form"
 
@@ -93,11 +93,92 @@ describe("FixedCostForm", () => {
     expect(onClose).toHaveBeenCalled()
   })
 
-  it("usa hoje como data de início padrão na criação", () => {
+  it("usa o mês atual como mês de início padrão na criação", () => {
     renderForm()
 
-    const today = new Date().toISOString().split("T")[0]
-    expect(screen.getByLabelText(/data de início/i)).toHaveValue(today)
+    const currentMonth = new Date().toISOString().slice(0, 7)
+    expect(screen.getByLabelText(/mês de início/i)).toHaveValue(currentMonth)
+    expect(screen.queryByLabelText(/data de início/i)).toBeNull()
+  })
+
+  it("mantém data completa para frequência semanal", () => {
+    renderForm({
+      mode: "series",
+      initial: {
+        name: "Faxina",
+        categoryId: "cat_1",
+        paymentMethod: "PIX",
+        dueDay: null,
+        cardId: null,
+        bankAccountId: null,
+        active: true,
+        startDate: "2026-01-15T00:00:00.000Z",
+        frequency: "WEEKLY",
+        customInterval: null,
+        customUnit: null,
+        endType: "NONE",
+        endDate: null,
+        endAfterCount: null,
+      },
+    })
+
+    expect(screen.getByLabelText(/data de início/i)).toHaveValue("2026-01-15")
+    expect(screen.queryByLabelText(/mês de início/i)).toBeNull()
+  })
+
+  it("preserva o dia armazenado quando o mês não muda", async () => {
+    const { onSubmit } = renderForm({
+      mode: "series",
+      initial: {
+        name: "Internet",
+        categoryId: "cat_1",
+        paymentMethod: "PIX",
+        dueDay: 10,
+        cardId: null,
+        bankAccountId: null,
+        active: true,
+        startDate: "2026-01-15T00:00:00.000Z",
+        frequency: "MONTHLY",
+        customInterval: null,
+        customUnit: null,
+        endType: "NONE",
+        endDate: null,
+        endAfterCount: null,
+      },
+    })
+
+    await userEvent.click(screen.getByRole("button", { name: /salvar configurações da série/i }))
+
+    await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
+    expect(onSubmit.mock.calls[0][0]).toMatchObject({ startDate: "2026-01-15" })
+  })
+
+  it("grava dia 01 quando o mês de início muda", async () => {
+    const { onSubmit } = renderForm({
+      mode: "series",
+      initial: {
+        name: "Internet",
+        categoryId: "cat_1",
+        paymentMethod: "PIX",
+        dueDay: 10,
+        cardId: null,
+        bankAccountId: null,
+        active: true,
+        startDate: "2026-01-15T00:00:00.000Z",
+        frequency: "MONTHLY",
+        customInterval: null,
+        customUnit: null,
+        endType: "NONE",
+        endDate: null,
+        endAfterCount: null,
+      },
+    })
+
+    fireEvent.change(screen.getByLabelText(/mês de início/i), { target: { value: "2026-02" } })
+    await userEvent.click(screen.getByRole("button", { name: /salvar configurações da série/i }))
+
+    await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
+    expect(onSubmit.mock.calls[0][0]).toMatchObject({ startDate: "2026-02-01" })
   })
 
   it("mostra erro do servidor no form", async () => {

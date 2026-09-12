@@ -9,6 +9,7 @@ import { FormField } from "@/components/ui/form-field"
 import { FormSection } from "@/components/ui/form-section"
 import { Input } from "@/components/ui/input"
 import { MoneyInput } from "@/components/ui/money-input"
+import { MonthInput } from "@/components/ui/month-input"
 import { SegmentedControl } from "@/components/ui/segmented-control"
 import {
   Select,
@@ -20,6 +21,7 @@ import {
 import { mapZodErrors } from "@/lib/forms"
 import { parseAmount } from "@/lib/amount"
 import { formatIsoDate, todayIso } from "@/lib/dates"
+import { formatMonth } from "@/lib/months"
 import { formatCurrency } from "@/lib/utils"
 import {
   fixedCostSchema,
@@ -179,6 +181,23 @@ const FIELD_ERROR_KEYS: Record<string, string> = {
 
 const NO_ACCOUNT = "none"
 
+const MONTH_BASED_FREQUENCIES: Frequency[] = [
+  "MONTHLY",
+  "BIMONTHLY",
+  "QUARTERLY",
+  "SEMIANNUAL",
+  "ANNUAL",
+]
+
+function isMonthBasedFrequency(
+  frequencyMode: FrequencyMode,
+  frequency: Frequency,
+  customUnit: RecurrenceUnit,
+) {
+  if (frequencyMode === "custom") return customUnit === "MONTHS" || customUnit === "YEARS"
+  return MONTH_BASED_FREQUENCIES.includes(frequency)
+}
+
 export function FixedCostForm({
   mode,
   type,
@@ -219,6 +238,7 @@ export function FixedCostForm({
   const [loading, setLoading] = useState(false)
 
   const paidInsideCard = type === "EXPENSE" && payment === "CREDIT_CARD"
+  const monthBasedStart = isMonthBasedFrequency(frequencyMode, frequency, customUnit)
 
   function clearError(field: string) {
     setErrors((prev) => {
@@ -245,6 +265,10 @@ export function FixedCostForm({
     setPayment(value)
     clearError("payment")
     if (value === "CREDIT_CARD") fillDueDayFromCard(cardId)
+  }
+
+  function handleStartMonthChange(value: string) {
+    setStartDate((prev) => (prev.slice(0, 7) === value ? prev : `${value}-01`))
   }
 
   function buildPayload(): FixedCostFormValues {
@@ -282,7 +306,9 @@ export function FixedCostForm({
         ? `a cada ${customInterval.trim() || "?"} ${CUSTOM_UNIT_PREVIEW[customUnit]}`
         : FREQUENCY_PREVIEW[frequency],
     )
-    if (startDate) parts.push(`a partir de ${formatIsoDate(startDate)}`)
+    if (startDate) {
+      parts.push(`a partir de ${monthBasedStart ? formatMonth(startDate.slice(0, 7)) : formatIsoDate(startDate)}`)
+    }
     parts.push(
       endType === "NONE"
         ? "sem término"
@@ -470,13 +496,25 @@ export function FixedCostForm({
           )}
 
           <FormSection icon={Repeat} title="Recorrência">
-            <DateInput
-              label="Data de início"
-              required
-              error={errors.startDate}
-              value={startDate}
-              onValueChange={setStartDate}
-            />
+            {monthBasedStart ? (
+              <MonthInput
+                label="Mês de início"
+                required
+                error={errors.startDate}
+                hint="O vencimento segue o Dia de vencimento; se cair antes do início, a primeira ocorrência vai para o mês seguinte."
+                value={startDate.slice(0, 7)}
+                onValueChange={handleStartMonthChange}
+              />
+            ) : (
+              <DateInput
+                label="Data de início"
+                required
+                error={errors.startDate}
+                hint="O vencimento segue o Dia de vencimento; se cair antes do início, a primeira ocorrência vai para o mês seguinte."
+                value={startDate}
+                onValueChange={setStartDate}
+              />
+            )}
 
             <FormField label="Tipo">
               <SegmentedControl

@@ -55,6 +55,7 @@ Regras:
 | Texto, número, data simples | `Input` dentro de `FormField` |
 | Valor monetário | `MoneyInput` (máscara + prefixo R$ + normalização no blur) |
 | Data | `DateInput` |
+| Mês | `MonthInput` (use quando o dia não importa para a regra) |
 | Seleção | `Select` com a prop `items` preenchida |
 | Toggle binário (tipo) | `TypeToggle` ou `radiogroup` próprio |
 | Escolha entre 2-3 modos | `SegmentedControl` |
