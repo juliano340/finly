@@ -54,7 +54,6 @@ export function MoneyInput({
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
         className={cn("h-10 pl-10 text-base font-medium", inputClassName)}
-        required={required}
       />
     </div>
   )

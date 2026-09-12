@@ -17,10 +17,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { FormActions } from "@/components/ui/form-actions"
 import { FormField } from "@/components/ui/form-field"
+import { FormSection } from "@/components/ui/form-section"
+import { MoneyInput } from "@/components/ui/money-input"
+import { DateInput } from "@/components/ui/date-input"
 import { TypeToggle } from "@/components/ui/type-toggle"
 import { formatMonth } from "@/lib/months"
-import { useAmountInput } from "@/hooks/use-amount-input"
+import { parseAmount } from "@/lib/amount"
+import { mapZodErrors } from "@/lib/forms"
+import { todayIso, toIsoDate } from "@/lib/dates"
 import { useInvoiceAutoCreate, type CardOption, type InvoiceOption } from "./use-invoice-auto-create"
 import { transactionSchema, type TransactionInput } from "@/features/transactions/transactions.schema"
 import type { CategoryWithCount } from "@/features/categories/categories.types"
@@ -74,7 +80,7 @@ export function TransactionForm({
   onDelete,
   onInvoiceCreated,
 }: TransactionFormProps) {
-  const amountInput = useAmountInput(initial?.amount)
+  const [amount, setAmount] = useState(initial?.amount != null ? initial.amount.toString() : "")
   const [type, setType] = useState<"INCOME" | "EXPENSE">(initial?.type ?? "EXPENSE")
   const [description, setDescription] = useState(initial?.description ?? "")
   const [categoryId, setCategoryId] = useState(initial?.categoryId ?? "")
@@ -82,9 +88,7 @@ export function TransactionForm({
     initial?.invoiceId ? "CARD" : initial?.bankAccountId ? "ACCOUNT" : "NONE",
   )
   const [bankAccountId, setBankAccountId] = useState(initial?.bankAccountId ?? "")
-  const [date, setDate] = useState(
-    initial?.date ? new Date(initial.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0]
-  )
+  const [date, setDate] = useState(initial?.date ? toIsoDate(initial.date) : todayIso())
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const inFlightRef = useRef(false)
@@ -128,7 +132,7 @@ export function TransactionForm({
     inFlightRef.current = true
 
     const parsed = transactionSchema.safeParse({
-      amount: amountInput.parsedValue,
+      amount: parseAmount(amount),
       type,
       description: description.trim() || undefined,
       categoryId,
@@ -137,13 +141,9 @@ export function TransactionForm({
       invoiceId: destinationType === "CARD" ? autoCreate.invoiceId : null,
     })
 
-    const newErrors: Record<string, string> = {}
-    if (!parsed.success) {
-      for (const issue of parsed.error.issues) {
-        const key = FIELD_ERROR_KEYS[String(issue.path[0])]
-        if (key && !newErrors[key]) newErrors[key] = issue.message
-      }
-    }
+    const newErrors: Record<string, string> = parsed.success
+      ? {}
+      : mapZodErrors(parsed.error, FIELD_ERROR_KEYS)
     if (destinationType === "ACCOUNT" && !bankAccountId) newErrors.account = "Selecione uma conta bancária"
     if (destinationType === "CARD" && !autoCreate.invoiceId) newErrors.invoice = "Selecione o cartão e a fatura"
 
@@ -189,33 +189,19 @@ export function TransactionForm({
             <TypeToggle value={type} onChange={changeType} />
 
             {/* Valor */}
-            <FormField label="Valor" required error={errors.amount}>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                  R$
-                </span>
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  placeholder="0,00"
-                  value={amountInput.amount}
-                  onChange={(e) => {
-                    amountInput.handleChange(e.target.value)
-                    clearError("amount")
-                  }}
-                  onBlur={amountInput.handleBlur}
-                  className="h-10 pl-10 text-base font-medium"
-                />
-              </div>
-            </FormField>
+            <MoneyInput
+              label="Valor"
+              required
+              error={errors.amount}
+              value={amount}
+              onValueChange={(value) => {
+                setAmount(value)
+                clearError("amount")
+              }}
+            />
 
             {/* Seção: Detalhes */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                <Tag className="h-3.5 w-3.5" />
-                Detalhes
-              </div>
-
+            <FormSection icon={Tag} title="Detalhes">
               <FormField label="Categoria" required error={errors.category}>
                 <Select
                   items={Object.fromEntries(filteredCategories.map((c) => [c.id, c.name]))}
@@ -349,18 +335,11 @@ export function TransactionForm({
                   )}
                 </div>
               )}
-            </div>
+            </FormSection>
 
             {/* Seção: Quando */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                <CalendarDays className="h-3.5 w-3.5" />
-                Quando
-              </div>
-
-              <FormField label="Data" required>
-                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-              </FormField>
+            <FormSection icon={CalendarDays} title="Quando">
+              <DateInput label="Data" required value={date} onValueChange={setDate} />
 
               <FormField label="Nota" hint={description.length > 0 ? `${description.length}/200` : "Opcional"}>
                 <Input
@@ -370,21 +349,14 @@ export function TransactionForm({
                   maxLength={200}
                 />
               </FormField>
-            </div>
+            </FormSection>
           </div>
 
           {errors.submit && (
             <p className="mt-3 text-sm text-destructive" role="alert">{errors.submit}</p>
           )}
 
-          <div className="mt-6 flex gap-2">
-            <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" className="flex-1" disabled={loading}>
-              {loading ? "Salvando..." : "Salvar"}
-            </Button>
-          </div>
+          <FormActions onCancel={() => onOpenChange(false)} loading={loading} />
         </form>
       </SheetContent>
     </Sheet>
