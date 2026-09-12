@@ -72,3 +72,6 @@ scripts/seed-accounts.ts
 
 # graphify (knowledge graph) — descontinuado
 graphify-out/
+
+# MAESTRI
+.maestri
