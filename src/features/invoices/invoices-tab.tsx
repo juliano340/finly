@@ -399,6 +399,12 @@ export function InvoicesTab() {
     editLifecycle === "OPEN" || editLifecycle === "ESTIMATED";
   const editLocked = selectedLocked && !editReopening;
 
+  const invoicedCardIds = new Set(invoices.map((invoice) => invoice.card.id));
+  const allCardsInvoiced =
+    cards.length > 0 && cards.every((card) => invoicedCardIds.has(card.id));
+  const selectedCardInvoiced =
+    createCardId !== "" && invoicedCardIds.has(createCardId);
+
   function fetchData() {
     return Promise.all([
       fetch("/api/cards"),
@@ -509,7 +515,8 @@ export function InvoicesTab() {
       setCreating(false);
       setInvoices((prev) => [...prev, created]);
     } else {
-      toast.error("Erro ao criar fatura");
+      const data = await res.json().catch(() => null);
+      toast.error(data?.error ?? "Erro ao criar fatura");
     }
   };
 
@@ -1540,7 +1547,15 @@ export function InvoicesTab() {
               >
                 <div className="space-y-6">
                   <FormSection icon={CreditCard} title="Cartão e vencimento">
-                    <FormField label="Cartão" required>
+                    <FormField
+                      label="Cartão"
+                      required
+                      hint={
+                        allCardsInvoiced
+                          ? "Todos os cartões já possuem fatura neste mês."
+                          : undefined
+                      }
+                    >
                       <Select
                         items={Object.fromEntries(
                           cards.map((card) => [card.id, card.name]),
@@ -1557,11 +1572,20 @@ export function InvoicesTab() {
                           <SelectValue placeholder="Selecione um cartão" />
                         </SelectTrigger>
                         <SelectContent>
-                          {cards.map((card) => (
-                            <SelectItem key={card.id} value={card.id}>
-                              {card.name}
-                            </SelectItem>
-                          ))}
+                          {cards.map((card) => {
+                            const invoiced = invoicedCardIds.has(card.id);
+                            return (
+                              <SelectItem
+                                key={card.id}
+                                value={card.id}
+                                disabled={invoiced}
+                              >
+                                {invoiced
+                                  ? `${card.name} — Fatura já criada neste mês`
+                                  : card.name}
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                     </FormField>
@@ -1644,7 +1668,11 @@ export function InvoicesTab() {
                     </FormField>
                   </FormSection>
                 </div>
-                <Button type="submit" className="mt-6 w-full">
+                <Button
+                  type="submit"
+                  className="mt-6 w-full"
+                  disabled={allCardsInvoiced || selectedCardInvoiced}
+                >
                   Salvar
                 </Button>
               </form>
