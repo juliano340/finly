@@ -24,9 +24,17 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.39"
+export const CURRENT_VERSION = "0.2.40"
 
 export const releases = [
+  {
+    version: "0.2.40",
+    date: "2026-09-13",
+    changes: [
+      { type: "feat", description: "Criar fatura agora bloqueia duplicidade por cartão/mês: o servidor responde 409 com mensagem específica e, no formulário de Nova fatura, cartões que já têm fatura no mês ficam desabilitados — quando todos já foram faturados, o app avisa e desabilita o Salvar." },
+      { type: "refactor", description: "Formulário de Editar fatura padronizado com seções e campos com rótulo, e o aviso do estado PAGA agora orienta a usar o botão Estornar pagamento na linha da fatura." },
+    ],
+  },
   {
     version: "0.2.39",
     date: "2026-09-13",

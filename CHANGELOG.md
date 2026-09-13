@@ -2,6 +2,16 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.40] - 2026-09-13
+
+### Adicionado
+
+- Criar fatura agora bloqueia duplicidade por cartão/mês: o servidor responde 409 com mensagem específica e, no formulário de Nova fatura, cartões que já têm fatura no mês ficam desabilitados — quando todos já foram faturados, o app avisa e desabilita o Salvar.
+
+### Alterado
+
+- Formulário de Editar fatura padronizado com seções e campos com rótulo, e o aviso do estado PAGA agora orienta a usar o botão Estornar pagamento na linha da fatura.
+
 ## [0.2.39] - 2026-09-13
 
 ### Corrigido
