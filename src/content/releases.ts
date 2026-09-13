@@ -24,9 +24,17 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.38"
+export const CURRENT_VERSION = "0.2.39"
 
 export const releases = [
+  {
+    version: "0.2.39",
+    date: "2026-09-13",
+    changes: [
+      { type: "fix", description: "Ao abrir uma nova fatura, a opção Como calcular volta ao padrão Total informado em vez de manter a escolha anterior; o botão de excluir fatura ganhou rótulo acessível." },
+      { type: "docs", description: "Guia de formulários atualizado para o padrão v2: campos com FormField, forms controlados vs. uncontrolled, empty-state guiado, acessibilidade e checklist de PR revisados." },
+    ],
+  },
   {
     version: "0.2.38",
     date: "2026-09-13",

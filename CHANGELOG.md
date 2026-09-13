@@ -2,6 +2,16 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.39] - 2026-09-13
+
+### Corrigido
+
+- Ao abrir uma nova fatura, a opção Como calcular volta ao padrão Total informado em vez de manter a escolha anterior; o botão de excluir fatura ganhou rótulo acessível.
+
+### Documentação
+
+- Guia de formulários atualizado para o padrão v2: campos com FormField, forms controlados vs. uncontrolled, empty-state guiado, acessibilidade e checklist de PR revisados.
+
 ## [0.2.38] - 2026-09-13
 
 ### Alterado
