@@ -345,7 +345,16 @@ export default function BankAccountsPage() {
                   </button>
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">{account.institution ?? "-"}</td>
-                <td className={`px-4 py-3 text-right font-medium ${isAccountNegative(account.balance, account.overdraftLimit) ? "text-destructive" : ""}`}>{formatCurrency(account.balance)}</td>
+                <td className="px-4 py-3 text-right">
+                  <span className={`font-medium ${isAccountNegative(account.balance, account.overdraftLimit) ? "text-destructive" : ""}`}>
+                    {formatCurrency(account.balance)}
+                  </span>
+                  {isAccountNegative(account.balance, account.overdraftLimit) && (
+                    <span className="ml-1.5 inline-block rounded bg-destructive/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-destructive">
+                      {account.overdraftLimit > 0 ? "Em cheque especial" : "Saldo negativo"}
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-right">
                   <Button
                     size="icon"
@@ -394,7 +403,14 @@ export default function BankAccountsPage() {
               </p>
             </div>
             <div className="flex flex-col items-end gap-1 shrink-0">
-              <strong className={`text-sm ${isAccountNegative(account.balance, account.overdraftLimit) ? "text-destructive" : ""}`}>{formatCurrency(account.balance)}</strong>
+              <strong className={`text-sm ${isAccountNegative(account.balance, account.overdraftLimit) ? "text-destructive" : ""}`}>
+                {formatCurrency(account.balance)}
+              </strong>
+              {isAccountNegative(account.balance, account.overdraftLimit) && (
+                <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-destructive">
+                  {account.overdraftLimit > 0 ? "Em cheque especial" : "Saldo negativo"}
+                </span>
+              )}
               <Settings className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
           </button>
@@ -479,7 +495,16 @@ export default function BankAccountsPage() {
                     <div className="grid gap-3">
                       <div className="rounded-lg bg-muted p-4">
                         <p className="text-xs text-muted-foreground">{selectedAccount.type === "BENEFIT" ? "Saldo disponível do benefício" : "Saldo atual"}</p>
-                        <p className={`text-2xl font-bold ${isAccountNegative(selectedAccount.balance, selectedAccount.overdraftLimit) ? "text-destructive" : ""}`}>{formatCurrency(selectedAccount.balance)}</p>
+                        <div className="flex items-center gap-2">
+                          <p className={`text-2xl font-bold ${isAccountNegative(selectedAccount.balance, selectedAccount.overdraftLimit) ? "text-destructive" : ""}`}>
+                            {formatCurrency(selectedAccount.balance)}
+                          </p>
+                          {isAccountNegative(selectedAccount.balance, selectedAccount.overdraftLimit) && (
+                            <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-destructive">
+                              {selectedAccount.overdraftLimit > 0 ? "Em cheque especial" : "Saldo negativo"}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       {selectedAccount.type === "BENEFIT" && (
                         <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">

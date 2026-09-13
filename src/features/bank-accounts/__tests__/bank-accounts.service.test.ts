@@ -370,4 +370,49 @@ describe("bank-accounts.service", () => {
     expect(outgoing).not.toBeNull()
     expect(incoming).not.toBeNull()
   })
+
+  it("bloqueia remoção que deixaria a conta abaixo do cheque especial", async () => {
+    const suffix = Date.now()
+    const account = await createBankAccount(
+      userId,
+      { name: `Invariante saldo ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 0, active: true, overdraftLimit: 100 },
+      prisma
+    )
+    const income = await createBankAccountMovement(
+      account.id,
+      userId,
+      { amount: 500, type: "INCOME", description: "Entrada", date: new Date("2026-06-09T12:00:00") },
+      prisma
+    )
+    await createBankAccountMovement(
+      account.id,
+      userId,
+      { amount: 550, type: "EXPENSE", description: "Saída", date: new Date("2026-06-10T12:00:00") },
+      prisma
+    )
+
+    const result = await deleteBankAccountMovement(income!.id, userId, prisma)
+    expect(result).toHaveProperty("error")
+    await expect(prisma.bankAccountMovement.findUnique({ where: { id: income!.id } })).resolves.not.toBeNull()
+  })
+
+  it("ajuste manual com prefixo AJUSTE_MANUAL: é bloqueado no estorno", async () => {
+    const suffix = Date.now()
+    const account = await createBankAccount(
+      userId,
+      { name: `Estorno ajuste ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 500, active: true, overdraftLimit: 0 },
+      prisma
+    )
+    const adjustment = await adjustBankAccountBalance(
+      account.id,
+      userId,
+      { targetBalance: 300, description: "CONFERENCIA", date: new Date("2026-06-11T12:00:00") },
+      prisma
+    )
+    expect(adjustment?.description?.startsWith("AJUSTE_MANUAL:")).toBe(true)
+
+    const result = await deleteBankAccountMovement(adjustment!.id, userId, prisma)
+    expect(result).toEqual({ error: "Ajustes de saldo não são estornáveis — faça um novo ajuste para corrigir o saldo." })
+    await expect(prisma.bankAccountMovement.findUnique({ where: { id: adjustment!.id } })).resolves.not.toBeNull()
+  })
 })

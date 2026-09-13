@@ -230,6 +230,25 @@ export async function deleteBankAccountMovement(
     return { error: "Movimentação de transferência não pode ser estornada individualmente — ela faz parte de um par." }
   }
 
+  const description = movement.description ?? ""
+  if (description.startsWith("AJUSTE_MANUAL:") || description === "AJUSTE MANUAL DE SALDO") {
+    return { error: "Ajustes de saldo não são estornáveis — faça um novo ajuste para corrigir o saldo." }
+  }
+
+  const currentBalance = await getBankAccountBalance(movement.bankAccountId, userId, db)
+  const account = await db.bankAccount.findUnique({
+    where: { id: movement.bankAccountId },
+    select: { overdraftLimit: true },
+  })
+  if (currentBalance === null || !account) return null
+
+  const amount = moneyToNumber(movement.amount)
+  const balanceAfterRemoval = movement.type === "INCOME" ? currentBalance - amount : currentBalance + amount
+  const overdraftLimit = moneyToNumber(account.overdraftLimit)
+  if (balanceAfterRemoval < -overdraftLimit) {
+    return { error: `Esta remoção deixaria a conta em R$ ${balanceAfterRemoval.toFixed(2)} (saldo atual R$ ${currentBalance.toFixed(2)}), abaixo do limite permitido. Estorne em ordem cronológica inversa.` }
+  }
+
   await db.bankAccountMovement.delete({ where: { id: movementId } })
   return movement
 }
@@ -256,7 +275,7 @@ export async function adjustBankAccountBalance(
       bankAccountId,
       amount: Math.abs(diff),
       type: diff > 0 ? "INCOME" : "EXPENSE",
-      description: input.description ?? "AJUSTE MANUAL DE SALDO",
+      description: `AJUSTE_MANUAL:${input.description ?? "CORRECAO DE SALDO"}`,
       date: input.date,
       userId,
     },
