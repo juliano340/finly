@@ -204,6 +204,36 @@ export async function createBankAccountMovement(
   })
 }
 
+export async function deleteBankAccountMovement(
+  movementId: string,
+  userId: string,
+  client?: PrismaClient
+) {
+  const db = client ?? defaultPrisma
+  const movement = await db.bankAccountMovement.findFirst({
+    where: { id: movementId, userId },
+    include: { fixedCostOccurrence: true },
+  })
+  if (!movement) return null
+
+  const linkedOccurrence =
+    movement.fixedCostOccurrence ??
+    (await db.fixedCostOccurrence.findFirst({ where: { bankAccountMovementId: movementId } }))
+  if (movement.transactionId || linkedOccurrence) {
+    return { error: "Esta movimentação é gerada por outro lançamento. Estorne pela origem (transação / custo fixo / fatura)." }
+  }
+
+  const isTransfer =
+    movement.description?.startsWith("TRANSFERENCIA_SAIDA:") ||
+    movement.description?.startsWith("TRANSFERENCIA_ENTRADA:")
+  if (isTransfer) {
+    return { error: "Movimentação de transferência não pode ser estornada individualmente — ela faz parte de um par." }
+  }
+
+  await db.bankAccountMovement.delete({ where: { id: movementId } })
+  return movement
+}
+
 export async function adjustBankAccountBalance(
   bankAccountId: string,
   userId: string,

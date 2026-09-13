@@ -83,7 +83,7 @@ export function FloatingScrollbar({ children, className, maxThumb = 96, gutter =
       <div
         ref={scrollRef}
         onScroll={recompute}
-        className={cn("min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden")}
+        className={cn("min-h-0 flex-1 overflow-y-auto px-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden")}
       >
         {children}
       </div>

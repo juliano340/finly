@@ -3,7 +3,7 @@
 import type { FormEvent } from "react"
 import { useEffect, useRef, useState } from "react"
 import { useFormStatus } from "react-dom"
-import { ArrowLeftRight, ArrowUpDown, Coins, Eye, Gift, Info, Loader2, Pencil, Plus, Settings, SlidersHorizontal, Trash2, Wallet } from "lucide-react"
+import { ArrowLeftRight, ArrowUpDown, Coins, Eye, Gift, Info, Loader2, Pencil, Plus, Settings, SlidersHorizontal, Trash2, Undo2, Wallet } from "lucide-react"
 import { toast } from "sonner"
 import { AddButton } from "@/components/ui/add-button"
 import { Button } from "@/components/ui/button"
@@ -72,6 +72,8 @@ export default function BankAccountsPage() {
   const [creatingType, setCreatingType] = useState<BankAccount["type"]>("DIGITAL")
   const [editingType, setEditingType] = useState<BankAccount["type"]>("DIGITAL")
   const [movementType, setMovementType] = useState<"INCOME" | "EXPENSE">("INCOME")
+  const [confirmReversal, setConfirmReversal] = useState<string | null>(null)
+  const [reversingId, setReversingId] = useState<string | null>(null)
   const updateInFlightRef = useRef(false)
 
   const fetchAccounts = async () => {
@@ -223,6 +225,23 @@ export default function BankAccountsPage() {
     }
     setShowForm(null)
     fetchAccounts()
+  }
+
+  const handleReverse = async (accountId: string, movementId: string) => {
+    setReversingId(movementId)
+    try {
+      const res = await fetch(`/api/bank-accounts/${accountId}/movements/${movementId}`, { method: "DELETE" })
+      if (res.ok) {
+        toast.success("Movimentação estornada.")
+        fetchAccounts()
+      } else {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.error ?? "Não foi possível estornar.")
+      }
+    } finally {
+      setReversingId(null)
+      setConfirmReversal(null)
+    }
   }
 
   const uppercaseInput = (event: FormEvent<HTMLInputElement>) => {
@@ -596,7 +615,34 @@ export default function BankAccountsPage() {
                               </a>
                             )}
                           </div>
-                          <span className={`shrink-0 ml-2 ${mov.type === "INCOME" ? "text-success" : "text-destructive"}`}>{mov.type === "INCOME" ? "+" : "-"}{formatCurrency(mov.amount)}</span>
+                          <div className="flex shrink-0 items-center gap-1 ml-2">
+                            <span className={`${mov.type === "INCOME" ? "text-success" : "text-destructive"}`}>{mov.type === "INCOME" ? "+" : "-"}{formatCurrency(mov.amount)}</span>
+                            {(() => {
+                              const isLinked = !!mov.transactionId
+                              const isTransfer = mov.description?.startsWith("TRANSFERENCIA_") === true
+                              const isDisabled = isLinked || isTransfer || reversingId === mov.id
+                              const tooltipText = isTransfer
+                                ? "Movimento de transferência não pode ser estornado individualmente"
+                                : isLinked
+                                  ? "Estorne pela transação original"
+                                  : undefined
+                              return (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger
+                                      disabled={isDisabled}
+                                      title={tooltipText ?? "Estornar"}
+                                      className="inline-flex h-7 w-7 items-center justify-center rounded-md hover:bg-muted disabled:pointer-events-none disabled:opacity-50 data-[trigger-disabled]:pointer-events-none data-[trigger-disabled]:opacity-50"
+                                      onClick={() => !isDisabled && setConfirmReversal(mov.id)}
+                                    >
+                                      {reversingId === mov.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Undo2 className="h-3.5 w-3.5" />}
+                                    </TooltipTrigger>
+                                    {tooltipText && <TooltipContent>{tooltipText}</TooltipContent>}
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )
+                            })()}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -770,6 +816,15 @@ export default function BankAccountsPage() {
         description="Tem certeza? Esta ação não pode ser desfeita."
         confirmText="Excluir"
         onConfirm={() => confirmDelete && handleDelete(confirmDelete)}
+      />
+
+      <ConfirmDialog
+        open={!!confirmReversal}
+        onOpenChange={() => setConfirmReversal(null)}
+        title="Estornar movimentação"
+        description="O saldo da conta será recalculado. Essa ação não pode ser desfeita."
+        confirmText="Estornar"
+        onConfirm={() => confirmReversal && selectedAccount && handleReverse(selectedAccount.id, confirmReversal)}
       />
     </div>
   )

@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest"
 import { getTestClient } from "@/__tests__/prisma"
 import { registerUser } from "@/features/auth/auth.service"
-import { adjustBankAccountBalance, createBankAccount, createBankAccountMovement, getBankAccounts, getBankAccountsTotal, rechargeBenefitAccount, transferBetweenBankAccounts } from "../bank-accounts.service"
+import { adjustBankAccountBalance, createBankAccount, createBankAccountMovement, deleteBankAccountMovement, getBankAccounts, getBankAccountsTotal, rechargeBenefitAccount, transferBetweenBankAccounts } from "../bank-accounts.service"
 
 const prisma = getTestClient()
 
@@ -266,5 +266,108 @@ describe("bank-accounts.service", () => {
       prisma
     )
     expect(result).toHaveProperty("error")
+  })
+
+  it("estorna movimentação manual e recalcula o saldo", async () => {
+    const suffix = Date.now()
+    const account = await createBankAccount(
+      userId,
+      { name: `Estorno ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 500, active: true, overdraftLimit: 0 },
+      prisma
+    )
+    const movement = await createBankAccountMovement(
+      account.id,
+      userId,
+      { amount: 100, type: "EXPENSE", description: "Compra estornável", date: new Date("2026-06-05T12:00:00") },
+      prisma
+    )
+
+    await expect(deleteBankAccountMovement(movement!.id, userId, prisma)).resolves.toMatchObject({ id: movement!.id })
+
+    const accounts = await getBankAccounts(userId, prisma)
+    expect(accounts.find((item) => item.id === account.id)?.balance).toBe(500)
+  })
+
+  it("bloqueia estorno de movimentação vinculada a lançamento", async () => {
+    const suffix = Date.now()
+    const account = await createBankAccount(
+      userId,
+      { name: `Estorno vinculado ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 500, active: true, overdraftLimit: 0 },
+      prisma
+    )
+    const movement = await createBankAccountMovement(
+      account.id,
+      userId,
+      { amount: 100, type: "EXPENSE", description: "Vinculada", date: new Date("2026-06-06T12:00:00") },
+      prisma
+    )
+    const category = await prisma.category.create({
+      data: { name: `Estorno cat ${suffix}`, userId, type: "EXPENSE" },
+    })
+    const transaction = await prisma.transaction.create({
+      data: {
+        amount: 100,
+        type: "EXPENSE",
+        categoryId: category.id,
+        bankAccountId: account.id,
+        userId,
+        date: new Date("2026-06-06T12:00:00"),
+      },
+    })
+    await prisma.bankAccountMovement.update({
+      where: { id: movement!.id },
+      data: { transactionId: transaction.id },
+    })
+
+    const result = await deleteBankAccountMovement(movement!.id, userId, prisma)
+    expect(result).toHaveProperty("error")
+    await expect(prisma.bankAccountMovement.findUnique({ where: { id: movement!.id } })).resolves.not.toBeNull()
+  })
+
+  it("bloqueia estorno de movimentação de outro usuário", async () => {
+    const suffix = Date.now()
+    const account = await createBankAccount(
+      userId,
+      { name: `Estorno dono ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 500, active: true, overdraftLimit: 0 },
+      prisma
+    )
+    const movement = await createBankAccountMovement(
+      account.id,
+      userId,
+      { amount: 100, type: "EXPENSE", description: "De outro dono", date: new Date("2026-06-07T12:00:00") },
+      prisma
+    )
+
+    const result = await deleteBankAccountMovement(movement!.id, "usuario-inexistente", prisma)
+    expect(result).toBeNull()
+    await expect(prisma.bankAccountMovement.findUnique({ where: { id: movement!.id } })).resolves.not.toBeNull()
+  })
+
+  it("bloqueia estorno de TRANSFERENCIA_SAIDA (description com prefixo + par)", async () => {
+    const suffix = Date.now()
+    const from = await createBankAccount(
+      userId,
+      { name: `Transf estorno origem ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 500, active: true, overdraftLimit: 0 },
+      prisma
+    )
+    const to = await createBankAccount(
+      userId,
+      { name: `Transf estorno destino ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 100, active: true, overdraftLimit: 0 },
+      prisma
+    )
+    const transfer = await transferBetweenBankAccounts(
+      userId,
+      { fromAccountId: from.id, toAccountId: to.id, amount: 50, method: "PIX", date: new Date("2026-06-08T12:00:00") },
+      prisma
+    )
+    if (!transfer || "error" in transfer) throw new Error("transferência de teste não criada")
+
+    const result = await deleteBankAccountMovement(transfer.outgoing.id, userId, prisma)
+    expect(result).toEqual({ error: "Movimentação de transferência não pode ser estornada individualmente — ela faz parte de um par." })
+
+    const outgoing = await prisma.bankAccountMovement.findUnique({ where: { id: transfer.outgoing.id } })
+    const incoming = await prisma.bankAccountMovement.findUnique({ where: { id: transfer.incoming.id } })
+    expect(outgoing).not.toBeNull()
+    expect(incoming).not.toBeNull()
   })
 })
