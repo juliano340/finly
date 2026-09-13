@@ -483,8 +483,8 @@ export default function BankAccountsPage() {
               </SheetHeader>
               <div className="flex-1 overflow-y-auto px-4 pb-4">
                 <div className="flex border-b">
-                  {([["overview", Eye], ["movements", ArrowUpDown], ["adjust", SlidersHorizontal], ["edit", Pencil]] as const).map(([tab, Icon]) => (
-                    <button key={tab} type="button" onClick={() => setDetailTab(tab)} className={`flex flex-1 items-center justify-center gap-1.5 border-b-2 pb-2.5 pt-2 transition-colors ${detailTab === tab ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
+                  {([["overview", "Visão geral", Eye], ["movements", "Movimentações", ArrowUpDown], ["adjust", "Ajuste de saldo", SlidersHorizontal], ["edit", "Editar conta", Pencil]] as const).map(([tab, label, Icon]) => (
+                    <button key={tab} type="button" title={label} aria-label={label} onClick={() => setDetailTab(tab)} className={`flex flex-1 items-center justify-center gap-1.5 border-b-2 pb-2.5 pt-2 transition-colors ${detailTab === tab ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
                       <Icon className="h-4 w-4" />
                     </button>
                   ))}
