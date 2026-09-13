@@ -1,10 +1,13 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { AlertTriangle, ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react"
+import { AlertTriangle, ArrowLeft, ArrowLeftRight, ArrowRight, CalendarDays, Check, Coins, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { FormField } from "@/components/ui/form-field"
+import { FloatingScrollbar } from "@/components/ui/floating-scrollbar"
+import { FormSection } from "@/components/ui/form-section"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Stepper } from "@/components/ui/stepper"
@@ -58,10 +61,21 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
   const parsedAmount = parseFloat(amount) || 0
   const fromAfter = fromAccount ? fromAccount.balance - parsedAmount : null
   const toAfter = toAccount ? toAccount.balance + parsedAmount : null
-  const willOverdraw = fromAccount ? !canWithdraw(fromAccount.balance, fromAccount.overdraftLimit, parsedAmount) : false
+  const insuficienteTotal =
+    !!fromAccount &&
+    parsedAmount > 0 &&
+    !canWithdraw(fromAccount.balance, fromAccount.overdraftLimit ?? 0, parsedAmount)
+  const willOverdraw =
+    !!fromAccount &&
+    parsedAmount > 0 &&
+    parsedAmount > fromAccount.balance &&
+    canWithdraw(fromAccount.balance, fromAccount.overdraftLimit ?? 0, parsedAmount)
 
   const isStep1Valid = !!fromId && !!toId
-  const isStep2Valid = parsedAmount > 0
+  const isStep2Valid =
+    parsedAmount > 0 &&
+    !!fromAccount &&
+    canWithdraw(fromAccount.balance, fromAccount.overdraftLimit ?? 0, parsedAmount)
 
   function resetForm() {
     setStep(0)
@@ -119,6 +133,8 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
 
   function goToStep(index: number) {
     setError("")
+    if (index > 0 && !isStep1Valid) return
+    if (index > 1 && !isStep2Valid) return
     setStep(index)
   }
 
@@ -136,7 +152,8 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-xl p-3 sm:p-4 max-h-[90dvh] overflow-y-auto">
+      <DialogContent className="sm:max-w-xl p-3 sm:p-4 max-h-[90dvh] overflow-hidden">
+        <FloatingScrollbar className="max-h-[calc(90dvh-1.5rem)]">
         <DialogHeader>
           <DialogTitle>Transferir entre contas</DialogTitle>
         </DialogHeader>
@@ -149,82 +166,86 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
           {step === 0 && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">Selecione a conta de origem e destino da transferência.</p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Conta origem</label>
-                  <Select value={fromId || null} onValueChange={(v) => setFromId(v ?? "")}>
-                    <SelectTrigger className="w-full">
-                      {fromId && fromAccount ? (
-                        <div className="flex w-full items-center justify-between gap-2 pr-2">
-                          <span>{fromAccount.name}</span>
-                          <span className="text-xs text-muted-foreground">{formatCurrency(fromAccount.balance)}</span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">Selecione</span>
-                      )}
-                    </SelectTrigger>
-                    <SelectContent>
-                      {fromAccounts.length === 0 ? (
-                        <SelectItem value="" disabled>Nenhuma conta disponível</SelectItem>
-                      ) : fromAccounts.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>
-                          <div className="flex w-full items-center justify-between gap-4">
-                            <span className="flex items-center gap-2">
-                              <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: a.color }} />
-                              {a.name}
-                            </span>
-                            <span className={isAccountNegative(a.balance, a.overdraftLimit) ? "text-red-600" : "text-muted-foreground"}>{formatCurrency(a.balance)}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {fromAccount && (
-                    <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
-                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: fromAccount.color }} />
-                      <span className="truncate">{fromAccount.institution ?? "Sem instituição"}</span>
-                      <span className="ml-auto font-medium">{formatCurrency(fromAccount.balance)}</span>
-                    </div>
-                  )}
+              <FormSection icon={ArrowLeftRight} title="Origem e destino">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <FormField label="Conta origem">
+                      <Select value={fromId || null} onValueChange={(v) => setFromId(v ?? "")}>
+                        <SelectTrigger className="w-full">
+                          {fromId && fromAccount ? (
+                            <div className="flex w-full items-center justify-between gap-2 pr-2">
+                              <span>{fromAccount.name}</span>
+                              <span className="text-xs text-muted-foreground">{formatCurrency(fromAccount.balance)}</span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">Selecione</span>
+                          )}
+                        </SelectTrigger>
+                        <SelectContent>
+                          {fromAccounts.length === 0 ? (
+                            <SelectItem value="" disabled>Nenhuma conta disponível</SelectItem>
+                          ) : fromAccounts.map((a) => (
+                            <SelectItem key={a.id} value={a.id}>
+                              <div className="flex w-full items-center justify-between gap-4">
+                                <span className="flex items-center gap-2">
+                                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: a.color }} />
+                                  {a.name}
+                                </span>
+                                <span className={isAccountNegative(a.balance, a.overdraftLimit) ? "text-red-600" : "text-muted-foreground"}>{formatCurrency(a.balance)}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormField>
+                    {fromAccount && (
+                      <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
+                        <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: fromAccount.color }} />
+                        <span className="truncate">{fromAccount.institution ?? "Sem instituição"}</span>
+                        <span className="ml-auto font-medium">{formatCurrency(fromAccount.balance)}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <FormField label="Conta destino">
+                      <Select value={toId || null} onValueChange={(v) => setToId(v ?? "")}>
+                        <SelectTrigger className="w-full">
+                          {toId && toAccount ? (
+                            <div className="flex w-full items-center justify-between gap-2 pr-2">
+                              <span>{toAccount.name}</span>
+                              <span className="text-xs text-muted-foreground">{formatCurrency(toAccount.balance)}</span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">Selecione</span>
+                          )}
+                        </SelectTrigger>
+                        <SelectContent>
+                          {toAccounts.length === 0 ? (
+                            <SelectItem value="" disabled>Nenhuma conta disponível</SelectItem>
+                          ) : toAccounts.map((a) => (
+                            <SelectItem key={a.id} value={a.id}>
+                              <div className="flex w-full items-center justify-between gap-4">
+                                <span className="flex items-center gap-2">
+                                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: a.color }} />
+                                  {a.name}
+                                </span>
+                                <span className={isAccountNegative(a.balance, a.overdraftLimit) ? "text-red-600" : "text-muted-foreground"}>{formatCurrency(a.balance)}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormField>
+                    {toAccount && (
+                      <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
+                        <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: toAccount.color }} />
+                        <span className="truncate">{toAccount.institution ?? "Sem instituição"}</span>
+                        <span className="ml-auto font-medium">{formatCurrency(toAccount.balance)}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Conta destino</label>
-                  <Select value={toId || null} onValueChange={(v) => setToId(v ?? "")}>
-                    <SelectTrigger className="w-full">
-                      {toId && toAccount ? (
-                        <div className="flex w-full items-center justify-between gap-2 pr-2">
-                          <span>{toAccount.name}</span>
-                          <span className="text-xs text-muted-foreground">{formatCurrency(toAccount.balance)}</span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">Selecione</span>
-                      )}
-                    </SelectTrigger>
-                    <SelectContent>
-                      {toAccounts.length === 0 ? (
-                        <SelectItem value="" disabled>Nenhuma conta disponível</SelectItem>
-                      ) : toAccounts.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>
-                          <div className="flex w-full items-center justify-between gap-4">
-                            <span className="flex items-center gap-2">
-                              <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: a.color }} />
-                              {a.name}
-                            </span>
-                            <span className={isAccountNegative(a.balance, a.overdraftLimit) ? "text-red-600" : "text-muted-foreground"}>{formatCurrency(a.balance)}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {toAccount && (
-                    <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
-                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: toAccount.color }} />
-                      <span className="truncate">{toAccount.institution ?? "Sem instituição"}</span>
-                      <span className="ml-auto font-medium">{formatCurrency(toAccount.balance)}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
+              </FormSection>
             </div>
           )}
 
@@ -232,45 +253,54 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">Informe o valor e o método da transferência.</p>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <div className="flex items-center justify-between gap-2">
-                    <label className="text-sm font-medium">Valor</label>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-auto px-2 py-1 text-xs"
-                      disabled={!fromAccount || getAvailableBalance(fromAccount.balance, fromAccount.overdraftLimit) <= 0}
-                      onClick={() => fromAccount && setAmount(getAvailableBalance(fromAccount.balance, fromAccount.overdraftLimit).toFixed(2))}
+              <FormSection icon={Coins} title="Valor e método">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <FormField
+                      label="Valor"
+                      hint={
+                        fromAccount
+                          ? `Saldo disponível: ${formatCurrency(getAvailableBalance(fromAccount.balance, fromAccount.overdraftLimit ?? 0))}`
+                          : undefined
+                      }
                     >
-                      Saldo total
-                    </Button>
+                      <Input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        placeholder="0,00"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        required
+                      />
+                    </FormField>
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto px-2 py-1 text-xs"
+                        disabled={!fromAccount || getAvailableBalance(fromAccount.balance, fromAccount.overdraftLimit) <= 0}
+                        onClick={() => fromAccount && setAmount(getAvailableBalance(fromAccount.balance, fromAccount.overdraftLimit).toFixed(2))}
+                      >
+                        Saldo total
+                      </Button>
+                    </div>
                   </div>
-                  <Input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    placeholder="0,00"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    required
-                  />
+                  <FormField label="Método">
+                    <Select items={{ PIX: "Pix", TED: "TED", TRANSFER: "Transferência" }} value={method} onValueChange={(v) => setMethod(v ?? "PIX")}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PIX">Pix</SelectItem>
+                        <SelectItem value="TED">TED</SelectItem>
+                        <SelectItem value="TRANSFER">Transferência</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormField>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Método</label>
-                  <Select items={{ PIX: "Pix", TED: "TED", TRANSFER: "Transferência" }} value={method} onValueChange={(v) => setMethod(v ?? "PIX")}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="PIX">Pix</SelectItem>
-                      <SelectItem value="TED">TED</SelectItem>
-                      <SelectItem value="TRANSFER">Transferência</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+              </FormSection>
 
               {parsedAmount > 0 && fromAccount && toAccount && (
                 <div className="grid gap-2 sm:grid-cols-2">
@@ -313,6 +343,16 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
                 </div>
               )}
 
+              {insuficienteTotal && (
+                <div className="flex gap-2 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-900">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <div>
+                    <p className="font-medium">Saldo insuficiente (incluindo cheque especial).</p>
+                    <p className="text-xs text-red-800">Não é possível transferir este valor. Reduza o valor ou escolha outra conta de origem.</p>
+                  </div>
+                </div>
+              )}
+
               {willOverdraw && (
                 <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -328,27 +368,23 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
           {step === 2 && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">Adicione detalhes opcionais à operação.</p>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">Descrição</label>
-                <Input
-                  placeholder="Ex: TRANSFERÊNCIA MENSAL"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value.toUpperCase())}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">
-                  Data da transferência
-                  <span className="ml-1 text-destructive">*</span>
-                </label>
-                <Input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  required
-                />
-                {!date && <p className="text-xs text-destructive">A data é obrigatória.</p>}
-              </div>
+              <FormSection icon={CalendarDays} title="Detalhes">
+                <FormField label="Descrição">
+                  <Input
+                    placeholder="Ex: TRANSFERÊNCIA MENSAL"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value.toUpperCase())}
+                  />
+                </FormField>
+                <FormField label="Data da transferência" required error={!date ? "A data é obrigatória." : undefined}>
+                  <Input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    required
+                  />
+                </FormField>
+              </FormSection>
             </div>
           )}
 
@@ -479,6 +515,7 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
             )}
           </div>
         </div>
+        </FloatingScrollbar>
       </DialogContent>
     </Dialog>
   )
