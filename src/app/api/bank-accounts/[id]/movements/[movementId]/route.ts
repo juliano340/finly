@@ -22,5 +22,8 @@ export async function DELETE(
   if (!deleted) return NextResponse.json({ error: "Movimentação não encontrada" }, { status: 404 })
   if ("error" in deleted) return NextResponse.json({ error: deleted.error }, { status: 400 })
 
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({
+    ok: true,
+    reversedTransfer: "reversedTransfer" in deleted ? deleted.reversedTransfer : null,
+  })
 }

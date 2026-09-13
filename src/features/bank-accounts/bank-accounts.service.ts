@@ -227,7 +227,51 @@ export async function deleteBankAccountMovement(
     movement.description?.startsWith("TRANSFERENCIA_SAIDA:") ||
     movement.description?.startsWith("TRANSFERENCIA_ENTRADA:")
   if (isTransfer) {
-    return { error: "Movimentação de transferência não pode ser estornada individualmente — ela faz parte de um par." }
+    const transferId = movement.description?.split(":")[1]
+    if (!transferId) {
+      return { error: "Par de transferência inconsistente — nenhum movimento estornado." }
+    }
+
+    const candidates = await db.bankAccountMovement.findMany({
+      where: {
+        userId,
+        OR: [
+          { description: { startsWith: "TRANSFERENCIA_SAIDA:" } },
+          { description: { startsWith: "TRANSFERENCIA_ENTRADA:" } },
+        ],
+      },
+    })
+    const transferMovements = candidates.filter((item) => item.description?.includes(`:${transferId}:`))
+    if (transferMovements.length !== 2) {
+      return { error: "Par de transferência inconsistente — nenhum movimento estornado." }
+    }
+
+    const pairAccountIds = [...new Set(transferMovements.map((item) => item.bankAccountId))]
+    for (const accountId of pairAccountIds) {
+      const pairBalance = await getBankAccountBalance(accountId, userId, db)
+      const pairAccount = await db.bankAccount.findUnique({
+        where: { id: accountId },
+        select: { overdraftLimit: true },
+      })
+      if (pairBalance === null || !pairAccount) {
+        return { error: "Par de transferência inconsistente — nenhum movimento estornado." }
+      }
+
+      const balanceAfterRemoval = transferMovements
+        .filter((item) => item.bankAccountId === accountId)
+        .reduce(
+          (balance, item) => item.type === "INCOME" ? balance - moneyToNumber(item.amount) : balance + moneyToNumber(item.amount),
+          pairBalance
+        )
+      if (balanceAfterRemoval < -moneyToNumber(pairAccount.overdraftLimit)) {
+        return { error: `Esta remoção deixaria a conta em R$ ${balanceAfterRemoval.toFixed(2)} (saldo atual R$ ${pairBalance.toFixed(2)}), abaixo do limite permitido. Estorne em ordem cronológica inversa.` }
+      }
+    }
+
+    await db.bankAccountMovement.deleteMany({
+      where: { id: { in: transferMovements.map((item) => item.id) }, userId },
+    })
+    return { reversedTransfer: transferId, movements: transferMovements }
   }
 
   const description = movement.description ?? ""

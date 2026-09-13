@@ -343,7 +343,7 @@ describe("bank-accounts.service", () => {
     await expect(prisma.bankAccountMovement.findUnique({ where: { id: movement!.id } })).resolves.not.toBeNull()
   })
 
-  it("bloqueia estorno de TRANSFERENCIA_SAIDA (description com prefixo + par)", async () => {
+  it("estorna o par de transferência e restaura os saldos", async () => {
     const suffix = Date.now()
     const from = await createBankAccount(
       userId,
@@ -363,12 +363,74 @@ describe("bank-accounts.service", () => {
     if (!transfer || "error" in transfer) throw new Error("transferência de teste não criada")
 
     const result = await deleteBankAccountMovement(transfer.outgoing.id, userId, prisma)
-    expect(result).toEqual({ error: "Movimentação de transferência não pode ser estornada individualmente — ela faz parte de um par." })
+    if (!result || !("reversedTransfer" in result)) throw new Error("estorno conjunto não retornou o objeto esperado")
+    expect(result.movements).toHaveLength(2)
+    expect(result.reversedTransfer).toEqual(expect.any(String))
 
-    const outgoing = await prisma.bankAccountMovement.findUnique({ where: { id: transfer.outgoing.id } })
-    const incoming = await prisma.bankAccountMovement.findUnique({ where: { id: transfer.incoming.id } })
-    expect(outgoing).not.toBeNull()
-    expect(incoming).not.toBeNull()
+    await expect(prisma.bankAccountMovement.findUnique({ where: { id: transfer.outgoing.id } })).resolves.toBeNull()
+    await expect(prisma.bankAccountMovement.findUnique({ where: { id: transfer.incoming.id } })).resolves.toBeNull()
+
+    const accounts = await getBankAccounts(userId, prisma)
+    expect(accounts.find((item) => item.id === from.id)?.balance).toBe(500)
+    expect(accounts.find((item) => item.id === to.id)?.balance).toBe(100)
+  })
+
+  it("bloqueia estorno de par de transferência inconsistente", async () => {
+    const suffix = Date.now()
+    const from = await createBankAccount(
+      userId,
+      { name: `Transf inconsistente origem ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 500, active: true, overdraftLimit: 0 },
+      prisma
+    )
+    const to = await createBankAccount(
+      userId,
+      { name: `Transf inconsistente destino ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 100, active: true, overdraftLimit: 0 },
+      prisma
+    )
+    const transfer = await transferBetweenBankAccounts(
+      userId,
+      { fromAccountId: from.id, toAccountId: to.id, amount: 50, method: "PIX", date: new Date("2026-06-12T12:00:00") },
+      prisma
+    )
+    if (!transfer || "error" in transfer) throw new Error("transferência de teste não criada")
+
+    await prisma.bankAccountMovement.delete({ where: { id: transfer.incoming.id } })
+
+    const result = await deleteBankAccountMovement(transfer.outgoing.id, userId, prisma)
+    expect(result).toEqual({ error: "Par de transferência inconsistente — nenhum movimento estornado." })
+    await expect(prisma.bankAccountMovement.findUnique({ where: { id: transfer.outgoing.id } })).resolves.not.toBeNull()
+  })
+
+  it("bloqueia estorno de par que deixaria a conta destino abaixo do cheque especial", async () => {
+    const suffix = Date.now()
+    const from = await createBankAccount(
+      userId,
+      { name: `Transf invariante origem ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 500, active: true, overdraftLimit: 0 },
+      prisma
+    )
+    const to = await createBankAccount(
+      userId,
+      { name: `Transf invariante destino ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 0, active: true, overdraftLimit: 0 },
+      prisma
+    )
+    const transfer = await transferBetweenBankAccounts(
+      userId,
+      { fromAccountId: from.id, toAccountId: to.id, amount: 400, method: "PIX", date: new Date("2026-06-13T12:00:00") },
+      prisma
+    )
+    if (!transfer || "error" in transfer) throw new Error("transferência de teste não criada")
+
+    await createBankAccountMovement(
+      to.id,
+      userId,
+      { amount: 400, type: "EXPENSE", description: "Gasto do destino", date: new Date("2026-06-14T12:00:00") },
+      prisma
+    )
+
+    const result = await deleteBankAccountMovement(transfer.outgoing.id, userId, prisma)
+    expect(result).toHaveProperty("error")
+    await expect(prisma.bankAccountMovement.findUnique({ where: { id: transfer.outgoing.id } })).resolves.not.toBeNull()
+    await expect(prisma.bankAccountMovement.findUnique({ where: { id: transfer.incoming.id } })).resolves.not.toBeNull()
   })
 
   it("bloqueia remoção que deixaria a conta abaixo do cheque especial", async () => {
