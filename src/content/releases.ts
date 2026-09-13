@@ -24,9 +24,17 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.44"
+export const CURRENT_VERSION = "0.2.45"
 
 export const releases = [
+  {
+    version: "0.2.45",
+    date: "2026-09-13",
+    changes: [
+      { type: "feat", description: "Estorno conjunto de transferências: estornar uma transferência remove o par (saída e entrada) de uma vez, com proteção para pares inconsistentes e para o limite do cheque especial." },
+      { type: "refactor", description: "Extrato de movimentos agora mostra o saldo resultante após cada movimento e o horário completo, e movimentos de ajuste aparecem como não estornáveis." },
+    ],
+  },
   {
     version: "0.2.44",
     date: "2026-09-13",

@@ -2,6 +2,16 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.45] - 2026-09-13
+
+### Adicionado
+
+- Estorno conjunto de transferências: estornar uma transferência remove o par (saída e entrada) de uma vez, com proteção para pares inconsistentes e para o limite do cheque especial.
+
+### Alterado
+
+- Extrato de movimentos agora mostra o saldo resultante após cada movimento e o horário completo, e movimentos de ajuste aparecem como não estornáveis.
+
 ## [0.2.44] - 2026-09-13
 
 ### Alterado
