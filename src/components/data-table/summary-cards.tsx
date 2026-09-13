@@ -28,18 +28,20 @@ export function SummaryCards({ total, paid, pending, loading, labels }: SummaryC
       </div>
 
       <Card className="border-0 shadow-sm md:hidden">
-        <CardContent className="grid grid-cols-3 gap-2 p-3">
-          <div className="min-w-0">
-            <p className="truncate text-[11px] font-medium text-muted-foreground">{l.total}</p>
-            <div className="truncate text-sm font-bold tabular-nums">{loading ? skeletonSm : formatCurrency(total)}</div>
+        <CardContent className="flex flex-col p-0">
+          <div className="flex items-center justify-between p-3">
+            <p className="text-xs text-muted-foreground">{l.total}</p>
+            <div className="text-base font-bold tabular-nums">{loading ? skeletonSm : formatCurrency(total)}</div>
           </div>
-          <div className="min-w-0">
-            <p className="truncate text-[11px] font-medium text-muted-foreground">{l.paid}</p>
-            <div className="truncate text-sm font-bold tabular-nums">{loading ? skeletonSm : formatCurrency(paid)}</div>
+          <div className="border-b border-border/60" />
+          <div className="flex items-center justify-between p-3">
+            <p className="text-xs text-muted-foreground">{l.paid}</p>
+            <div className="text-base font-bold tabular-nums">{loading ? skeletonSm : formatCurrency(paid)}</div>
           </div>
-          <div className="min-w-0">
-            <p className="truncate text-[11px] font-medium text-muted-foreground">{l.pending}</p>
-            <div className="truncate text-sm font-bold tabular-nums">{loading ? skeletonSm : formatCurrency(pending)}</div>
+          <div className="border-b border-border/60" />
+          <div className="flex items-center justify-between p-3">
+            <p className="text-xs text-muted-foreground">{l.pending}</p>
+            <div className="text-base font-bold tabular-nums">{loading ? skeletonSm : formatCurrency(pending)}</div>
           </div>
         </CardContent>
       </Card>
