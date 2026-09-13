@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.49] - 2026-09-13
+
+### Adicionado
+
+- Os ícones das abas do painel da conta agora mostram descrição ao passar o mouse e para leitores de tela: Visão geral, Movimentações, Ajuste de saldo e Editar conta.
+
 ## [0.2.48] - 2026-09-13
 
 ### Corrigido

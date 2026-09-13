@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.48"
+export const CURRENT_VERSION = "0.2.49"
 
 export const releases = [
+  {
+    version: "0.2.49",
+    date: "2026-09-13",
+    changes: [
+      { type: "feat", description: "Os ícones das abas do painel da conta agora mostram descrição ao passar o mouse e para leitores de tela: Visão geral, Movimentações, Ajuste de saldo e Editar conta." },
+    ],
+  },
   {
     version: "0.2.48",
     date: "2026-09-13",
