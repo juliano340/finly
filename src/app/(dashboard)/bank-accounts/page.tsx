@@ -3,12 +3,14 @@
 import type { FormEvent } from "react"
 import { useEffect, useRef, useState } from "react"
 import { useFormStatus } from "react-dom"
-import { ArrowLeftRight, ArrowUpDown, Eye, Gift, Info, Loader2, Pencil, Plus, Settings, SlidersHorizontal, Trash2 } from "lucide-react"
+import { ArrowLeftRight, ArrowUpDown, Coins, Eye, Gift, Info, Loader2, Pencil, Plus, Settings, SlidersHorizontal, Trash2, Wallet } from "lucide-react"
 import { toast } from "sonner"
 import { AddButton } from "@/components/ui/add-button"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { FormField } from "@/components/ui/form-field"
+import { FormSection } from "@/components/ui/form-section"
 import { Label } from "@/components/ui/label"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -118,6 +120,7 @@ export default function BankAccountsPage() {
     updateInFlightRef.current = true
     setUpdateSubmitting(true)
     try {
+      const account = accounts.find((item) => item.id === accountId) ?? selectedAccount
       const res = await fetch(`/api/bank-accounts/${accountId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -126,6 +129,7 @@ export default function BankAccountsPage() {
           institution: formData.get("institution") || null,
           type: formData.get("type"),
           color: formData.get("color") || "#22C55E",
+          initialBalance: account?.initialBalance,
           overdraftLimit: formData.get("overdraftLimit") || 0,
           benefitDailyRate: formData.get("benefitDailyRate") || null,
         }),
@@ -385,53 +389,52 @@ export default function BankAccountsPage() {
             <>
               <SheetHeader><SheetTitle>Nova conta</SheetTitle></SheetHeader>
               <form action={handleCreate} className="flex-1 overflow-y-auto px-4 pb-4">
-                <div className="mt-4 grid gap-4">
-                  <div className="space-y-1.5">
-                    <Label>Nome da conta</Label>
-                    <Input className="uppercase" name="name" placeholder="Ex: NUBANK" onInput={uppercaseInput} required />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Instituição</Label>
-                    <Input className="uppercase" name="institution" placeholder="Ex: NUBANK" onInput={uppercaseInput} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Tipo da conta</Label>
-                    <Select value={creatingType} items={ACCOUNT_TYPE_ITEMS} onValueChange={(v) => setCreatingType(v as BankAccount["type"])}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="CHECKING">Corrente</SelectItem>
-                        <SelectItem value="SAVINGS">Poupança</SelectItem>
-                        <SelectItem value="DIGITAL">Digital</SelectItem>
-                        <SelectItem value="CASH">Dinheiro</SelectItem>
-                        <SelectItem value="INVESTMENT">Investimento</SelectItem>
-                        <SelectItem value="BENEFIT">Benefício / Pré-pago</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {creatingType === "BENEFIT" && <p className="text-xs text-muted-foreground">Para vale-alimentação, refeição e outros saldos fornecidos pela empresa.</p>}
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Saldo inicial</Label>
-                    <Input name="initialBalance" type="number" step="0.01" placeholder="0,00" defaultValue="0" />
-                  </div>
-                  {creatingType === "BENEFIT" ? (
-                    <div className="space-y-1.5">
-                      <Label>Valor por dia trabalhado (opcional)</Label>
-                      <Input name="benefitDailyRate" type="number" step="0.01" min="0.01" placeholder="Ex: 22,00" />
-                      <p className="text-xs text-muted-foreground">Usado para sugerir o valor da recarga mensal.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-1.5">
-                      <Label>Limite cheque especial</Label>
-                      <Input name="overdraftLimit" type="number" step="0.01" placeholder="0,00" defaultValue="0" />
-                      <p className="text-xs text-muted-foreground">0 = sem cheque especial</p>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <Label>Cor:</Label>
-                    <Input name="color" type="color" defaultValue="#22C55E" className="w-16" />
-                  </div>
+                <div className="space-y-6">
+                  <FormSection icon={Wallet} title="Identificação">
+                    <FormField label="Nome da conta" required>
+                      <Input className="uppercase" name="name" placeholder="Ex: NUBANK" onInput={uppercaseInput} required />
+                    </FormField>
+                    <FormField label="Instituição" hint="Opcional">
+                      <Input className="uppercase" name="institution" placeholder="Ex: NUBANK" onInput={uppercaseInput} />
+                    </FormField>
+                    <input type="hidden" name="type" value={creatingType} />
+                    <FormField
+                      label="Tipo da conta"
+                      hint={creatingType === "BENEFIT" ? "Para vale-alimentação, refeição e outros saldos fornecidos pela empresa." : undefined}
+                    >
+                      <Select value={creatingType} items={ACCOUNT_TYPE_ITEMS} onValueChange={(v) => setCreatingType(v as BankAccount["type"])}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="CHECKING">Corrente</SelectItem>
+                          <SelectItem value="SAVINGS">Poupança</SelectItem>
+                          <SelectItem value="DIGITAL">Digital</SelectItem>
+                          <SelectItem value="CASH">Dinheiro</SelectItem>
+                          <SelectItem value="INVESTMENT">Investimento</SelectItem>
+                          <SelectItem value="BENEFIT">Benefício / Pré-pago</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormField>
+                  </FormSection>
+
+                  <FormSection icon={Coins} title="Valores">
+                    <FormField label="Saldo inicial">
+                      <Input name="initialBalance" type="number" step="0.01" placeholder="0,00" defaultValue="0" />
+                    </FormField>
+                    {creatingType === "BENEFIT" ? (
+                      <FormField label="Valor por dia trabalhado" hint="Opcional — usado para sugerir o valor da recarga mensal.">
+                        <Input key={creatingType} name="benefitDailyRate" type="number" step="0.01" min="0.01" placeholder="Ex: 22,00" />
+                      </FormField>
+                    ) : (
+                      <FormField label="Limite cheque especial" hint="0 = sem cheque especial">
+                        <Input key={creatingType} name="overdraftLimit" type="number" step="0.01" placeholder="0,00" defaultValue="0" />
+                      </FormField>
+                    )}
+                    <FormField label="Cor">
+                      <Input name="color" type="color" defaultValue="#22C55E" className="w-16" />
+                    </FormField>
+                  </FormSection>
                 </div>
                 <Button type="submit" className="mt-6 w-full">Salvar</Button>
               </form>
@@ -696,6 +699,7 @@ export default function BankAccountsPage() {
                       </div>
                       <div className="space-y-1.5">
                         <Label>Tipo da conta</Label>
+                        <input type="hidden" name="type" value={editingType} />
                         <Select value={editingType} items={ACCOUNT_TYPE_ITEMS} onValueChange={(v) => setEditingType(v as BankAccount["type"])}>
                           <SelectTrigger className="w-full">
                             <SelectValue />
@@ -713,13 +717,13 @@ export default function BankAccountsPage() {
                       {editingType === "BENEFIT" ? (
                         <div className="space-y-1.5">
                           <Label>Valor por dia trabalhado (opcional)</Label>
-                          <Input name="benefitDailyRate" type="number" step="0.01" min="0.01" placeholder="Ex: 22,00" defaultValue={selectedAccount.benefitDailyRate ?? ""} />
+                          <Input key={editingType} name="benefitDailyRate" type="number" step="0.01" min="0.01" placeholder="Ex: 22,00" defaultValue={selectedAccount.benefitDailyRate ?? ""} />
                           <p className="text-xs text-muted-foreground">A conta benefício não permite cheque especial nem transferências.</p>
                         </div>
                       ) : (
                         <div className="space-y-1.5">
                           <Label>Limite cheque especial</Label>
-                          <Input name="overdraftLimit" type="number" step="0.01" placeholder="0,00" defaultValue={selectedAccount.overdraftLimit.toFixed(2)} />
+                          <Input key={editingType} name="overdraftLimit" type="number" step="0.01" placeholder="0,00" defaultValue={selectedAccount.overdraftLimit.toFixed(2)} />
                           <p className="text-xs text-muted-foreground">0 = sem cheque especial</p>
                         </div>
                       )}
