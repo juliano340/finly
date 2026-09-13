@@ -773,7 +773,7 @@ function FixedCostsPageInner() {
                 <SheetTitle>{editMode === "AMOUNT" ? selectedTemplate.name : `Configurações · ${selectedTemplate.name}`}</SheetTitle>
               </SheetHeader>
               <div className="flex-1 overflow-y-auto px-4 pb-4">
-                <div className="mt-4 space-y-4">
+                <div className="space-y-4">
                   {editMode === "AMOUNT" ? (
                     <OccurrenceAmountForm
                       key={`amount-${selectedOccurrence.id}`}
