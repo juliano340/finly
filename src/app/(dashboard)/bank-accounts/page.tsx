@@ -11,7 +11,6 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { FormField } from "@/components/ui/form-field"
 import { FormSection } from "@/components/ui/form-section"
-import { Label } from "@/components/ui/label"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -516,26 +515,29 @@ export default function BankAccountsPage() {
                       </Button>
                     </div>
                     {showForm === "recharge" && selectedAccount.type === "BENEFIT" && (
-                      <form action={(formData) => handleRecharge(selectedAccount.id, formData)} className="grid gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
-                        <div className="space-y-1.5">
-                          <Label>Valor creditado pela empresa</Label>
-                          <Input
-                            name="amount"
-                            type="number"
-                            step="0.01"
-                            min="0.01"
-                            defaultValue={selectedAccount.benefitDailyRate ? estimatedBenefitCredit(selectedAccount.benefitDailyRate).toFixed(2) : undefined}
-                            placeholder="0,00"
-                            required
-                          />
-                          {selectedAccount.benefitDailyRate && (
-                            <p className="text-xs text-muted-foreground">
-                              Sugestão: {businessDaysInCurrentMonth()} dias úteis × {formatCurrency(selectedAccount.benefitDailyRate)}. Ajuste se houve feriado, férias ou ausência.
-                            </p>
-                          )}
-                        </div>
-                        <Input className="uppercase" name="description" placeholder="Ex: RECARGA DE AGOSTO" onInput={uppercaseInput} />
-                        <Input name="date" type="date" defaultValue={new Date().toISOString().split("T")[0]} />
+                      <form action={(formData) => handleRecharge(selectedAccount.id, formData)} className="space-y-4 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                        <FormSection icon={Gift} title="Recarga">
+                          <FormField
+                            label="Valor creditado pela empresa"
+                            hint={selectedAccount.benefitDailyRate ? `${businessDaysInCurrentMonth()} dias úteis × ${formatCurrency(selectedAccount.benefitDailyRate)}. Ajuste se houve feriado, férias ou ausência.` : undefined}
+                          >
+                            <Input
+                              name="amount"
+                              type="number"
+                              step="0.01"
+                              min="0.01"
+                              defaultValue={selectedAccount.benefitDailyRate ? estimatedBenefitCredit(selectedAccount.benefitDailyRate).toFixed(2) : undefined}
+                              placeholder="0,00"
+                              required
+                            />
+                          </FormField>
+                          <FormField label="Descrição">
+                            <Input className="uppercase" name="description" placeholder="Ex: RECARGA DE AGOSTO" onInput={uppercaseInput} />
+                          </FormField>
+                          <FormField label="Data">
+                            <Input name="date" type="date" defaultValue={new Date().toISOString().split("T")[0]} />
+                          </FormField>
+                        </FormSection>
                         <div className="flex gap-2">
                           <Button type="submit">Registrar recarga</Button>
                           <Button type="button" variant="ghost" onClick={() => setShowForm(null)}>Cancelar</Button>
@@ -543,24 +545,32 @@ export default function BankAccountsPage() {
                       </form>
                     )}
                     {showForm === "movement" && (
-                      <form action={(formData) => { handleMovement(selectedAccount.id, formData); setShowForm(null) }} className="grid gap-2 rounded-lg border p-3">
-                        <div className="grid grid-cols-2 gap-2">
-                          <Input name="amount" type="number" step="0.01" min="0.01" placeholder="Valor" required />
-                          <div className="space-y-1.5">
+                      <form action={(formData) => { handleMovement(selectedAccount.id, formData); setShowForm(null) }} className="space-y-4 rounded-lg border p-3">
+                        <FormSection icon={ArrowUpDown} title="Movimentação">
+                          <div className="grid grid-cols-2 gap-2">
+                            <FormField label="Valor" required>
+                              <Input name="amount" type="number" step="0.01" min="0.01" placeholder="0,00" required />
+                            </FormField>
                             <input type="hidden" name="type" value={movementType} />
-                            <Select value={movementType} items={MOVEMENT_TYPE_ITEMS} onValueChange={(v) => setMovementType(v as "INCOME" | "EXPENSE")}>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="INCOME">Recebimento</SelectItem>
-                                <SelectItem value="EXPENSE">Saída</SelectItem>
-                              </SelectContent>
-                            </Select>
+                            <FormField label="Tipo">
+                              <Select value={movementType} items={MOVEMENT_TYPE_ITEMS} onValueChange={(v) => setMovementType(v as "INCOME" | "EXPENSE")}>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="INCOME">Recebimento</SelectItem>
+                                  <SelectItem value="EXPENSE">Saída</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </FormField>
                           </div>
-                        </div>
-                        <Input className="uppercase" name="description" placeholder="Descrição" onInput={uppercaseInput} />
-                        <Input name="date" type="date" />
+                          <FormField label="Descrição">
+                            <Input className="uppercase" name="description" placeholder="EX: PIX RECEBIDO" onInput={uppercaseInput} />
+                          </FormField>
+                          <FormField label="Data">
+                            <Input name="date" type="date" />
+                          </FormField>
+                        </FormSection>
                         <div className="flex gap-2">
                           <Button type="submit">Adicionar</Button>
                           <Button type="button" variant="ghost" onClick={() => setShowForm(null)}>Cancelar</Button>
@@ -643,8 +653,8 @@ export default function BankAccountsPage() {
                     {showForm === "adjust" && (
                       <div className="rounded-lg border p-4 space-y-4">
                         <form action={async (formData) => { await handleAdjustment(selectedAccount.id, formData); setShowForm(null); setAdjustTarget("") }} className="space-y-4">
-                          <div className="space-y-1.5">
-                            <label className="text-sm font-medium">Saldo correto</label>
+                          <FormSection icon={SlidersHorizontal} title="Ajuste de saldo">
+                          <FormField label="Saldo correto" required>
                             <Input
                               name="targetBalance"
                               type="text"
@@ -665,15 +675,14 @@ export default function BankAccountsPage() {
                                 }
                               }}
                             />
-                          </div>
-                          <div className="space-y-1.5">
-                            <label className="text-sm font-medium">Motivo do ajuste</label>
+                          </FormField>
+                          <FormField label="Motivo do ajuste">
                             <Input className="uppercase" name="adjustDescription" placeholder="EX: AJUSTE MANUAL DE SALDO" onInput={uppercaseInput} />
-                          </div>
-                          <div className="space-y-1.5">
-                            <label className="text-sm font-medium">Data do ajuste</label>
+                          </FormField>
+                          <FormField label="Data do ajuste">
                             <Input name="adjustDate" type="date" />
-                          </div>
+                          </FormField>
+                          </FormSection>
                           <div className="flex gap-2">
                             <AdjustSubmitButton submitting={adjustSubmitting} />
                             <Button type="button" variant="outline" onClick={() => { setShowForm(null); setAdjustTarget("") }}>
@@ -688,49 +697,50 @@ export default function BankAccountsPage() {
 
                 {detailTab === "edit" && (
                   <div className="mt-4 space-y-6">
-                    <form action={(formData) => handleUpdate(selectedAccount.id, formData)} className="grid gap-4">
-                      <div className="space-y-1.5">
-                        <Label>Nome da conta</Label>
-                        <Input className="uppercase" name="name" defaultValue={selectedAccount.name} onInput={uppercaseInput} required />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Instituição</Label>
-                        <Input className="uppercase" name="institution" defaultValue={selectedAccount.institution ?? ""} onInput={uppercaseInput} />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Tipo da conta</Label>
+                    <form action={(formData) => handleUpdate(selectedAccount.id, formData)} className="space-y-6">
+                      <FormSection icon={Wallet} title="Identificação">
+                        <FormField label="Nome da conta" required>
+                          <Input className="uppercase" name="name" defaultValue={selectedAccount.name} onInput={uppercaseInput} required />
+                        </FormField>
+                        <FormField label="Instituição" hint="Opcional">
+                          <Input className="uppercase" name="institution" defaultValue={selectedAccount.institution ?? ""} onInput={uppercaseInput} />
+                        </FormField>
                         <input type="hidden" name="type" value={editingType} />
-                        <Select value={editingType} items={ACCOUNT_TYPE_ITEMS} onValueChange={(v) => setEditingType(v as BankAccount["type"])}>
-                          <SelectTrigger className="w-full">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="CHECKING">Corrente</SelectItem>
-                            <SelectItem value="SAVINGS">Poupança</SelectItem>
-                            <SelectItem value="DIGITAL">Digital</SelectItem>
-                            <SelectItem value="CASH">Dinheiro</SelectItem>
-                            <SelectItem value="INVESTMENT">Investimento</SelectItem>
-                            <SelectItem value="BENEFIT">Benefício / Pré-pago</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      {editingType === "BENEFIT" ? (
-                        <div className="space-y-1.5">
-                          <Label>Valor por dia trabalhado (opcional)</Label>
-                          <Input key={editingType} name="benefitDailyRate" type="number" step="0.01" min="0.01" placeholder="Ex: 22,00" defaultValue={selectedAccount.benefitDailyRate ?? ""} />
-                          <p className="text-xs text-muted-foreground">A conta benefício não permite cheque especial nem transferências.</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-1.5">
-                          <Label>Limite cheque especial</Label>
-                          <Input key={editingType} name="overdraftLimit" type="number" step="0.01" placeholder="0,00" defaultValue={selectedAccount.overdraftLimit.toFixed(2)} />
-                          <p className="text-xs text-muted-foreground">0 = sem cheque especial</p>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2">
-                        <Label>Cor:</Label>
-                        <Input name="color" type="color" defaultValue={selectedAccount.color} className="w-16" />
-                      </div>
+                        <FormField
+                          label="Tipo da conta"
+                          hint={editingType === "BENEFIT" ? "Para vale-alimentação, refeição e outros saldos fornecidos pela empresa." : undefined}
+                        >
+                          <Select value={editingType} items={ACCOUNT_TYPE_ITEMS} onValueChange={(v) => setEditingType(v as BankAccount["type"])}>
+                            <SelectTrigger className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="CHECKING">Corrente</SelectItem>
+                              <SelectItem value="SAVINGS">Poupança</SelectItem>
+                              <SelectItem value="DIGITAL">Digital</SelectItem>
+                              <SelectItem value="CASH">Dinheiro</SelectItem>
+                              <SelectItem value="INVESTMENT">Investimento</SelectItem>
+                              <SelectItem value="BENEFIT">Benefício / Pré-pago</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormField>
+                      </FormSection>
+
+                      <FormSection icon={Coins} title="Valores">
+                        {editingType === "BENEFIT" ? (
+                          <FormField label="Valor por dia trabalhado" hint="Opcional — usado para sugerir o valor da recarga mensal.">
+                            <Input key={editingType} name="benefitDailyRate" type="number" step="0.01" min="0.01" placeholder="Ex: 22,00" defaultValue={selectedAccount.benefitDailyRate ?? ""} />
+                          </FormField>
+                        ) : (
+                          <FormField label="Limite cheque especial" hint="0 = sem cheque especial">
+                            <Input key={editingType} name="overdraftLimit" type="number" step="0.01" placeholder="0,00" defaultValue={selectedAccount.overdraftLimit.toFixed(2)} />
+                          </FormField>
+                        )}
+                        <FormField label="Cor">
+                          <Input name="color" type="color" defaultValue={selectedAccount.color} className="w-16" />
+                        </FormField>
+                      </FormSection>
+
                       <Button type="submit" className="w-full" disabled={updateSubmitting}>
                         {updateSubmitting ? "Salvando..." : "Salvar alterações"}
                       </Button>
