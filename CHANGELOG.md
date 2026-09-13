@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.41] - 2026-09-13
+
+### Corrigido
+
+- O sheet de edição de ocorrências de custos fixos perdeu o espaçamento residual no topo, ficando alinhado ao padrão dos demais formulários.
+
 ## [0.2.40] - 2026-09-13
 
 ### Adicionado
