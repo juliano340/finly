@@ -24,9 +24,17 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.42"
+export const CURRENT_VERSION = "0.2.43"
 
 export const releases = [
+  {
+    version: "0.2.43",
+    date: "2026-09-13",
+    changes: [
+      { type: "feat", description: "Estorno de movimentações manuais e recargas direto na aba Movimentar da conta — movimentos gerados por transações, custos fixos e transferências continuam protegidos e devem ser estornados pela origem." },
+      { type: "fix", description: "O anel de foco dos campos do wizard de transferência não é mais cortado pela barra de rolagem." },
+    ],
+  },
   {
     version: "0.2.42",
     date: "2026-09-13",

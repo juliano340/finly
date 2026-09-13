@@ -2,6 +2,16 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.43] - 2026-09-13
+
+### Adicionado
+
+- Estorno de movimentações manuais e recargas direto na aba Movimentar da conta — movimentos gerados por transações, custos fixos e transferências continuam protegidos e devem ser estornados pela origem.
+
+### Corrigido
+
+- O anel de foco dos campos do wizard de transferência não é mais cortado pela barra de rolagem.
+
 ## [0.2.42] - 2026-09-13
 
 ### Adicionado
