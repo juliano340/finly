@@ -2,6 +2,20 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.42] - 2026-09-13
+
+### Adicionado
+
+- Wizard de transferência entre contas no padrão dos formulários, com bloqueio de valores acima do saldo somado ao cheque especial (banner vermelho e avanço desabilitado) e barra de rolagem flutuante nos painéis.
+
+### Corrigido
+
+- A scrollbar de dialogs e sheets agora segue a customização visual do app, com thumb fina e respiro no trilho.
+
+### Alterado
+
+- Abas Movimentar, Recarga e Ajuste da conta padronizadas com seções e campos com rótulo, incluindo correção no Ajuste de saldo.
+
 ## [0.2.41] - 2026-09-13
 
 ### Corrigido

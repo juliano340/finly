@@ -24,9 +24,18 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.41"
+export const CURRENT_VERSION = "0.2.42"
 
 export const releases = [
+  {
+    version: "0.2.42",
+    date: "2026-09-13",
+    changes: [
+      { type: "feat", description: "Wizard de transferência entre contas no padrão dos formulários, com bloqueio de valores acima do saldo somado ao cheque especial (banner vermelho e avanço desabilitado) e barra de rolagem flutuante nos painéis." },
+      { type: "refactor", description: "Abas Movimentar, Recarga e Ajuste da conta padronizadas com seções e campos com rótulo, incluindo correção no Ajuste de saldo." },
+      { type: "fix", description: "A scrollbar de dialogs e sheets agora segue a customização visual do app, com thumb fina e respiro no trilho." },
+    ],
+  },
   {
     version: "0.2.41",
     date: "2026-09-13",
