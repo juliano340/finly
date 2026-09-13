@@ -282,7 +282,7 @@ export default function BankAccountsPage() {
           <h1 className="text-2xl font-bold tracking-tight">Contas e benefícios</h1>
           <p className="text-muted-foreground">Controle dinheiro disponível e saldos de benefícios separadamente.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
           <Button variant="outline" size="sm" disabled={accounts.filter((account) => account.type !== "BENEFIT").length < 2} onClick={() => setTransferOpen(true)}><ArrowLeftRight className="mr-2 h-4 w-4" />Transferir</Button>
           <AddButton label="Nova conta" onClick={() => setCreating(true)} />
         </div>
