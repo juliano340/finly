@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
 import { cardInvoiceSchema } from "@/features/card-invoices/card-invoices.schema"
 import { createCardInvoice, getCardInvoices } from "@/features/card-invoices/card-invoices.service"
 
@@ -26,6 +27,13 @@ export async function POST(request: Request) {
   const parsed = cardInvoiceSchema.safeParse(await request.json())
   if (!parsed.success) {
     return NextResponse.json({ error: "Dados inválidos" }, { status: 400 })
+  }
+
+  const existing = await prisma.cardInvoice.findFirst({
+    where: { cardId: parsed.data.cardId, month: parsed.data.month, userId: session.user.id },
+  })
+  if (existing) {
+    return NextResponse.json({ error: "Já existe fatura para este cartão neste mês" }, { status: 409 })
   }
 
   const invoice = await createCardInvoice(session.user.id, parsed.data)
