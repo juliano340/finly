@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.46"
+export const CURRENT_VERSION = "0.2.47"
 
 export const releases = [
+  {
+    version: "0.2.47",
+    date: "2026-09-13",
+    changes: [
+      { type: "fix", description: "No mobile, os botões Transferir e Nova conta ficam empilhados na página de contas, sem quebrar o layout." },
+    ],
+  },
   {
     version: "0.2.46",
     date: "2026-09-13",

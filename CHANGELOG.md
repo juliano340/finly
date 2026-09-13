@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.47] - 2026-09-13
+
+### Corrigido
+
+- No mobile, os botões Transferir e Nova conta ficam empilhados na página de contas, sem quebrar o layout.
+
 ## [0.2.46] - 2026-09-13
 
 ### Alterado
