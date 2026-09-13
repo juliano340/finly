@@ -72,6 +72,11 @@ export default function ChangelogPage() {
   const [page, setPage] = useState(1)
   const groups = getReleaseGroups(page)
 
+  function goToPage(next: number) {
+    setPage(Math.min(Math.max(next, 1), totalPages))
+    window.scrollTo({ top: 0, behavior: "instant" })
+  }
+
   return (
     <div className="mx-auto max-w-3xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
       <div>
@@ -115,7 +120,7 @@ export default function ChangelogPage() {
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              onClick={() => goToPage(page - 1)}
               disabled={page === 1}
               className="inline-flex h-7 items-center gap-1 rounded-lg border bg-background px-2.5 text-sm font-medium transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -123,7 +128,7 @@ export default function ChangelogPage() {
             </button>
             <button
               type="button"
-              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+              onClick={() => goToPage(page + 1)}
               disabled={page === totalPages}
               className="inline-flex h-7 items-center gap-1 rounded-lg border bg-background px-2.5 text-sm font-medium transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
             >
