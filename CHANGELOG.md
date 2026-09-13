@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.48] - 2026-09-13
+
+### Corrigido
+
+- Os cards de resumo financeiro ficam empilhados com linhas separadoras no mobile, aproveitando melhor o espaço (no desktop nada muda).
+
 ## [0.2.47] - 2026-09-13
 
 ### Corrigido
