@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.38] - 2026-09-13
+
+### Alterado
+
+- Formulário de nova conta padronizado com as seções Identificação e Valores. A edição agora preserva o saldo da conta e o tipo selecionado é enviado corretamente ao criar ou editar, inclusive ao trocar para conta benefício.
+
 ## [0.2.37] - 2026-09-12
 
 ### Corrigido

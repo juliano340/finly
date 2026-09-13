@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.37"
+export const CURRENT_VERSION = "0.2.38"
 
 export const releases = [
+  {
+    version: "0.2.38",
+    date: "2026-09-13",
+    changes: [
+      { type: "refactor", description: "Formulário de nova conta padronizado com as seções Identificação e Valores. A edição agora preserva o saldo da conta e o tipo selecionado é enviado corretamente ao criar ou editar, inclusive ao trocar para conta benefício." },
+    ],
+  },
   {
     version: "0.2.37",
     date: "2026-09-12",
