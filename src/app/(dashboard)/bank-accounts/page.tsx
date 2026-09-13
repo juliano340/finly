@@ -3,7 +3,7 @@
 import type { FormEvent } from "react"
 import { useEffect, useRef, useState } from "react"
 import { useFormStatus } from "react-dom"
-import { ArrowLeftRight, ArrowUpDown, Coins, Eye, Gift, Info, Loader2, Pencil, Plus, Settings, SlidersHorizontal, Trash2, Undo2, Wallet } from "lucide-react"
+import { ArrowLeftRight, ArrowUp, ArrowDown, ArrowUpDown, Coins, Eye, Gift, Info, Loader2, Pencil, Plus, Settings, SlidersHorizontal, Trash2, Undo2, Wallet } from "lucide-react"
 import { toast } from "sonner"
 import { AddButton } from "@/components/ui/add-button"
 import { Button } from "@/components/ui/button"
@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { TransferWizard } from "@/features/bank-accounts/components/transfer-wizard"
-import { formatCurrency, formatDate } from "@/lib/utils"
+import { formatCurrency } from "@/lib/utils"
 import { isAccountNegative, getAvailableBalance } from "@/lib/balance"
 import { ariaSort, sortButtonLabel } from "@/lib/accessible-sort"
 
@@ -624,53 +624,104 @@ export default function BankAccountsPage() {
                     <div className="space-y-1">
                       {selectedAccount.movements.length === 0 ? (
                         <p className="text-sm text-muted-foreground">Nenhuma movimentação.</p>
-                      ) : selectedAccount.movements.map((mov) => (
-                        <div key={mov.id} className="flex items-center justify-between rounded-lg border p-2 text-sm">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="truncate">{formatMovementDescription(mov.description, mov.type)} · {formatDate(mov.date)}</span>
-                            {mov.transactionId && (
-                              <a
-                                href={`/transactions?id=${mov.transactionId}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="shrink-0 text-xs text-primary hover:underline"
-                                title="Ver transação original"
-                              >
-                                Ver lançamento
-                              </a>
-                            )}
-                          </div>
-                          <div className="flex shrink-0 items-center gap-1 ml-2">
-                            <span className={`${mov.type === "INCOME" ? "text-success" : "text-destructive"}`}>{mov.type === "INCOME" ? "+" : "-"}{formatCurrency(mov.amount)}</span>
-                            {(() => {
-                              const isLinked = !!mov.transactionId
-                              const isTransfer = mov.description?.startsWith("TRANSFERENCIA_") === true
-                              const isDisabled = isLinked || isTransfer || reversingId === mov.id
-                              const tooltipText = isTransfer
-                                ? "Movimento de transferência não pode ser estornado individualmente"
-                                : isLinked
-                                  ? "Estorne pela transação original"
-                                  : undefined
-                              return (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger
-                                      disabled={isDisabled}
-                                      title={tooltipText ?? "Estornar"}
-                                      className="inline-flex h-7 w-7 items-center justify-center rounded-md hover:bg-muted disabled:pointer-events-none disabled:opacity-50 data-[trigger-disabled]:pointer-events-none data-[trigger-disabled]:opacity-50"
-                                      onClick={() => !isDisabled && setConfirmReversal(mov.id)}
-                                    >
-                                      {reversingId === mov.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Undo2 className="h-3.5 w-3.5" />}
-                                    </TooltipTrigger>
-                                    {tooltipText && <TooltipContent>{tooltipText}</TooltipContent>}
-                                  </Tooltip>
-                                </TooltipProvider>
-                              )
-                            })()}
-                          </div>
-                        </div>
-                      ))}
+                      ) : (() => {
+                        const sortedAsc = [...selectedAccount.movements].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                        const saldoMap = new Map<string, number>()
+                        let saldo = selectedAccount.initialBalance
+                        for (const m of sortedAsc) {
+                          saldo += m.type === "INCOME" ? m.amount : -m.amount
+                          saldoMap.set(m.id, saldo)
+                        }
+                        const displayDesc = [...selectedAccount.movements].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                        let lastDay = ""
+                        return displayDesc.map((mov) => {
+                          const dt = new Date(mov.date)
+                          const dayKey = dt.toLocaleDateString("pt-BR", { timeZone: "UTC" })
+                          const weekday = dt.toLocaleDateString("pt-BR", { weekday: "long", timeZone: "UTC" })
+                          const showSeparator = dayKey !== lastDay
+                          if (showSeparator) lastDay = dayKey
+                          const formattedDate = dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" })
+                          const formattedTime = dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })
+                          const saldoAtual = saldoMap.get(mov.id)
+                          return (
+                            <div key={mov.id}>
+                              {showSeparator && (
+                                <p className="pt-2 pb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                                  {dayKey} — {weekday}
+                                </p>
+                              )}
+                              <div className="flex items-start gap-3 rounded-lg border p-2.5 text-sm">
+                                <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${mov.type === "INCOME" ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
+                                  {mov.type === "INCOME" ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />}
+                                </span>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="truncate font-medium">{formatMovementDescription(mov.description, mov.type)}</span>
+                                    {mov.transactionId && (
+                                      <a
+                                        href={`/transactions?id=${mov.transactionId}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="shrink-0 text-xs text-primary hover:underline"
+                                        title="Ver transação original"
+                                      >
+                                        Ver lançamento
+                                      </a>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">
+                                    {formattedDate} às {formattedTime}
+                                  </p>
+                                </div>
+                                <div className="flex shrink-0 flex-col items-end gap-0.5">
+                                  <span className={`font-medium ${mov.type === "INCOME" ? "text-success" : "text-destructive"}`}>
+                                    {mov.type === "INCOME" ? "+" : "-"}{formatCurrency(mov.amount)}
+                                  </span>
+                                  {saldoAtual !== undefined && (
+                                    <span className="text-xs text-muted-foreground">
+                                      saldo {formatCurrency(saldoAtual)}
+                                    </span>
+                                  )}
+                                  {(() => {
+                                    const isLinked = !!mov.transactionId
+                                    const isTransfer = mov.description?.startsWith("TRANSFERENCIA_") === true
+                                    const isAdjust = mov.description?.startsWith("AJUSTE_MANUAL:") === true || mov.description === "AJUSTE MANUAL DE SALDO"
+                                    const isDisabled = isLinked || isAdjust || reversingId === mov.id
+                                    const tooltipText = isAdjust
+                                      ? "Ajustes de saldo não são estornáveis"
+                                      : isLinked
+                                        ? "Estorne pela transação original"
+                                        : isTransfer
+                                          ? "Estornar transferência (origem e destino juntos)"
+                                          : undefined
+                                    return (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger
+                                            disabled={isDisabled}
+                                            title={tooltipText ?? "Estornar"}
+                                            className="inline-flex h-6 w-6 items-center justify-center rounded-md hover:bg-muted disabled:pointer-events-none disabled:opacity-50 data-[trigger-disabled]:pointer-events-none data-[trigger-disabled]:opacity-50"
+                                            onClick={() => !isDisabled && setConfirmReversal(mov.id)}
+                                          >
+                                            {reversingId === mov.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Undo2 className="h-3 w-3" />}
+                                          </TooltipTrigger>
+                                          {tooltipText && <TooltipContent>{tooltipText}</TooltipContent>}
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    )
+                                  })()}
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })
+                      })()}
                     </div>
+                    {selectedAccount.movements.length === 50 && (
+                      <p className="pt-1 text-center text-xs text-muted-foreground">
+                        Exibindo os 50 movimentos mais recentes.
+                      </p>
+                    )}
                   </div>
                 )}
 
