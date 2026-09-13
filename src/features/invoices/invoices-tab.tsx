@@ -1690,11 +1690,10 @@ export function InvoicesTab() {
                       {formatCurrency(selectedInvoice.effectiveTotal)}
                     </p>
                   </div>
-                  <form ref={editFormRef} className="space-y-4">
+                  <form ref={editFormRef} className="space-y-6">
                     {!editLocked && (
-                      <>
-                        <div className="space-y-1.5">
-                          <Label>Cartão</Label>
+                      <FormSection icon={CreditCard} title="Cartão e vencimento">
+                        <FormField label="Cartão" required>
                           <input
                             type="hidden"
                             name="cardId"
@@ -1718,18 +1717,24 @@ export function InvoicesTab() {
                               ))}
                             </SelectContent>
                           </Select>
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label>Data de vencimento</Label>
+                        </FormField>
+                        <FormField label="Data de vencimento" required>
                           <Input
                             name="dueDate"
                             type="date"
                             defaultValue={selectedInvoice.dueDate.slice(0, 10)}
                             required
                           />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label>Como calcular</Label>
+                        </FormField>
+                      </FormSection>
+                    )}
+
+                    {!editLocked && (
+                      <FormSection icon={Calculator} title="Cálculo">
+                        <FormField
+                          label="Como calcular"
+                          hint="Itens e valor informado são preservados ao trocar."
+                        >
                           <input
                             type="hidden"
                             name="calculationMode"
@@ -1756,12 +1761,8 @@ export function InvoicesTab() {
                               </SelectItem>
                             </SelectContent>
                           </Select>
-                          <p className="text-xs text-muted-foreground">
-                            Itens e valor informado são preservados ao trocar.
-                          </p>
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label>Valor total informado</Label>
+                        </FormField>
+                        <FormField label="Valor total informado">
                           <Input
                             name="amount"
                             type="number"
@@ -1770,11 +1771,11 @@ export function InvoicesTab() {
                             defaultValue={selectedInvoice.enteredTotal}
                             required
                           />
-                        </div>
-                      </>
+                        </FormField>
+                      </FormSection>
                     )}
-                    <div className="space-y-1.5">
-                      <Label>Etapa da fatura</Label>
+
+                    <FormField label="Etapa da fatura">
                       {selectedInvoice.lifecycleStatus !== "PAID" && (
                         <input
                           type="hidden"
@@ -1802,12 +1803,12 @@ export function InvoicesTab() {
                           <SelectItem value="PAID">Paga</SelectItem>
                         </SelectContent>
                       </Select>
-                      {editLocked ? (
+                      {editLocked && (
                         <p className="text-xs text-muted-foreground">
-                          Fatura {selectedInvoice.lifecycleStatus === "PAID" ? "paga" : "fechada"}: escolha a etapa Aberta para reabri-la e editar vencimento e valores.
+                          Fatura paga: use o botão Estornar pagamento na linha da fatura para reabri-la e editar vencimento e valores.
                         </p>
-                      ) : null}
-                    </div>
+                      )}
+                    </FormField>
                     <div className="flex gap-2">
                       <Button
                         type="button"
