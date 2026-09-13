@@ -802,6 +802,7 @@ export function InvoicesTab() {
               setCreateCardId("");
               setCreateDueDate("");
               setCreateLifecycleStatus("OPEN");
+              setCreateMode("ENTERED_TOTAL");
               setCreating(true);
             }}
           >
@@ -1798,6 +1799,8 @@ export function InvoicesTab() {
                       <Button
                         type="button"
                         variant="outline"
+                        aria-label="Excluir fatura"
+                        title="Excluir fatura"
                         onClick={() => setDeleteTarget(selectedInvoice.id)}
                       >
                         <Trash2 className="h-4 w-4" />
