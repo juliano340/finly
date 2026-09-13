@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.43"
+export const CURRENT_VERSION = "0.2.44"
 
 export const releases = [
+  {
+    version: "0.2.44",
+    date: "2026-09-13",
+    changes: [
+      { type: "refactor", description: "Estornos mais seguros: ajustes de saldo não podem ser estornados (inclusive os antigos) e nenhuma remoção deixa a conta abaixo do cheque especial. Saldos negativos agora exibem badge de SALDO NEGATIVO ou EM CHEQUE ESPECIAL na listagem e no painel da conta." },
+    ],
+  },
   {
     version: "0.2.43",
     date: "2026-09-13",

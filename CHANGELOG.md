@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.44] - 2026-09-13
+
+### Alterado
+
+- Estornos mais seguros: ajustes de saldo não podem ser estornados (inclusive os antigos) e nenhuma remoção deixa a conta abaixo do cheque especial. Saldos negativos agora exibem badge de SALDO NEGATIVO ou EM CHEQUE ESPECIAL na listagem e no painel da conta.
+
 ## [0.2.43] - 2026-09-13
 
 ### Adicionado
