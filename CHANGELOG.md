@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.46] - 2026-09-13
+
+### Alterado
+
+- A paginação do changelog agora rola a página de volta ao topo ao trocar de página.
+
 ## [0.2.45] - 2026-09-13
 
 ### Adicionado

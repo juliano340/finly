@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.45"
+export const CURRENT_VERSION = "0.2.46"
 
 export const releases = [
+  {
+    version: "0.2.46",
+    date: "2026-09-13",
+    changes: [
+      { type: "refactor", description: "A paginação do changelog agora rola a página de volta ao topo ao trocar de página." },
+    ],
+  },
   {
     version: "0.2.45",
     date: "2026-09-13",
