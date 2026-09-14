@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.50"
+export const CURRENT_VERSION = "0.2.51"
 
 export const releases = [
+  {
+    version: "0.2.51",
+    date: "2026-09-13",
+    changes: [
+      { type: "feat", description: "Botão Refazer leitura do PDF na Análise da Fatura: substitui os itens importados anteriores pela nova leitura, preserva os itens manuais da fatura e atualiza ranking e gráficos na hora." },
+    ],
+  },
   {
     version: "0.2.50",
     date: "2026-09-13",

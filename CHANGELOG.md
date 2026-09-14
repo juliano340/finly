@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.51] - 2026-09-13
+
+### Adicionado
+
+- Botão Refazer leitura do PDF na Análise da Fatura: substitui os itens importados anteriores pela nova leitura, preserva os itens manuais da fatura e atualiza ranking e gráficos na hora.
+
 ## [0.2.50] - 2026-09-13
 
 ### Corrigido
