@@ -102,6 +102,12 @@ export default function AnalysisPage({
       .finally(() => setLoading(false))
   }, [invoiceId])
 
+  const refetchAnalysis = useCallback(async () => {
+    if (!invoiceId) return
+    const res = await fetch(`/api/invoices/${invoiceId}/import/analysis`)
+    if (res.ok) setData(await res.json())
+  }, [invoiceId])
+
   const updateTransactionCategory = useCallback(
     async (transactionId: string, categoryId: string | null) => {
       if (!invoiceId || !data) return
@@ -130,23 +136,7 @@ export default function AnalysisPage({
 
         if (!res.ok) throw new Error("Erro ao salvar categoria")
 
-        const updated = await res.json()
-
-        setData((prev) => {
-          if (!prev) return prev
-          return {
-            ...prev,
-            transactions: prev.transactions.map((t) =>
-              t.id === transactionId
-                ? {
-                    ...t,
-                    categoryId: updated.category?.id ?? null,
-                    suggestedCategoryId: null,
-                  }
-                : t
-            ),
-          }
-        })
+        await refetchAnalysis()
 
         toast.success("Categoria atualizada")
       } catch {
@@ -170,7 +160,7 @@ export default function AnalysisPage({
         })
       }
     },
-    [invoiceId, data]
+    [invoiceId, data, refetchAnalysis]
   )
 
   const handleAutoCategorize = useCallback(async () => {
