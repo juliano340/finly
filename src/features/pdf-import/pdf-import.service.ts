@@ -256,11 +256,12 @@ export async function updateTransactionCategory(
       where: {
         normalizedDesc_userId: { normalizedDesc, userId },
       },
-      update: { categoryId },
+      update: { categoryId, importSessionId: transaction.importSessionId },
       create: {
         normalizedDesc,
         categoryId,
         userId,
+        importSessionId: transaction.importSessionId,
       },
     })
   } else {
@@ -456,9 +457,15 @@ export async function getInvoiceAnalysis(
     orderBy: { name: "asc" },
   })
 
+  const globalMappings = await db.descriptionMapping.findMany({
+    where: { userId },
+  })
   const mappingByDesc = new Map(
-    session.descriptionMappings.map((m) => [m.normalizedDesc, m.categoryId])
+    globalMappings.map((m) => [m.normalizedDesc, m.categoryId])
   )
+  for (const m of session.descriptionMappings) {
+    mappingByDesc.set(m.normalizedDesc, m.categoryId)
+  }
 
   const purchases = session.transactions
     .filter((t) => t.type !== "credit")
@@ -479,6 +486,7 @@ export async function getInvoiceAnalysis(
       total: number
       originals: Set<string>
       txs: { date: Date | null; amount: number; description: string }[]
+      categoryIds: Map<string, number>
     }
   >()
 
@@ -489,6 +497,7 @@ export async function getInvoiceAnalysis(
       total: 0,
       originals: new Set(),
       txs: [],
+      categoryIds: new Map<string, number>(),
     }
     entry.count++
     entry.total += Math.abs(t.amount)
@@ -498,12 +507,17 @@ export async function getInvoiceAnalysis(
       amount: t.amount,
       description: t.description,
     })
+    if (t.categoryId) {
+      entry.categoryIds.set(t.categoryId, (entry.categoryIds.get(t.categoryId) ?? 0) + 1)
+    }
     rankingMap.set(key, entry)
   }
 
   const rankingRaw = Array.from(rankingMap.entries())
-    .map(([description, { count, total, originals, txs }]) => {
-      const directCategoryId = mappingByDesc.get(description) ?? null
+    .map(([description, { count, total, originals, txs, categoryIds }]) => {
+      const transactionCategoryId =
+        Array.from(categoryIds.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
+      const directCategoryId = mappingByDesc.get(description) ?? transactionCategoryId
       return {
         description,
         count,
