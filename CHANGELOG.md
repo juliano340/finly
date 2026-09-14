@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.52] - 2026-09-13
+
+### Corrigido
+
+- Os alertas de saldo do passo Valor do wizard de transferência ganharam espaço reservado e um leve atraso de exibição, sem pulo de layout; o aviso vermelho tem prioridade sobre o âmbar.
+
 ## [0.2.51] - 2026-09-13
 
 ### Adicionado

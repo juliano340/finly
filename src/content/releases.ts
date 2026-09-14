@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.51"
+export const CURRENT_VERSION = "0.2.52"
 
 export const releases = [
+  {
+    version: "0.2.52",
+    date: "2026-09-13",
+    changes: [
+      { type: "fix", description: "Os alertas de saldo do passo Valor do wizard de transferência ganharam espaço reservado e um leve atraso de exibição, sem pulo de layout; o aviso vermelho tem prioridade sobre o âmbar." },
+    ],
+  },
   {
     version: "0.2.51",
     date: "2026-09-13",
