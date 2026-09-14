@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { AlertTriangle, ArrowLeft, ArrowLeftRight, ArrowRight, CalendarDays, Check, Coins, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -70,6 +70,15 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
     parsedAmount > 0 &&
     parsedAmount > fromAccount.balance &&
     canWithdraw(fromAccount.balance, fromAccount.overdraftLimit ?? 0, parsedAmount)
+
+  const [displayedAlert, setDisplayedAlert] = useState<"none" | "red" | "amber">("none")
+
+  useEffect(() => {
+    const target = insuficienteTotal ? "red" : willOverdraw ? "amber" : "none"
+    if (target === displayedAlert) return
+    const id = setTimeout(() => setDisplayedAlert(target), 250)
+    return () => clearTimeout(id)
+  }, [insuficienteTotal, willOverdraw, displayedAlert])
 
   const isStep1Valid = !!fromId && !!toId
   const isStep2Valid =
@@ -343,25 +352,27 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
                 </div>
               )}
 
-              {insuficienteTotal && (
-                <div className="flex gap-2 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-900">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                  <div>
-                    <p className="font-medium">Saldo insuficiente (incluindo cheque especial).</p>
-                    <p className="text-xs text-red-800">Não é possível transferir este valor. Reduza o valor ou escolha outra conta de origem.</p>
+              <div className="min-h-[76px]" aria-live="polite">
+                {displayedAlert === "red" ? (
+                  <div className="flex gap-2 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-900 opacity-100 transition-opacity duration-150">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <div>
+                      <p className="font-medium">Saldo insuficiente (incluindo cheque especial).</p>
+                      <p className="text-xs text-red-800">Não é possível transferir este valor. Reduza o valor ou escolha outra conta de origem.</p>
+                    </div>
                   </div>
-                </div>
-              )}
-
-              {willOverdraw && (
-                <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                  <div>
-                    <p className="font-medium">Essa transferência deixará a conta origem negativa.</p>
-                    <p className="text-xs text-amber-800">A operação ainda pode ser concluída se esse for o ajuste desejado.</p>
+                ) : displayedAlert === "amber" ? (
+                  <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 opacity-100 transition-opacity duration-150">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <div>
+                      <p className="font-medium">Essa transferência deixará a conta origem negativa.</p>
+                      <p className="text-xs text-amber-800">A operação ainda pode ser concluída se esse for o ajuste desejado.</p>
+                    </div>
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="min-h-[76px] opacity-0" aria-hidden="true" />
+                )}
+              </div>
             </div>
           )}
 
