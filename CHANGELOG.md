@@ -2,6 +2,13 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.50] - 2026-09-13
+
+### Corrigido
+
+- Ao trocar a categoria de uma compra na Análise da Fatura, o ranking, os gráficos e os contadores de filtro são atualizados na hora.
+- Categorias definidas manualmente passam a valer no ranking de descrições e no gráfico por categoria, inclusive para importações antigas.
+
 ## [0.2.49] - 2026-09-13
 
 ### Adicionado

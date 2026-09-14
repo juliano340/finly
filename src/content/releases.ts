@@ -24,9 +24,17 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.49"
+export const CURRENT_VERSION = "0.2.50"
 
 export const releases = [
+  {
+    version: "0.2.50",
+    date: "2026-09-13",
+    changes: [
+      { type: "fix", description: "Ao trocar a categoria de uma compra na Análise da Fatura, o ranking, os gráficos e os contadores de filtro são atualizados na hora." },
+      { type: "fix", description: "Categorias definidas manualmente passam a valer no ranking de descrições e no gráfico por categoria, inclusive para importações antigas." },
+    ],
+  },
   {
     version: "0.2.49",
     date: "2026-09-13",
