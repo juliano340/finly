@@ -17,9 +17,11 @@ export async function uploadAndParsePdf(
   file: File,
   userId: string,
   cardInvoiceId?: string,
-  client?: PrismaClient
+  client?: PrismaClient,
+  options?: { replace?: boolean }
 ): Promise<PdfImportResult> {
   const db = client ?? defaultPrisma
+  const replace = options?.replace ?? false
 
   if (cardInvoiceId) {
     const invoice = await db.cardInvoice.findFirst({
@@ -41,38 +43,70 @@ export async function uploadAndParsePdf(
 
   const parsed = parser.parse(rawText)
 
-  const session = await db.importSession.create({
-    data: {
-      fileName: file.name,
-      bank: parsed.bank,
-      invoiceTotal: parsed.invoiceTotal,
-      dueDate: parsed.dueDate,
-      rawText,
-      userId,
-      transactions: {
-        create: parsed.transactions.map((t) => ({
-          cardIdentifier: t.cardIdentifier,
-          date: t.date,
-          description: t.description,
-          amount: t.amount,
-          type: t.type,
-          rawLine: t.rawLine,
-          userId,
-        })),
-      },
+  const sessionData = {
+    fileName: file.name,
+    bank: parsed.bank,
+    invoiceTotal: parsed.invoiceTotal,
+    dueDate: parsed.dueDate,
+    rawText,
+    userId,
+    transactions: {
+      create: parsed.transactions.map((t) => ({
+        cardIdentifier: t.cardIdentifier,
+        date: t.date,
+        description: t.description,
+        amount: t.amount,
+        type: t.type,
+        rawLine: t.rawLine,
+        userId,
+      })),
     },
-  })
+  }
 
-  if (cardInvoiceId) {
-    await db.cardInvoice.update({
-      where: { id: cardInvoiceId },
-      data: {
-        importSessionId: session.id,
-        calculationMode: "ENTERED_TOTAL",
-        ...(parsed.invoiceTotal !== null && { amount: parsed.invoiceTotal, enteredTotal: parsed.invoiceTotal }),
-        ...(parsed.dueDate !== null && { dueDate: parsed.dueDate }),
-      },
+  const invoiceData = {
+    calculationMode: "ENTERED_TOTAL" as const,
+    ...(parsed.invoiceTotal !== null && { amount: parsed.invoiceTotal, enteredTotal: parsed.invoiceTotal }),
+    ...(parsed.dueDate !== null && { dueDate: parsed.dueDate }),
+  }
+
+  let session: { id: string }
+  if (replace && cardInvoiceId) {
+    session = await db.$transaction(async (tx) => {
+      const current = await tx.cardInvoice.findFirst({
+        where: { id: cardInvoiceId, userId },
+        select: { importSessionId: true },
+      })
+      if (!current) throw new Error("Fatura não encontrada")
+
+      if (current.importSessionId) {
+        const previousSessionId = current.importSessionId
+        await tx.cardInvoiceItem.deleteMany({
+          where: {
+            invoiceId: cardInvoiceId,
+            importedTransaction: { importSessionId: previousSessionId },
+          },
+        })
+        await tx.descriptionMapping.deleteMany({
+          where: { importSessionId: previousSessionId, userId },
+        })
+        await tx.importSession.delete({ where: { id: previousSessionId } })
+      }
+
+      const created = await tx.importSession.create({ data: sessionData })
+      await tx.cardInvoice.update({
+        where: { id: cardInvoiceId },
+        data: { importSessionId: created.id, ...invoiceData },
+      })
+      return created
     })
+  } else {
+    session = await db.importSession.create({ data: sessionData })
+    if (cardInvoiceId) {
+      await db.cardInvoice.update({
+        where: { id: cardInvoiceId },
+        data: { importSessionId: session.id, ...invoiceData },
+      })
+    }
   }
 
   return {

@@ -17,6 +17,7 @@ export async function POST(
   try {
     const formData = await request.formData()
     const file = formData.get("file") as File | null
+    const replace = formData.get("replace") === "true"
 
     if (!file) {
       return NextResponse.json({ error: "Nenhum arquivo enviado" }, { status: 400 })
@@ -30,7 +31,9 @@ export async function POST(
     const result = await uploadAndParsePdf(
       file,
       session.user.id,
-      invoiceId
+      invoiceId,
+      undefined,
+      { replace }
     )
 
     return NextResponse.json(result)

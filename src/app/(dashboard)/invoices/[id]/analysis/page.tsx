@@ -1,12 +1,14 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { ArrowLeft, Loader2, Sparkles } from "lucide-react"
+import { ArrowLeft, Loader2, RefreshCw, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { toast } from "sonner"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { CategoryCell } from "@/features/invoices/category-cell"
+import { ImportPdfDialog } from "@/features/invoices/import-pdf-dialog"
 import { CategoryChart } from "./category-chart"
 import { SpendingTimeline } from "./spending-timeline"
 import { SpendingWaves } from "./spending-waves"
@@ -85,6 +87,8 @@ export default function AnalysisPage({
   const [error, setError] = useState<string | null>(null)
   const [savingTxs, setSavingTxs] = useState<Set<string>>(new Set())
   const [autoCategorizing, setAutoCategorizing] = useState(false)
+  const [redoConfirmOpen, setRedoConfirmOpen] = useState(false)
+  const [redoImportOpen, setRedoImportOpen] = useState(false)
 
   useEffect(() => {
     params.then(({ id }) => setInvoiceId(id))
@@ -226,6 +230,15 @@ export default function AnalysisPage({
           <h1 className="text-xl font-bold tracking-tight">Análise da Fatura</h1>
           <p className="text-xs text-muted-foreground">{data.session.fileName}</p>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-auto gap-1.5"
+          onClick={() => setRedoConfirmOpen(true)}
+        >
+          <RefreshCw className="h-3.5 w-3.5" />
+          Refazer leitura do PDF
+        </Button>
       </div>
 
       <div className="grid gap-3 md:grid-cols-4">
@@ -443,6 +456,28 @@ export default function AnalysisPage({
           </CardContent>
         </Card>
       </div>
+
+      <ConfirmDialog
+        open={redoConfirmOpen}
+        onOpenChange={setRedoConfirmOpen}
+        title="Refazer leitura do PDF"
+        description="Os itens importados atuais serão substituídos pela nova leitura."
+        confirmText="Refazer leitura"
+        onConfirm={() => {
+          setRedoConfirmOpen(false)
+          setRedoImportOpen(true)
+        }}
+      />
+
+      <ImportPdfDialog
+        open={redoImportOpen}
+        onOpenChange={setRedoImportOpen}
+        invoiceId={invoiceId ?? undefined}
+        replace
+        onImportComplete={() => {
+          void refetchAnalysis()
+        }}
+      />
     </div>
   )
 }

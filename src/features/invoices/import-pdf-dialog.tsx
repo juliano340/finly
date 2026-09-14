@@ -24,6 +24,7 @@ interface ImportPdfDialogProps {
   onOpenChange: (open: boolean) => void
   invoiceId?: string
   cards?: CardOption[]
+  replace?: boolean
   onImportComplete: (invoiceId?: string) => void
 }
 
@@ -32,6 +33,7 @@ export function ImportPdfDialog({
   onOpenChange,
   invoiceId,
   cards,
+  replace = false,
   onImportComplete,
 }: ImportPdfDialogProps) {
   const [file, setFile] = useState<File | null>(null)
@@ -62,6 +64,10 @@ export function ImportPdfDialog({
 
     if (isStandalone) {
       formData.append("cardId", cardId)
+    }
+
+    if (replace) {
+      formData.append("replace", "true")
     }
 
     try {
