@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.56"
+export const CURRENT_VERSION = "0.2.57"
 
 export const releases = [
+  {
+    version: "0.2.57",
+    date: "2026-09-16",
+    changes: [
+      { type: "fix", description: "Páginas com seletor de mês (fechamento mensal, faturas e custos fixos) agora esperam o mês persistido carregar antes de buscar dados — fim do flash com dados do mês errado na primeira carga." },
+    ],
+  },
   {
     version: "0.2.56",
     date: "2026-09-16",

@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.57] - 2026-09-16
+
+### Corrigido
+
+- Páginas com seletor de mês (fechamento mensal, faturas e custos fixos) agora esperam o mês persistido carregar antes de buscar dados — fim do flash com dados do mês errado na primeira carga.
+
 ## [0.2.56] - 2026-09-16
 
 ### Adicionado
