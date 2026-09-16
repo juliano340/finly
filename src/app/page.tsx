@@ -182,14 +182,16 @@ export default function HomePage() {
         .nav { display: flex; align-items: center; gap: 28px; }
         .nav a { color: var(--muted); font-size: 14px; font-weight: 500; }
         .nav a:hover { color: var(--fg); }
-        .nav-changelog {
+        .nav a.nav-changelog {
           display: inline-flex; align-items: center; gap: 6px;
           padding: 5px 14px; border-radius: var(--radius-pill);
           background: var(--accent-bg); border: 1px solid var(--accent-border);
           color: var(--accent); font-size: 13px; font-weight: 600;
           transition: background .15s, color .15s, border-color .15s;
         }
-        .nav-changelog:hover { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+        [data-theme="light"] .nav a.nav-changelog { color: var(--accent-dark, #16A34A); }
+        .nav a.nav-changelog:hover { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+        [data-theme="light"] .nav a.nav-changelog:hover { color: var(--fg); }
         .nav-changelog-dot {
           width: 6px; height: 6px; border-radius: 50%;
           background: var(--accent); box-shadow: 0 0 6px var(--accent);
