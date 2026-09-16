@@ -2,19 +2,19 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
-## [0.2.55] - 2026-09-13
+## [0.2.55] - 2026-09-16
 
 ### Corrigido
 
 - O card Contas do mês não conta mais duas vezes os custos fixos pagos dentro de um cartão que já tem fatura no mês: essas linhas ganharam a tag 'dentro da fatura' e saíram dos totais e do contador de pagas.
 
-## [0.2.54] - 2026-09-13
+## [0.2.54] - 2026-09-16
 
 ### Corrigido
 
 - A pill Novidades do menu da home teve o contraste corrigido nos temas claro e escuro, com a especificidade do CSS ajustada.
 
-## [0.2.53] - 2026-09-13
+## [0.2.53] - 2026-09-16
 
 ### Adicionado
 
