@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { useTheme } from "next-themes"
 import Link from "next/link"
 import { ShowcaseMockup } from "./(marketing)/_components/showcase-mockup"
+import { CURRENT_VERSION } from "@/content/releases"
 
 const features = [
   {
@@ -181,6 +182,21 @@ export default function HomePage() {
         .nav { display: flex; align-items: center; gap: 28px; }
         .nav a { color: var(--muted); font-size: 14px; font-weight: 500; }
         .nav a:hover { color: var(--fg); }
+        .nav-changelog {
+          display: inline-flex; align-items: center; gap: 6px;
+          padding: 5px 14px; border-radius: var(--radius-pill);
+          background: var(--accent-bg); border: 1px solid var(--accent-border);
+          color: var(--accent); font-size: 13px; font-weight: 600;
+          transition: background .15s, color .15s, border-color .15s;
+        }
+        .nav-changelog:hover { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+        .nav-changelog-dot {
+          width: 6px; height: 6px; border-radius: 50%;
+          background: var(--accent); box-shadow: 0 0 6px var(--accent);
+        }
+        .nav-changelog-version {
+          font-size: 10px; font-weight: 500; opacity: .7;
+        }
 
         .btn {
           display: inline-flex; align-items: center; justify-content: center; gap: 8px;
@@ -523,6 +539,7 @@ export default function HomePage() {
             <a href="#recursos">Recursos</a>
             <a href="#showcase">Produto</a>
             <a href="#numeros">Números</a>
+            <Link href="/changelog" className="nav-changelog"><span className="nav-changelog-dot" />Novidades<span className="nav-changelog-version">v{CURRENT_VERSION}</span></Link>
           </nav>
           <div className="header-actions" style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <button className="theme-toggle" aria-label="Alternar tema" suppressHydrationWarning onClick={toggleTheme}>
