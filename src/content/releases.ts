@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.54"
+export const CURRENT_VERSION = "0.2.55"
 
 export const releases = [
+  {
+    version: "0.2.55",
+    date: "2026-09-13",
+    changes: [
+      { type: "fix", description: "O card Contas do mês não conta mais duas vezes os custos fixos pagos dentro de um cartão que já tem fatura no mês: essas linhas ganharam a tag 'dentro da fatura' e saíram dos totais e do contador de pagas." },
+    ],
+  },
   {
     version: "0.2.54",
     date: "2026-09-13",
