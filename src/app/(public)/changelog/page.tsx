@@ -77,6 +77,33 @@ export default function ChangelogPage() {
     window.scrollTo({ top: 0, behavior: "instant" })
   }
 
+  function renderPagination(key?: string) {
+    if (totalPages <= 1) return null
+    return (
+      <div key={key} className="flex items-center justify-between pt-4">
+        <span className="text-xs text-muted-foreground">Página {page} de {totalPages}</span>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => goToPage(page - 1)}
+            disabled={page === 1}
+            className="inline-flex h-7 items-center gap-1 rounded-lg border bg-background px-2.5 text-sm font-medium transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />Anterior
+          </button>
+          <button
+            type="button"
+            onClick={() => goToPage(page + 1)}
+            disabled={page === totalPages}
+            className="inline-flex h-7 items-center gap-1 rounded-lg border bg-background px-2.5 text-sm font-medium transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Próxima<ChevronRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="mx-auto max-w-3xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
       <div>
@@ -91,6 +118,8 @@ export default function ChangelogPage() {
         </div>
         <p className="mt-1 text-sm text-muted-foreground">Histórico de atualizações do Finly.</p>
       </div>
+
+      {renderPagination("top")}
 
       <div className="min-h-[480px] space-y-6">
         {groups.map((group) => (
@@ -114,29 +143,7 @@ export default function ChangelogPage() {
         ))}
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between pt-4">
-          <span className="text-xs text-muted-foreground">Página {page} de {totalPages}</span>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => goToPage(page - 1)}
-              disabled={page === 1}
-              className="inline-flex h-7 items-center gap-1 rounded-lg border bg-background px-2.5 text-sm font-medium transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <ChevronLeft className="h-3.5 w-3.5" />Anterior
-            </button>
-            <button
-              type="button"
-              onClick={() => goToPage(page + 1)}
-              disabled={page === totalPages}
-              className="inline-flex h-7 items-center gap-1 rounded-lg border bg-background px-2.5 text-sm font-medium transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Próxima<ChevronRight className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        </div>
-      )}
+      {renderPagination()}
     </div>
   )
 }
