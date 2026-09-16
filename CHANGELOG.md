@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.54] - 2026-09-13
+
+### Corrigido
+
+- A pill Novidades do menu da home teve o contraste corrigido nos temas claro e escuro, com a especificidade do CSS ajustada.
+
 ## [0.2.53] - 2026-09-13
 
 ### Adicionado

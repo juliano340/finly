@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.53"
+export const CURRENT_VERSION = "0.2.54"
 
 export const releases = [
+  {
+    version: "0.2.54",
+    date: "2026-09-13",
+    changes: [
+      { type: "fix", description: "A pill Novidades do menu da home teve o contraste corrigido nos temas claro e escuro, com a especificidade do CSS ajustada." },
+    ],
+  },
   {
     version: "0.2.53",
     date: "2026-09-13",
