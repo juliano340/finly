@@ -142,6 +142,7 @@ function MonthlyClosingPageContent() {
         amount: item.amount,
         status: item.status,
         payable: Boolean(paymentOf(item).bankAccountId),
+        invoicedInsideCard: paymentOf(item).paidInsideCard && !!effectiveCardName(item) && invoiceCardIds.has(effectiveCardName(item)!),
       })),
   ].sort((a, b) => (a.dueDate ?? "9999-12-31").localeCompare(b.dueDate ?? "9999-12-31"))
 
@@ -223,6 +224,7 @@ type BillRow = {
   amount: number
   status: "PENDING" | "PAID"
   payable?: boolean
+  invoicedInsideCard?: boolean
 }
 type DetailItem = { name?: string; label?: string; amount?: number; value?: number; status?: string }
 type ExpenseDetail = { id: string; name: string; amount: number; status: string; children?: { id: string; name: string; amount: number }[] }
@@ -517,9 +519,10 @@ function BillsList({ loading, bills = [], filter, month, onPayFixedCost }: {
   const [sortField, setSortField] = useState<BillSortField>("dueDate")
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
   const selection = useTableSelection(visible, (bill) => bill.amount, { storageKey: `bills:selection:${month}` })
-  const paidCount = bills.filter((bill) => bill.status === "PAID").length
-  const paidTotal = bills.filter((bill) => bill.status === "PAID").reduce((total, bill) => total + bill.amount, 0)
-  const pendingTotal = bills.filter((bill) => bill.status === "PENDING").reduce((total, bill) => total + bill.amount, 0)
+  const payableBills = bills.filter((bill) => !bill.invoicedInsideCard)
+  const paidCount = payableBills.filter((bill) => bill.status === "PAID").length
+  const paidTotal = payableBills.filter((bill) => bill.status === "PAID").reduce((total, bill) => total + bill.amount, 0)
+  const pendingTotal = payableBills.filter((bill) => bill.status === "PENDING").reduce((total, bill) => total + bill.amount, 0)
   const todayISO = new Date().toLocaleDateString("en-CA")
 
   function toggleSort(field: BillSortField) {
@@ -573,12 +576,12 @@ function BillsList({ loading, bills = [], filter, month, onPayFixedCost }: {
   const emptyLabel = filter === "PENDING" ? "Nenhuma conta pendente neste mês." : filter === "PAID" ? "Nenhuma conta paga neste mês." : "Nenhuma conta neste mês."
   if (visible.length === 0) return <p className="py-4 text-sm text-muted-foreground">{emptyLabel}</p>
 
-  const monthTotal = bills.reduce((total, bill) => total + bill.amount, 0)
+  const monthTotal = payableBills.reduce((total, bill) => total + bill.amount, 0)
 
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        <span>{paidCount} de {bills.length} pagas</span>
+        <span>{paidCount} de {payableBills.length} pagas</span>
         <span>Pago: <span className="font-medium text-foreground">{formatCurrency(paidTotal)}</span></span>
         <span>A pagar: <span className="font-medium text-foreground">{formatCurrency(pendingTotal)}</span></span>
       </div>
@@ -636,7 +639,14 @@ function BillsList({ loading, bills = [], filter, month, onPayFixedCost }: {
                 <td className="w-10 px-3 py-3 text-center">
                   <input type="checkbox" className="h-4 w-4" aria-label={`Selecionar ${bill.name}`} checked={selection.selectedIds.has(bill.id)} onChange={() => selection.toggleSelect(bill.id)} />
                 </td>
-                <td className="max-w-[220px] truncate px-3 py-3 font-medium">{bill.name}</td>
+                <td className="max-w-[220px] px-3 py-3 font-medium">
+                  <span className="inline-flex max-w-full items-center gap-2">
+                    <span className="truncate">{bill.name}</span>
+                    {bill.invoicedInsideCard && (
+                      <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-normal uppercase tracking-wide text-muted-foreground">dentro da fatura</span>
+                    )}
+                  </span>
+                </td>
                 <td className="px-3 py-3 text-muted-foreground">{bill.category}</td>
                 <td className="whitespace-nowrap px-3 py-3 text-muted-foreground">{bill.dueDate ? formatDate(bill.dueDate) : "—"}</td>
                 <td className="px-3 py-3 text-muted-foreground">{bill.method}</td>
@@ -663,7 +673,12 @@ function BillsList({ loading, bills = [], filter, month, onPayFixedCost }: {
           return (
             <div key={`${bill.kind}-${bill.id}`} className="rounded-lg border p-3">
               <div className="flex items-start justify-between gap-3">
-                <p className="min-w-0 truncate font-semibold">{bill.name}</p>
+                <div className="min-w-0">
+                  <p className="truncate font-semibold">{bill.name}</p>
+                  {bill.invoicedInsideCard && (
+                    <span className="mt-1 inline-block rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">dentro da fatura</span>
+                  )}
+                </div>
                 <BillBadge status={bill.status} overdue={overdue} />
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
