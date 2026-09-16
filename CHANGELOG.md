@@ -2,6 +2,16 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.53] - 2026-09-13
+
+### Adicionado
+
+- Link Novidades com a versão atual no menu da home, levando direto para o changelog.
+
+### Corrigido
+
+- O preview de saldo do passo Valor do wizard de transferência fica sempre visível, sem a tela crescer ao digitar o primeiro dígito.
+
 ## [0.2.52] - 2026-09-13
 
 ### Corrigido
