@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useEffect, useState } from "react"
+import { Suspense, useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { ArrowUpDown, ChevronDown, ChevronUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -44,32 +44,38 @@ export default function MonthlyClosingPage() {
 }
 
 function MonthlyClosingPageContent() {
-  const [month, setMonth] = useMonthParam({ defaultMonth: getCurrentMonth() })
+  const [month, setMonth, isMonthReady] = useMonthParam({ defaultMonth: getCurrentMonth() })
   const [data, setData] = useState<ClosingData | null>(null)
   const [loading, setLoading] = useState(true)
   const [billFilter, setBillFilter] = useState<"ALL" | "PENDING" | "PAID">("ALL")
 
-  function fetchClosing() {
-    return fetch(`/api/monthly-closing?month=${month}`)
-      .then((res) => res.json())
-      .then((d) => setData(d))
-  }
+  const fetchClosing = useCallback(async (targetMonth: string, signal?: AbortSignal) => {
+    const res = await fetch(`/api/monthly-closing?month=${targetMonth}`, { signal })
+    if (signal?.aborted) return
+    const d: ClosingData = await res.json()
+    if (signal?.aborted) return
+    setData(d)
+  }, [])
 
   useEffect(() => {
-    let cancelled = false
+    if (!isMonthReady) return
+    const controller = new AbortController()
     queueMicrotask(() => {
-      if (!cancelled) setLoading(true)
+      if (!controller.signal.aborted) setLoading(true)
     })
-    fetchClosing().then(() => {
-      if (!cancelled) setLoading(false)
-    })
-    return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month])
+    fetchClosing(month, controller.signal) // eslint-disable-line react-hooks/set-state-in-effect
+      .then(() => {
+        if (!controller.signal.aborted) setLoading(false)
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setLoading(false)
+      })
+    return () => controller.abort()
+  }, [month, isMonthReady, fetchClosing])
 
   const handlePayFixedCost = async (id: string) => {
     await fetch(`/api/fixed-cost-occurrences/${id}/pay`, { method: "POST" })
-    fetchClosing()
+    fetchClosing(month)
   }
   const summary = data?.summary
 

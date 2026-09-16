@@ -123,7 +123,7 @@ function formatCalendarDate(value: string) {
 }
 
 function FixedCostsPageInner() {
-  const [month, setMonth] = useMonthParam({ defaultMonth: getCurrentMonth() })
+  const [month, setMonth, isMonthReady] = useMonthParam({ defaultMonth: getCurrentMonth() })
 
   const [categories, setCategories] = useState<Category[]>([])
   const [cards, setCards] = useState<CardItem[]>([])
@@ -172,13 +172,14 @@ function FixedCostsPageInner() {
   }, [month])
 
   useEffect(() => {
+    if (!isMonthReady) return
     const requestId = ++fetchRequestIdRef.current
     const timer = window.setTimeout(() => { void fetchData(requestId) }, 0)
     return () => {
       window.clearTimeout(timer)
       fetchRequestIdRef.current += 1
     }
-  }, [fetchData])
+  }, [fetchData, isMonthReady])
 
   const handlePay = async (fixedCostId: string) => {
     setPayingId(fixedCostId)

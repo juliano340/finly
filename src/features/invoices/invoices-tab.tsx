@@ -331,7 +331,7 @@ export function InvoicesTab() {
   const [cards, setCards] = useState<CardItem[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccountItem[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [month, setMonth] = useMonthParam({ defaultMonth: getCurrentMonth() });
+  const [month, setMonth, isMonthReady] = useMonthParam({ defaultMonth: getCurrentMonth() });
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [creating, setCreating] = useState(false);
   const [createMode, setCreateMode] = useState<"CALCULATED" | "ENTERED_TOTAL">(
@@ -405,15 +405,17 @@ export function InvoicesTab() {
   const selectedCardInvoiced =
     createCardId !== "" && invoicedCardIds.has(createCardId);
 
-  function fetchData() {
+  function fetchData(signal?: AbortSignal) {
     return Promise.all([
-      fetch("/api/cards"),
-      fetch(`/api/invoices?month=${month}`),
-      fetch("/api/bank-accounts"),
+      fetch("/api/cards", { signal }),
+      fetch(`/api/invoices?month=${month}`, { signal }),
+      fetch("/api/bank-accounts", { signal }),
     ]).then(async ([cardsRes, invoicesRes, accountsRes]) => {
+      if (signal?.aborted) return;
       if (cardsRes.ok) setCards(await cardsRes.json());
       if (invoicesRes.ok) {
         const invoiceData: Invoice[] = await invoicesRes.json();
+        if (signal?.aborted) return;
         setInvoices(invoiceData);
         setSelectedInvoice((current) =>
           current
@@ -433,19 +435,22 @@ export function InvoicesTab() {
   const loadedRef = useRef(false);
 
   useEffect(() => {
-    let cancelled = false;
+    if (!isMonthReady) return;
+    const controller = new AbortController();
     if (loadedRef.current) setLoading(true);
-    fetchData().then(() => {
-      if (!cancelled) {
-        loadedRef.current = true;
-        setLoading(false);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
+    fetchData(controller.signal)
+      .then(() => {
+        if (!controller.signal.aborted) {
+          loadedRef.current = true;
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month]);
+  }, [month, isMonthReady]);
 
   const openPayDialog = (invoice: Invoice) => {
     setPayingInvoice(invoice);
