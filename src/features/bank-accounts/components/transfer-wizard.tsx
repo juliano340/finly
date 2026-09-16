@@ -311,7 +311,7 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
                 </div>
               </FormSection>
 
-              {parsedAmount > 0 && fromAccount && toAccount && (
+              {fromAccount && toAccount && (
                 <div className="grid gap-2 sm:grid-cols-2">
                   <div className="rounded-lg border bg-card p-3">
                     <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Origem</p>
@@ -322,12 +322,20 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Depois</span>
-                      <span className={isAccountNegative(fromAfter!, fromAccount.overdraftLimit) ? "font-medium text-red-600" : "font-medium text-emerald-600"}>{formatCurrency(fromAfter!)}</span>
+                      {parsedAmount > 0 ? (
+                        <span className={isAccountNegative(fromAfter!, fromAccount.overdraftLimit) ? "font-medium text-red-600" : "font-medium text-emerald-600"}>{formatCurrency(fromAfter!)}</span>
+                      ) : (
+                        <span className="font-medium">{formatCurrency(fromAccount.balance)}</span>
+                      )}
                     </div>
                     <div className="mt-1.5 border-t pt-1.5">
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>Impacto</span>
-                        <span className="font-medium text-red-600">-{formatCurrency(parsedAmount)}</span>
+                        {parsedAmount > 0 ? (
+                          <span className="font-medium text-red-600">-{formatCurrency(parsedAmount)}</span>
+                        ) : (
+                          <span>—</span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -340,12 +348,20 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Depois</span>
-                      <span className="font-medium text-emerald-600">{formatCurrency(toAfter!)}</span>
+                      {parsedAmount > 0 ? (
+                        <span className="font-medium text-emerald-600">{formatCurrency(toAfter!)}</span>
+                      ) : (
+                        <span className="font-medium">{formatCurrency(toAccount.balance)}</span>
+                      )}
                     </div>
                     <div className="mt-1.5 border-t pt-1.5">
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>Impacto</span>
-                        <span className="font-medium text-emerald-600">+{formatCurrency(parsedAmount)}</span>
+                        {parsedAmount > 0 ? (
+                          <span className="font-medium text-emerald-600">+{formatCurrency(parsedAmount)}</span>
+                        ) : (
+                          <span>—</span>
+                        )}
                       </div>
                     </div>
                   </div>
