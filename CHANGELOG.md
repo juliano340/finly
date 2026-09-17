@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.59] - 2026-09-17
+
+### Adicionado
+
+- Novo gráfico no Fechamento Mensal: evolução dos gastos que impactam o mês na data real de cada lançamento, com o acumulado subindo e a linha do saldo do benefício (VA).
+
 ## [0.2.58] - 2026-09-16
 
 ### Adicionado

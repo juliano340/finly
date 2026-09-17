@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.58"
+export const CURRENT_VERSION = "0.2.59"
 
 export const releases = [
+  {
+    version: "0.2.59",
+    date: "2026-09-17",
+    changes: [
+      { type: "feat", description: "Novo gráfico no Fechamento Mensal: evolução dos gastos que impactam o mês na data real de cada lançamento, com o acumulado subindo e a linha do saldo do benefício (VA)." },
+    ],
+  },
   {
     version: "0.2.58",
     date: "2026-09-16",
