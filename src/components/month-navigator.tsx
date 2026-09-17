@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { changeMonth, formatMonth, formatMonthDistance, getCurrentMonth } from "@/lib/months"
@@ -31,6 +32,28 @@ export function MonthNavigator({
   const nextDisabled = disabled || (maxMonth !== undefined && month >= maxMonth)
   const todayDisabled = disabled || month === todayMonth
 
+  useEffect(() => {
+    function handleKeydown(event: KeyboardEvent) {
+      if (!(event.ctrlKey || event.metaKey)) return
+      if (event.shiftKey) return
+      if (event.defaultPrevented) return
+      const target = event.target as HTMLElement
+      if (target.closest("input, textarea, select, [contenteditable=true]")) return
+      if (document.querySelector("[data-slot=dialog-content], [data-slot=sheet-content]")) return
+
+      if (event.key === "ArrowLeft" && !previousDisabled) {
+        event.preventDefault()
+        onMonthChange(previous)
+      } else if (event.key === "ArrowRight" && !nextDisabled) {
+        event.preventDefault()
+        onMonthChange(next)
+      }
+    }
+
+    window.addEventListener("keydown", handleKeydown)
+    return () => window.removeEventListener("keydown", handleKeydown)
+  }, [previous, next, previousDisabled, nextDisabled, onMonthChange])
+
   return (
     <div className="flex items-center gap-2" aria-label="Navegação entre meses">
       {month !== todayMonth && (
@@ -44,7 +67,7 @@ export function MonthNavigator({
         </Button>
       </div>
       <div className="flex h-10 items-center gap-1 rounded-lg border bg-background p-1">
-        <Button type="button" variant="ghost" size="icon" className="size-8" aria-label="Mês anterior" disabled={previousDisabled} onClick={() => onMonthChange(previous)}>
+        <Button type="button" variant="ghost" size="icon" className="size-8" aria-label="Mês anterior" aria-keyshortcuts="Control+ArrowLeft Meta+ArrowLeft" title="Mês anterior - Ctrl/Cmd+seta esquerda" disabled={previousDisabled} onClick={() => onMonthChange(previous)}>
           <ChevronLeft aria-hidden="true" className="size-4" />
         </Button>
         {inputLabel ? (
@@ -61,7 +84,7 @@ export function MonthNavigator({
         ) : (
           <span className="min-w-36 px-2 text-center text-sm font-medium">{formatMonth(month)}</span>
         )}
-        <Button type="button" variant="ghost" size="icon" className="size-8" aria-label="Próximo mês" disabled={nextDisabled} onClick={() => onMonthChange(next)}>
+        <Button type="button" variant="ghost" size="icon" className="size-8" aria-label="Próximo mês" aria-keyshortcuts="Control+ArrowRight Meta+ArrowRight" title="Próximo mês - Ctrl/Cmd+seta direita" disabled={nextDisabled} onClick={() => onMonthChange(next)}>
           <ChevronRight aria-hidden="true" className="size-4" />
         </Button>
       </div>
