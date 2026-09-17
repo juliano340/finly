@@ -11,6 +11,10 @@ interface TransactionFilters {
   month?: string
 }
 
+export function getTransactionMonth(value: Date | string): string {
+  return new Date(value).toISOString().slice(0, 7)
+}
+
 export function useTransactions(initialFilters?: TransactionFilters) {
   const [transactions, setTransactions] = useState<TransactionWithRelations[]>([])
   const [total, setTotal] = useState(0)
@@ -55,14 +59,16 @@ export function useTransactions(initialFilters?: TransactionFilters) {
       })
       if (res.ok) {
         const created = await res.json()
-        setTransactions((prev) => [created, ...prev])
-        setTotal((t) => t + 1)
+        if (!filters.month || getTransactionMonth(created.date) === filters.month) {
+          setTransactions((prev) => [created, ...prev])
+          setTotal((t) => t + 1)
+        }
         return created
       }
       const err = await res.json()
       throw new Error(err.error ?? "Erro ao criar transação")
     },
-    []
+    [filters.month]
   )
 
   const updateTransaction = useCallback(
@@ -74,13 +80,18 @@ export function useTransactions(initialFilters?: TransactionFilters) {
       })
       if (res.ok) {
         const updated = await res.json()
-        setTransactions((prev) => prev.map((t) => (t.id === id ? updated : t)))
+        if (filters.month && getTransactionMonth(updated.date) !== filters.month) {
+          setTransactions((prev) => prev.filter((t) => t.id !== id))
+          setTotal((t) => t - 1)
+        } else {
+          setTransactions((prev) => prev.map((t) => (t.id === id ? updated : t)))
+        }
         return updated
       }
       const err = await res.json().catch(() => ({}))
       throw new Error(err.error ?? "Erro ao atualizar transação")
     },
-    []
+    [filters.month]
   )
 
   const deleteTransaction = useCallback(async (id: string) => {

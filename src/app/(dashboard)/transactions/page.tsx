@@ -12,11 +12,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useTransactions } from "@/hooks/use-transactions"
+import { useTransactions, getTransactionMonth } from "@/hooks/use-transactions"
 import { useCategories } from "@/hooks/use-categories"
 import { useTableSelection } from "@/components/data-table/use-table-selection"
 import { MonthNavigator, getCurrentMonth } from "@/components/month-navigator"
 import { useMonthParam } from "@/hooks/use-month-param"
+import { formatMonth } from "@/lib/months"
 import { TransactionRow } from "./_components/transaction-row"
 import { TransactionTable } from "./_components/transaction-table"
 import { TransactionForm } from "./_components/transaction-form"
@@ -128,14 +129,26 @@ export default function TransactionsPage() {
   const filteredExpense = transactions.filter((tx) => tx.type === "EXPENSE").reduce((sum, tx) => sum + tx.amount, 0)
 
   async function handleCreate(input: TransactionInput) {
-    await createTransaction(input)
+    const created = await createTransaction(input)
+    const createdMonth = getTransactionMonth(created.date)
+    if (createdMonth !== month) {
+      setMonth(createdMonth)
+      toast.success(`Lançamento registrado em ${formatMonth(createdMonth)} — lista ajustada para ${formatMonth(createdMonth)}`)
+      return
+    }
     toast.success("Transação criada!")
   }
 
   async function handleUpdate(input: TransactionInput) {
     if (!editing) return
-    await updateTransaction(editing.id, input)
+    const updated = await updateTransaction(editing.id, input)
     setEditing(null)
+    const updatedMonth = getTransactionMonth(updated.date)
+    if (updatedMonth !== month) {
+      setMonth(updatedMonth)
+      toast.success(`Lançamento atualizado em ${formatMonth(updatedMonth)} — lista ajustada para ${formatMonth(updatedMonth)}`)
+      return
+    }
     toast.success("Transação atualizada!")
   }
 

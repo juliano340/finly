@@ -48,4 +48,40 @@ test.describe("Transações", () => {
     await page.click('button:has-text("Salvar")')
     await expect(page.getByRole("row", { name: /E2E Cat.*99,90/ })).toBeVisible({ timeout: 10000 })
   })
+
+  test("criar lançamento em outro mês redireciona automaticamente", async ({ page }) => {
+    await page.goto("/login")
+    await page.fill('input[id="email"]', seedEmail)
+    await page.fill('input[id="password"]', "Finly123")
+    await page.click('button[type="submit"]')
+    await page.waitForURL("**/dashboard**", { timeout: 20000 })
+
+    await page.goto("/categories")
+    await page.click('button:has-text("Nova categoria")')
+    await page.getByLabel(/Nome/).fill("E2E Outro Mês")
+    await page.click('button:has-text("Salvar")')
+    await expect(page.getByRole("cell", { name: /E2E Outro Mês/ })).toBeVisible({ timeout: 10000 })
+
+    const now = new Date()
+    const target = new Date(now.getFullYear(), now.getMonth() - 1, 15)
+    const MONTH_ABBR = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+    const targetMonthStr = `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, "0")}`
+    const targetDateStr = `${targetMonthStr}-15`
+    const monthLabel = `${MONTH_ABBR[target.getMonth()]} ${target.getFullYear()}`
+
+    await page.goto("/transactions")
+    await expect(page.locator("h1")).toContainText("Transações")
+
+    await page.click('button:has-text("Novo lançamento avulso")')
+    await page.getByRole("heading", { name: "Nova transação" }).waitFor({ timeout: 10000 })
+    await page.getByPlaceholder("0,00").fill("15,50")
+    await page.getByLabel(/Data/).fill(targetDateStr)
+    await page.click('text=Selecione...')
+    await page.getByText("E2E Outro Mês", { exact: true }).click()
+    await page.click('button:has-text("Salvar")')
+
+    await expect(page.getByText(new RegExp(`lista ajustada para ${monthLabel}`))).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('div[aria-label="Navegação entre meses"]')).toContainText(monthLabel, { timeout: 10000 })
+    await expect(page.getByRole("row", { name: /E2E Outro Mês.*15,50/ })).toBeVisible({ timeout: 10000 })
+  })
 })
