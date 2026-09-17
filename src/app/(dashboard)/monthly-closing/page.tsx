@@ -10,6 +10,9 @@ import { resolveOccurrencePayment } from "@/features/fixed-costs/occurrence-paym
 import { MonthNavigator, changeMonth, getCurrentMonth } from "@/components/month-navigator"
 import { useMonthParam } from "@/hooks/use-month-param"
 import { useTableSelection } from "@/components/data-table/use-table-selection"
+import { formatMonth } from "@/lib/months"
+import type { ExpenseEvolution } from "@/features/monthly-closing/expense-evolution"
+import { ExpenseEvolutionChart } from "./_components/expense-evolution-chart"
 
   interface ClosingData {
     summary: {
@@ -33,6 +36,7 @@ import { useTableSelection } from "@/components/data-table/use-table-selection"
     fixedCost: { name: string; type: "INCOME" | "EXPENSE"; paidInsideCard: boolean; paymentMethod: string; dueDay: number | null; cardId: string | null; bankAccountId: string | null; category: { name: string }; card: { name: string } | null; bankAccount: { name: string } | null }
   }[]
   looseExpenses: { id: string; amount: number; description: string | null; category: { name: string } }[]
+  expenseEvolution: ExpenseEvolution
 }
 
 export default function MonthlyClosingPage() {
@@ -192,6 +196,34 @@ function MonthlyClosingPageContent() {
         />
         <ExpenseComposition items={totalFormula} pendingItems={pendingFormula} details={expenseDetails} loading={loading} month={month} />
       </div>
+
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              <CardTitle className="text-base">Evolução dos gastos que impactam este mês</CardTitle>
+              <p className="text-sm text-muted-foreground">Lançamentos na data real que estão formando o fechamento de {formatMonth(month)}.</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              <span>Total já comprometido: <span className="font-medium text-foreground tabular-nums">{formatCurrency(data?.expenseEvolution.total ?? 0)}</span></span>
+              <span>{data?.expenseEvolution.expenseCount ?? 0} {(data?.expenseEvolution.expenseCount ?? 0) === 1 ? "despesa" : "despesas"}</span>
+              {data?.expenseEvolution.periodStart && data.expenseEvolution.periodEnd && (
+                <span>
+                  Período: {data.expenseEvolution.periodStart.slice(8, 10)}/{data.expenseEvolution.periodStart.slice(5, 7)} → {data.expenseEvolution.periodEnd.slice(8, 10)}/{data.expenseEvolution.periodEnd.slice(5, 7)}
+                </span>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="px-4 pb-4 pt-0">
+          {data ? (
+            <ExpenseEvolutionChart evolution={data.expenseEvolution} />
+          ) : (
+            <div className="h-[280px] animate-pulse rounded bg-muted" />
+          )}
+        </CardContent>
+      </Card>
+
       <section className="grid gap-4 lg:grid-cols-2">
         <Card className="border-0 shadow-sm lg:col-span-2">
           <CardHeader className="pb-3">
@@ -872,6 +904,14 @@ function ClosingSkeleton() {
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="rounded-xl border-0 bg-card shadow-sm p-6 space-y-4">
+        <div className="space-y-2">
+          <div className="h-5 w-72 animate-pulse rounded bg-muted" />
+          <div className="h-4 w-80 animate-pulse rounded bg-muted" />
+        </div>
+        <div className="h-[280px] animate-pulse rounded bg-muted" />
       </div>
 
       <div className="rounded-xl border-0 bg-card shadow-sm p-6 space-y-4">

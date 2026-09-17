@@ -8,6 +8,7 @@ import { validateExpenseLimit } from "@/features/bank-accounts/bank-accounts.ser
 import { moneyToNumber, sumMoney, type MoneyValue } from "@/lib/money"
 import { composeMonthlyFinancialSources } from "@/features/monthly-plan/monthly-plan.sources"
 import { calculateInvoiceTotals } from "@/features/card-invoices/invoice-calculation"
+import { buildExpenseEvolution } from "./expense-evolution"
 
 type FixedCostOccurrenceClient = Pick<PrismaClient, "fixedCost" | "fixedCostOccurrence">
 
@@ -67,10 +68,24 @@ export async function getMonthlyClosing(
 
   await ensureFixedCostOccurrences(userId, month, financialMonth.id, db)
 
-  const [invoices, occurrences, looseExpenseItems, looseIncome] = await Promise.all([
+  const [invoices, occurrences, looseExpenseItems, looseIncome, benefitAccounts] = await Promise.all([
     db.cardInvoice.findMany({
       where: { userId, month },
-      include: { card: true, items: true },
+      include: {
+        card: true,
+        items: {
+          include: {
+            transaction: { select: { date: true } },
+            importedTransaction: { select: { date: true } },
+            fixedCostOccurrence: { select: { scheduledDate: true, dueDate: true } },
+          },
+        },
+        importSession: {
+          select: {
+            transactions: { select: { date: true, amount: true, type: true, description: true } },
+          },
+        },
+      },
       orderBy: { dueDate: "asc" },
     }),
     db.fixedCostOccurrence.findMany({
@@ -84,6 +99,13 @@ export async function getMonthlyClosing(
     }),
     getLooseExpenseTransactions(userId, month, db),
     getLooseIncomeTransactions(userId, month, db),
+    db.bankAccount.findMany({
+      where: { userId, type: "BENEFIT" },
+      select: {
+        initialBalance: true,
+        movements: { select: { date: true, amount: true, type: true } },
+      },
+    }),
   ])
 
   const paymentById = new Map(occurrences.map((item) => [item.id, resolveOccurrencePayment(item)]))
@@ -144,11 +166,67 @@ export async function getMonthlyClosing(
     })),
   ]
 
+  const [year, monthNumber] = month.split("-").map(Number)
+  const monthStart = new Date(Date.UTC(year, monthNumber - 1, 1))
+
+  const expenseEvolution = buildExpenseEvolution({
+    invoices: invoicesWithTotals.map((invoice) => ({
+      effectiveTotal: invoice.amount,
+      dueDate: invoice.dueDate,
+      importedTransactions: (invoice.importSession?.transactions ?? []).map((transaction) => ({
+        date: transaction.date,
+        amount: moneyToNumber(transaction.amount),
+        type: transaction.type,
+        description: transaction.description,
+      })),
+      items: invoice.items.map((item) => ({
+        amount: item.amount,
+        date:
+          item.transaction?.date ??
+          item.importedTransaction?.date ??
+          (item.fixedCostOccurrence
+            ? item.fixedCostOccurrence.scheduledDate ?? item.fixedCostOccurrence.dueDate
+            : null),
+        description: item.description,
+      })),
+      unlinkedFixedOccurrences: insideCard
+        .filter((occurrence) => paymentOf(occurrence).cardId === invoice.cardId)
+        .filter((occurrence) => !invoice.items.some((item) => item.fixedCostOccurrenceId === occurrence.id))
+        .map((occurrence) => ({
+          amount: moneyToNumber(occurrence.amount),
+          date: occurrence.scheduledDate ?? occurrence.dueDate,
+          description: occurrence.fixedCost.name,
+        })),
+    })),
+    outsideCardOccurrences: [
+      ...outsideCard,
+      ...insideCard.filter((occurrence) => !paymentOf(occurrence).cardId || !invoiceCardIds.has(paymentOf(occurrence).cardId!)),
+    ].map((occurrence) => ({
+      amount: moneyToNumber(occurrence.amount),
+      date: occurrence.scheduledDate ?? occurrence.dueDate ?? monthStart,
+      description: occurrence.fixedCost.name,
+    })),
+    looseExpenses: looseExpenseItems.map((expense) => ({
+      amount: expense.amount,
+      date: expense.date,
+      description: expense.description,
+    })),
+    benefitAccounts: benefitAccounts.map((account) => ({
+      initialBalance: moneyToNumber(account.initialBalance),
+      movements: account.movements.map((movement) => ({
+        date: movement.date,
+        amount: moneyToNumber(movement.amount),
+        type: movement.type,
+      })),
+    })),
+  })
+
   return {
     financialMonth,
     invoices: invoicesWithTotals,
     fixedCosts: expenseOccurrences,
     looseExpenses: looseExpenseItems,
+    expenseEvolution,
     summary: {
       month,
       cardInvoicesTotal,
@@ -708,6 +786,7 @@ async function getLooseExpenseTransactions(
       id: true,
       amount: true,
       description: true,
+      date: true,
       category: { select: { name: true } },
     },
     orderBy: { date: "desc" },

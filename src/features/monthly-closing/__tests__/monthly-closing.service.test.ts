@@ -421,4 +421,88 @@ describe("monthly-closing.service", () => {
     const backToPending = await prisma.fixedCostOccurrence.findUniqueOrThrow({ where: { id: occurrence.id } })
     expect(backToPending.status).toBe("PENDING")
   })
+
+  it("expenseEvolution: transação manual de setembro vinculada à fatura de outubro aparece na data de setembro", async () => {
+    const month = "2026-10"
+    const suffix = Date.now()
+    await prisma.fixedCost.deleteMany({ where: { userId } })
+    await prisma.transaction.deleteMany({ where: { userId } })
+    await prisma.cardInvoice.deleteMany({ where: { userId, month } })
+    const card = await prisma.card.create({ data: { name: `Cartao Evolucao ${suffix}`, userId } })
+    const financialMonth = await prisma.financialMonth.upsert({
+      where: { month_userId: { month, userId } },
+      update: {},
+      create: { month, userId },
+    })
+    const transaction = await prisma.transaction.create({
+      data: { amount: 150, type: "EXPENSE", categoryId, userId, date: new Date("2026-09-20T12:00:00") },
+    })
+    await prisma.cardInvoice.create({
+      data: {
+        cardId: card.id,
+        financialMonthId: financialMonth.id,
+        month,
+        dueDate: new Date("2026-10-10T12:00:00"),
+        amount: 150,
+        userId,
+        items: {
+          create: [{ description: "Compra setembro", amount: 150, kind: "IMPORTED", userId, transactionId: transaction.id }],
+        },
+      },
+    })
+
+    const closing = await getMonthlyClosing(userId, month, prisma)
+
+    expect(closing.expenseEvolution.points.find((point) => point.date === "2026-09-20")?.daily).toBe(150)
+    expect(closing.expenseEvolution.periodStart).toBe("2026-09-20")
+    expect(closing.expenseEvolution.total).toBe(150)
+  })
+
+  it("expenseEvolution: avulsa de setembro não aparece no fechamento de outubro (e aparece no de setembro)", async () => {
+    await prisma.fixedCost.deleteMany({ where: { userId } })
+    await prisma.transaction.deleteMany({ where: { userId } })
+    await prisma.cardInvoice.deleteMany({ where: { userId, month: { in: ["2026-09", "2026-10"] } } })
+    await prisma.transaction.create({
+      data: { amount: 42, type: "EXPENSE", categoryId, userId, date: new Date("2026-09-20T12:00:00") },
+    })
+
+    const september = await getMonthlyClosing(userId, "2026-09", prisma)
+    const october = await getMonthlyClosing(userId, "2026-10", prisma)
+
+    expect(september.expenseEvolution.points.find((point) => point.date === "2026-09-20")?.daily).toBe(42)
+    expect(september.expenseEvolution.total).toBe(42)
+    expect(october.expenseEvolution.points).toEqual([])
+    expect(october.expenseEvolution.total).toBe(0)
+  })
+
+  it("expenseEvolution: acumulado final fecha com totalSpent (fixture sem overrides)", async () => {
+    const month = "2026-10"
+    const suffix = Date.now()
+    await prisma.fixedCost.deleteMany({ where: { userId } })
+    await prisma.transaction.deleteMany({ where: { userId } })
+    await prisma.cardInvoice.deleteMany({ where: { userId, month } })
+    const card = await prisma.card.create({ data: { name: `Cartao Total ${suffix}`, userId } })
+    const financialMonth = await prisma.financialMonth.upsert({
+      where: { month_userId: { month, userId } },
+      update: {},
+      create: { month, userId },
+    })
+    const fixedCost = await prisma.fixedCost.create({
+      data: { name: `Fixo Evo ${suffix}`, defaultAmount: 120, categoryId, paymentMethod: "PIX", paidInsideCard: false, userId },
+    })
+    await prisma.fixedCostOccurrence.create({
+      data: { fixedCostId: fixedCost.id, financialMonthId: financialMonth.id, month, amount: 120, status: "PENDING", dueDate: new Date("2026-10-15T12:00:00"), userId },
+    })
+    await prisma.cardInvoice.create({
+      data: { cardId: card.id, financialMonthId: financialMonth.id, month, dueDate: new Date("2026-10-10T12:00:00"), amount: 300, userId },
+    })
+    await prisma.transaction.create({
+      data: { amount: 80, type: "EXPENSE", categoryId, userId, date: new Date("2026-10-05T12:00:00") },
+    })
+
+    const closing = await getMonthlyClosing(userId, month, prisma)
+
+    expect(closing.expenseEvolution.total).toBe(500)
+    expect(Math.abs(closing.expenseEvolution.total - closing.summary.totalSpent)).toBeLessThanOrEqual(0.01)
+  })
 })
