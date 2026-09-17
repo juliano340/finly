@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.58] - 2026-09-16
+
+### Adicionado
+
+- No seletor de mês, Ctrl/Cmd + setas esquerda/direita troca o mês em qualquer tela que usa o componente, com dica no botão e sem interferir em campos de texto ou diálogos abertos.
+
 ## [0.2.57] - 2026-09-16
 
 ### Corrigido

@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.57"
+export const CURRENT_VERSION = "0.2.58"
 
 export const releases = [
+  {
+    version: "0.2.58",
+    date: "2026-09-16",
+    changes: [
+      { type: "feat", description: "No seletor de mês, Ctrl/Cmd + setas esquerda/direita troca o mês em qualquer tela que usa o componente, com dica no botão e sem interferir em campos de texto ou diálogos abertos." },
+    ],
+  },
   {
     version: "0.2.57",
     date: "2026-09-16",
