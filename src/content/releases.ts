@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.59"
+export const CURRENT_VERSION = "0.2.60"
 
 export const releases = [
+  {
+    version: "0.2.60",
+    date: "2026-09-17",
+    changes: [
+      { type: "feat", description: "Ao criar ou editar um lançamento com data de outro mês, a lista de transações vai automaticamente para o mês da data, com um aviso de redirecionamento." },
+    ],
+  },
   {
     version: "0.2.59",
     date: "2026-09-17",

@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.60] - 2026-09-17
+
+### Adicionado
+
+- Ao criar ou editar um lançamento com data de outro mês, a lista de transações vai automaticamente para o mês da data, com um aviso de redirecionamento.
+
 ## [0.2.59] - 2026-09-17
 
 ### Adicionado
