@@ -68,6 +68,8 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     needs: [test, e2e]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       VERCEL_ORG_ID: team_0tbbu6XeDEvkxx5tZkaj9wXH
       VERCEL_PROJECT_ID: prj_NjAFxN02Ru4YfvA8NrKmGMjpfSaq
@@ -77,3 +79,15 @@ jobs:
 
       - name: Deploy to Vercel production
         run: npx --yes vercel@latest deploy --prod --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Tag release
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v$VERSION"
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" > /dev/null 2>&1; then
+            echo "tag $TAG ja existe"
+          else
+            git tag "$TAG"
+            git push origin "$TAG"
+            echo "tag $TAG criada"
+          fi
