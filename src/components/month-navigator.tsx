@@ -55,7 +55,7 @@ export function MonthNavigator({
   }, [previous, next, previousDisabled, nextDisabled, onMonthChange])
 
   return (
-    <div className="flex items-center gap-2" aria-label="Navegação entre meses">
+    <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap" aria-label="Navegação entre meses">
       {month !== todayMonth && (
         <span className="whitespace-nowrap rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
           {formatMonthDistance(month, todayMonth)}
@@ -82,7 +82,7 @@ export function MonthNavigator({
             onChange={(event) => onMonthChange(event.target.value)}
           />
         ) : (
-          <span className="min-w-36 px-2 text-center text-sm font-medium">{formatMonth(month)}</span>
+          <span className="min-w-0 px-2 text-center text-sm font-medium sm:min-w-36">{formatMonth(month)}</span>
         )}
         <Button type="button" variant="ghost" size="icon" className="size-8" aria-label="Próximo mês" aria-keyshortcuts="Control+ArrowRight Meta+ArrowRight" title="Próximo mês - Ctrl/Cmd+seta direita" disabled={nextDisabled} onClick={() => onMonthChange(next)}>
           <ChevronRight aria-hidden="true" className="size-4" />
