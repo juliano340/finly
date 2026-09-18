@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.61] - 2026-09-17
+
+### Corrigido
+
+- O seletor de mês não estoura mais a largura em telas de celular (ex.: Redmi Note 13, 393px): o grupo do mês se compacta e quebra linha quando necessário, sem alterar o desktop.
+
 ## [0.2.60] - 2026-09-17
 
 ### Adicionado

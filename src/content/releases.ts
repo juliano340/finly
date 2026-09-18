@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.60"
+export const CURRENT_VERSION = "0.2.61"
 
 export const releases = [
+  {
+    version: "0.2.61",
+    date: "2026-09-17",
+    changes: [
+      { type: "fix", description: "O seletor de mês não estoura mais a largura em telas de celular (ex.: Redmi Note 13, 393px): o grupo do mês se compacta e quebra linha quando necessário, sem alterar o desktop." },
+    ],
+  },
   {
     version: "0.2.60",
     date: "2026-09-17",
