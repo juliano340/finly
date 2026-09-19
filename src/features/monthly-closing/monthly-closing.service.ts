@@ -820,6 +820,7 @@ async function aggregateTransactions(
   const result = await db.transaction.aggregate({
     where: {
       userId,
+      status: "ACTIVE",
       type,
       invoiceItem: null,
       OR: [{ bankAccountId: null }, { bankAccount: { type: { not: "BENEFIT" } } }],
@@ -839,6 +840,7 @@ async function getLooseExpenseTransactions(
   const transactions = await db.transaction.findMany({
     where: {
       userId,
+      status: "ACTIVE",
       type: "EXPENSE",
       invoiceItem: null,
       OR: [{ bankAccountId: null }, { bankAccount: { type: { not: "BENEFIT" } } }],
@@ -868,6 +870,7 @@ async function getLooseIncomeTransactions(
   const transactions = await db.transaction.findMany({
     where: {
       userId,
+      status: "ACTIVE",
       type: "INCOME",
       OR: [{ bankAccountId: null }, { bankAccount: { type: { not: "BENEFIT" } } }],
       date: { gte: new Date(year, m - 1, 1), lt: new Date(year, m, 1) },

@@ -32,6 +32,8 @@ describe("Dashboard Service", () => {
         { amount: 150, type: "EXPENSE", date: new Date(2026, 5, 5, 12, 0, 0), categoryId: catExpense.id, userId },
         { amount: 200, type: "EXPENSE", date: new Date(2026, 5, 10, 12, 0, 0), categoryId: catExpense.id, userId },
         { amount: 100, type: "EXPENSE", date: new Date(2026, 5, 15, 12, 0, 0), categoryId: catExpense.id, userId },
+        { amount: 70, type: "INCOME", date: new Date(2026, 5, 20, 12, 0, 0), categoryId: catIncome.id, userId, status: "REVERSED" },
+        { amount: 70, type: "EXPENSE", date: new Date(2026, 5, 21, 12, 0, 0), categoryId: catExpense.id, userId, status: "REVERSED" },
       ],
     })
 
@@ -151,6 +153,20 @@ describe("Dashboard Service", () => {
 
     expect(stats.expense).toBe(450)
     expect(stats.byCategory).toHaveLength(1)
+  })
+
+  it("ignora transações estornadas (REVERSED) nos totais, categorias, tendência e recentes", async () => {
+    const stats = await getDashboardStats(userId, "2026-06", prisma)
+
+    expect(stats.income).toBe(5000)
+    expect(stats.expense).toBe(450)
+    expect(stats.byCategory.reduce((total, item) => total + item.value, 0)).toBe(450)
+    expect(stats.recentTransactions).toHaveLength(4)
+    expect(stats.dailyTrend.reduce((total, day) => total + day.income, 0)).toBe(5000)
+    expect(stats.dailyTrend.reduce((total, day) => total + day.expense, 0)).toBe(450)
+
+    const evolution = await getMonthlyEvolution(userId, "2026-06", 2, prisma)
+    expect(evolution.months.find((item) => item.month === "2026-06")?.looseExpenses).toBe(450)
   })
 
   it("retorna evolução mensal com faturas, custos fixos e avulsas", async () => {

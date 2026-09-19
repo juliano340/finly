@@ -82,6 +82,7 @@ export async function getDashboardStats(
       db.transaction.aggregate({
         where: {
           userId,
+          status: "ACTIVE",
           type: "INCOME",
           OR: [{ bankAccountId: null }, { bankAccount: { type: { not: "BENEFIT" } } }],
           date: { gte: startDate, lt: endDate },
@@ -91,6 +92,7 @@ export async function getDashboardStats(
       db.transaction.aggregate({
         where: {
           userId,
+          status: "ACTIVE",
           type: "EXPENSE",
           invoiceItem: null,
           OR: [{ bankAccountId: null }, { bankAccount: { type: { not: "BENEFIT" } } }],
@@ -100,7 +102,7 @@ export async function getDashboardStats(
       }),
       db.transaction.groupBy({
         by: ["categoryId"],
-        where: { userId, type: "EXPENSE", invoiceItem: null, date: { gte: startDate, lt: endDate } },
+        where: { userId, status: "ACTIVE", type: "EXPENSE", invoiceItem: null, date: { gte: startDate, lt: endDate } },
         _sum: { amount: true },
         orderBy: { _sum: { amount: "desc" } },
       }),
@@ -108,13 +110,14 @@ export async function getDashboardStats(
         by: ["date", "type"],
         where: {
           userId,
+          status: "ACTIVE",
           date: { gte: startDate, lt: endDate },
           OR: [{ type: "INCOME" }, { invoiceItem: null }],
         },
         _sum: { amount: true },
       }),
       db.transaction.findMany({
-        where: { userId, date: { gte: startDate, lt: endDate } },
+        where: { userId, status: "ACTIVE", date: { gte: startDate, lt: endDate } },
         include: {
           category: { select: { name: true, color: true } },
           bankAccount: { select: { name: true } },
@@ -430,6 +433,7 @@ async function getLooseExpenseTotalsByMonth(userId: string, months: string[], db
   const transactions = await db.transaction.findMany({
     where: {
       userId,
+      status: "ACTIVE",
       type: "EXPENSE",
       invoiceItem: null,
       OR: [{ bankAccountId: null }, { bankAccount: { type: { not: "BENEFIT" } } }],

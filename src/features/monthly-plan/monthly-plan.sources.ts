@@ -109,6 +109,7 @@ export async function loadMonthlyFinancialSources(
     db.transaction.aggregate({
       where: {
         userId,
+        status: "ACTIVE",
         type: "EXPENSE",
         invoiceItem: null,
         OR: [{ bankAccountId: null }, { bankAccount: { type: { not: "BENEFIT" } } }],

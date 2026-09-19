@@ -143,6 +143,19 @@ describe("monthly-plan.service", () => {
     expect(stored).toBeNull()
   })
 
+  it("ignora transações estornadas (REVERSED) no variableSpent", async () => {
+    const category = await prisma.category.findFirstOrThrow({ where: { userId, type: "EXPENSE" } })
+    const before = await getMonthlyPlan(userId, MONTH, AS_OF, prisma)
+    const reversed = await prisma.transaction.create({
+      data: { amount: 70, type: "EXPENSE", date: new Date("2026-08-12T18:00:00Z"), categoryId: category.id, userId, status: "REVERSED" },
+    })
+
+    const after = await getMonthlyPlan(userId, MONTH, AS_OF, prisma)
+    expect(after.variableSpent).toBe(before.variableSpent)
+
+    await prisma.transaction.delete({ where: { id: reversed.id } })
+  })
+
   it("upsert usa usuário+mês e preserva override zero", async () => {
     const updated = await updateMonthlyPlan(
       userId,

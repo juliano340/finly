@@ -111,6 +111,7 @@ export async function getBudgetSummary(
     const spent = await db.transaction.aggregate({
       where: {
         userId,
+        status: "ACTIVE",
         categoryId: budget.categoryId,
         type: "EXPENSE",
         date: { gte: startDate, lt: endDate },

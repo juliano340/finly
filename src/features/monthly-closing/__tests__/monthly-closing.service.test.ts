@@ -85,6 +85,34 @@ describe("monthly-closing.service", () => {
     expect(closing.fixedCosts.map((item) => item.fixedCost.name)).not.toContain(fixedCosts[2].name)
   })
 
+  it("ignora transações estornadas (REVERSED) nos totais do fechamento", async () => {
+    const month = "2027-01"
+    await prisma.fixedCostOccurrence.deleteMany({ where: { userId } })
+    await prisma.fixedCost.deleteMany({ where: { userId } })
+    await prisma.financialMonth.create({ data: { month, userId } })
+    await prisma.transaction.createMany({
+      data: [
+        { amount: 100, type: "EXPENSE", categoryId, userId, date: new Date("2027-01-05T12:00:00"), status: "ACTIVE" },
+        { amount: 70, type: "EXPENSE", categoryId, userId, date: new Date("2027-01-06T12:00:00"), status: "REVERSED" },
+        { amount: 200, type: "INCOME", categoryId, userId, date: new Date("2027-01-01T12:00:00"), status: "ACTIVE" },
+        { amount: 70, type: "INCOME", categoryId, userId, date: new Date("2027-01-02T12:00:00"), status: "REVERSED" },
+      ],
+    })
+
+    const closing = await getMonthlyClosing(userId, month, prisma)
+
+    expect(closing.summary.looseExpensesTotal).toBe(100)
+    expect(closing.looseExpenses).toHaveLength(1)
+    expect(closing.summary.incomeTotal).toBe(200)
+    expect(closing.summary.totalSpent).toBe(100)
+    expect(closing.summary.projectedBalance).toBe(100)
+
+    const summary = await getMonthlyClosingSummary(userId, month, prisma)
+    expect(summary.incomeTotal).toBe(200)
+    expect(summary.totalSpent).toBe(100)
+    expect(summary.projectedBalance).toBe(100)
+  })
+
   it("calcula saldo projetado como receitas totais menos gastos totais (pagos e não pagos)", async () => {
     const month = "2026-09"
     const suffix = Date.now()

@@ -61,6 +61,9 @@ describe("Budgets Service", () => {
     await prisma.transaction.create({
       data: { amount: 300, type: "EXPENSE", date: new Date(2026, 5, 10, 12, 0, 0), categoryId: catId, userId },
     })
+    await prisma.transaction.create({
+      data: { amount: 70, type: "EXPENSE", date: new Date(2026, 5, 12, 12, 0, 0), categoryId: catId, userId, status: "REVERSED" },
+    })
 
     const summary = await getBudgetSummary(userId, "2026-06", prisma)
     expect(summary.length).toBe(1)
