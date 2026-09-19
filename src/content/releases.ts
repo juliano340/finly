@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.66"
+export const CURRENT_VERSION = "0.2.67"
 
 export const releases = [
+  {
+    version: "0.2.67",
+    date: "2026-09-19",
+    changes: [
+      { type: "feat", description: "Ao importar o extrato do benefício (FLASH), o saldo da conta agora é reconciliado com o saldo final do arquivo, o aviso mostra quanto entrou e quanto saiu, e dá para substituir ajustes e transações manuais anteriores dentro do período do extrato (com estorno auditável)." },
+    ],
+  },
   {
     version: "0.2.66",
     date: "2026-09-19",

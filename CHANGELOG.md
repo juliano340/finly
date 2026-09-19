@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.67] - 2026-09-19
+
+### Adicionado
+
+- Ao importar o extrato do benefício (FLASH), o saldo da conta agora é reconciliado com o saldo final do arquivo, o aviso mostra quanto entrou e quanto saiu, e dá para substituir ajustes e transações manuais anteriores dentro do período do extrato (com estorno auditável).
+
 ## [0.2.66] - 2026-09-19
 
 ### Corrigido
