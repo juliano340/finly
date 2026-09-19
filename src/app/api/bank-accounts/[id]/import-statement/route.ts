@@ -18,8 +18,9 @@ export async function POST(
   if (uploadError) return NextResponse.json({ error: uploadError }, { status: 400 })
 
   const content = await file.text()
+  const replaceManual = formData.get("replaceManual") === "true"
   const { id } = await params
-  const result = await importBenefitStatement(id, session.user.id, content)
+  const result = await importBenefitStatement(id, session.user.id, content, { replaceManual })
   if (!result) return NextResponse.json({ error: "Conta de benefício inválida" }, { status: 400 })
 
   if (result.imported === 0 && result.duplicates === 0) {

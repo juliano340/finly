@@ -77,6 +77,7 @@ export default function BankAccountsPage() {
   const [confirmReversal, setConfirmReversal] = useState<string | null>(null)
   const [reversingId, setReversingId] = useState<string | null>(null)
   const [importingStatement, setImportingStatement] = useState(false)
+  const [replaceManual, setReplaceManual] = useState(false)
   const statementInputRef = useRef<HTMLInputElement>(null)
   const updateInFlightRef = useRef(false)
 
@@ -236,10 +237,20 @@ export default function BankAccountsPage() {
     try {
       const formData = new FormData()
       formData.append("file", file)
+      formData.append("replaceManual", replaceManual ? "true" : "false")
       const res = await fetch(`/api/bank-accounts/${accountId}/import-statement`, { method: "POST", body: formData })
       const data = await res.json().catch(() => ({}))
       if (res.ok) {
-        toast.success(`${data.imported} importados · ${data.duplicates} duplicados · ${data.errors?.length ?? 0} erros`)
+        const title = `${data.imported} lançamentos importados${data.duplicates > 0 ? ` · ${data.duplicates} duplicados` : ""}`
+        const description = [
+          `Entrou ${formatCurrency(data.totalIn)}`,
+          `Saiu ${formatCurrency(data.totalOut)}`,
+          ...(data.finalBalance !== null && data.finalBalance !== undefined
+            ? [data.balanceAdjusted !== 0 ? `Saldo ajustado para ${formatCurrency(data.finalBalance)}` : "Saldo já conferia"]
+            : []),
+          ...(data.manualReplaced > 0 ? [`${data.manualReplaced} manuais substituídos`] : []),
+        ].join(" · ")
+        toast.success(title, { description })
         await fetchAccounts()
       } else {
         toast.error(data.error ?? "Não foi possível importar o extrato.")
@@ -563,6 +574,15 @@ export default function BankAccountsPage() {
                               </Button>
                             </div>
                           </div>
+                          <label className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
+                            <input
+                              type="checkbox"
+                              className="mt-0.5 h-4 w-4 shrink-0"
+                              checked={replaceManual}
+                              onChange={(event) => setReplaceManual(event.target.checked)}
+                            />
+                            <span>Substituir registros manuais anteriores (ajustes e transações dentro do período do arquivo)</span>
+                          </label>
                         </div>
                       )}
                       {selectedAccount.overdraftLimit > 0 && (

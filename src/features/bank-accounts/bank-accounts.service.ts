@@ -352,30 +352,82 @@ export async function rechargeBenefitAccount(
   })
 }
 
+export interface BenefitStatementImportOptions {
+  replaceManual?: boolean
+}
+
 export interface BenefitStatementImportResult {
   imported: number
   duplicates: number
   errors: string[]
+  manualReplaced: number
+  balanceAdjusted: number
+  finalBalance: number | null
+  totalIn: number
+  totalOut: number
 }
+
+const MANUAL_MOVEMENT_PREFIXES = ["AJUSTE_MANUAL", "AJUSTE MANUAL DE SALDO", "TRANSAÇÃO"]
 
 function movementDedupeKey(movement: { date: Date; type: string; amount: number; description: string | null }): string {
   return `${movement.date.toISOString().slice(0, 10)}|${movement.type}|${movement.amount.toFixed(2)}|${movement.description ?? ""}`
+}
+
+async function replaceManualMovements(
+  db: PrismaClient,
+  bankAccountId: string,
+  userId: string,
+  movements: BenefitStatementMovement[],
+): Promise<number> {
+  const firstDate = movements.reduce((earliest, movement) => (movement.date < earliest ? movement.date : earliest), movements[0].date)
+  const lastDate = movements.reduce((latest, movement) => (movement.date > latest ? movement.date : latest), movements[0].date)
+  const windowStart = new Date(`${firstDate.toISOString().slice(0, 10)}T00:00:00.000Z`)
+  const windowEnd = new Date(`${lastDate.toISOString().slice(0, 10)}T23:59:59.999Z`)
+
+  const manualMovements = await db.bankAccountMovement.findMany({
+    where: {
+      bankAccountId,
+      userId,
+      date: { gte: windowStart, lte: windowEnd },
+      OR: MANUAL_MOVEMENT_PREFIXES.map((prefix) => ({ description: { startsWith: prefix } })),
+    },
+    select: { id: true, transactionId: true },
+  })
+
+  let manualReplaced = 0
+  let deleteTransaction: ((id: string, userId: string, client?: PrismaClient) => Promise<boolean>) | null = null
+  for (const movement of manualMovements) {
+    if (movement.transactionId) {
+      if (!deleteTransaction) {
+        const transactionsService = await import("@/features/transactions/transactions.service")
+        deleteTransaction = transactionsService.deleteTransaction
+      }
+      const reversed = await deleteTransaction(movement.transactionId, userId, db)
+      if (reversed) manualReplaced += 1
+    } else {
+      const deleted = await db.bankAccountMovement.deleteMany({ where: { id: movement.id, userId } })
+      if (deleted.count > 0) manualReplaced += 1
+    }
+  }
+
+  return manualReplaced
 }
 
 export async function importBenefitStatement(
   bankAccountId: string,
   userId: string,
   csvContent: string,
+  options?: BenefitStatementImportOptions,
   client?: PrismaClient,
 ): Promise<BenefitStatementImportResult | null> {
   const db = client ?? defaultPrisma
   const account = await db.bankAccount.findFirst({
     where: { id: bankAccountId, userId, type: "BENEFIT", active: true },
-    select: { id: true },
+    select: { id: true, initialBalance: true },
   })
   if (!account) return null
 
-  const { movements, errors } = parseBenefitStatementCsv(csvContent)
+  const { movements, errors, finalBalance, totalIn, totalOut } = parseBenefitStatementCsv(csvContent)
 
   const existingMovements = await db.bankAccountMovement.findMany({
     where: { bankAccountId, userId },
@@ -419,7 +471,39 @@ export async function importBenefitStatement(
     imported = created.count
   }
 
-  return { imported, duplicates, errors }
+  let manualReplaced = 0
+  if (options?.replaceManual && movements.length > 0) {
+    manualReplaced = await replaceManualMovements(db, bankAccountId, userId, movements)
+  }
+
+  let balanceAdjusted = 0
+  if (finalBalance !== null) {
+    const accountMovements = await db.bankAccountMovement.findMany({
+      where: { bankAccountId, userId },
+      select: { amount: true, type: true },
+    })
+    const income = sumMoney(accountMovements.filter((movement) => movement.type === "INCOME").map((movement) => movement.amount))
+    const expense = sumMoney(accountMovements.filter((movement) => movement.type === "EXPENSE").map((movement) => movement.amount))
+    const currentBalance = subtractMoney(sumMoney([account.initialBalance, income]), expense)
+    const diff = subtractMoney(finalBalance, currentBalance)
+
+    if (Math.abs(diff) >= 0.005) {
+      const lastDate = movements.reduce((latest, movement) => (movement.date > latest ? movement.date : latest), movements[0].date)
+      await db.bankAccountMovement.create({
+        data: {
+          bankAccountId,
+          amount: Math.abs(diff),
+          type: diff > 0 ? "INCOME" : "EXPENSE",
+          description: "AJUSTE IMPORTACAO EXTRATO",
+          date: lastDate,
+          userId,
+        },
+      })
+      balanceAdjusted = diff
+    }
+  }
+
+  return { imported, duplicates, errors, manualReplaced, balanceAdjusted, finalBalance, totalIn, totalOut }
 }
 
 export async function transferBetweenBankAccounts(

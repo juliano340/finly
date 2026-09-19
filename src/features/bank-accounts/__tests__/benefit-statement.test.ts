@@ -102,4 +102,48 @@ describe("parseBenefitStatementCsv", () => {
     expect(result.movements).toHaveLength(1)
     expect(result.movements[0].description.startsWith("'=")).toBe(true)
   })
+
+  it("extrai finalBalance/totalIn/totalOut do layout real", () => {
+    const content = [
+      "Data,Hora,Movimentação,Valor,Meio de Pagamento,Saldo",
+      '14/09/2026,11:31,JOAO RENATO ROSSETI PORTO ALEGRE BRA,"-R$ 18,50",Cartão,"R$ 0,89"',
+      '29/08/2026,00:31,Depósito transferido,"R$ 466,20",Depósito,"R$ 466,71"',
+    ].join("\n")
+
+    const result = parseBenefitStatementCsv(content)
+
+    expect(result.errors).toEqual([])
+    expect(result.movements).toHaveLength(2)
+    expect(result.finalBalance).toBe(0.89)
+    expect(result.totalIn).toBe(466.2)
+    expect(result.totalOut).toBe(18.5)
+  })
+
+  it("finalBalance null quando não há coluna Saldo", () => {
+    const content = [
+      "Data,Movimentação,Valor",
+      '05/09/2026,"Depósito transferido","R$ 20,00"',
+    ].join("\n")
+
+    const result = parseBenefitStatementCsv(content)
+
+    expect(result.errors).toEqual([])
+    expect(result.movements).toHaveLength(1)
+    expect(result.finalBalance).toBeNull()
+  })
+
+  it("usa a última linha VÁLIDA quando a linha final é inválida", () => {
+    const content = [
+      "Data,Movimentação,Valor,Saldo",
+      '01/09/2026,"Coisa válida","R$ 10,00","R$ 30,00"',
+      'invalida,"Coisa inválida","R$ 5,00","R$ 99,00"',
+    ].join("\n")
+
+    const result = parseBenefitStatementCsv(content)
+
+    expect(result.movements).toHaveLength(1)
+    expect(result.finalBalance).toBe(30)
+    expect(result.errors).toHaveLength(1)
+    expect(result.errors[0]).toContain("Linha 3")
+  })
 })
