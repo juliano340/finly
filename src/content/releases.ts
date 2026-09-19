@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.63"
+export const CURRENT_VERSION = "0.2.64"
 
 export const releases = [
+  {
+    version: "0.2.64",
+    date: "2026-09-18",
+    changes: [
+      { type: "feat", description: "O card Despesas do mês agora segue a mesma composição do card Receitas: despesas sem VA + VA (benefício) = total, no desktop e no celular." },
+    ],
+  },
   {
     version: "0.2.63",
     date: "2026-09-18",

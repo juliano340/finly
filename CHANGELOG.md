@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.64] - 2026-09-18
+
+### Adicionado
+
+- O card Despesas do mês agora segue a mesma composição do card Receitas: despesas sem VA + VA (benefício) = total, no desktop e no celular.
+
 ## [0.2.63] - 2026-09-18
 
 ### Adicionado
