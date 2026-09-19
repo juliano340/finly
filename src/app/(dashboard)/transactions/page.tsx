@@ -52,6 +52,7 @@ export default function TransactionsPage() {
     createTransaction,
     updateTransaction,
     deleteTransaction,
+    refetch,
   } = useTransactions({ month })
 
   const {
@@ -179,6 +180,7 @@ export default function TransactionsPage() {
     if (res.ok) {
       toast.success(`${ids.length} transaç${ids.length !== 1 ? "ões" : "ão"} exclu${ids.length !== 1 ? "ídas" : "ída"}.`)
       clearSelection()
+      await refetch()
     } else {
       toast.error("Não foi possível excluir as transações.")
     }
