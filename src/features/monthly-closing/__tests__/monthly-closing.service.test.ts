@@ -531,6 +531,8 @@ describe("monthly-closing.service — VA (benefício)", () => {
         { bankAccountId: account.id, amount: 500, type: "INCOME", description: "RECARGA BENEFÍCIO: OUTUBRO", date: new Date("2026-10-01T12:00:00"), userId },
         { bankAccountId: account.id, amount: 120.5, type: "EXPENSE", description: "Mercado do mês", date: new Date("2026-10-05T12:00:00"), userId },
         { bankAccountId: account.id, amount: 80.3, type: "EXPENSE", description: "Lanchonete", date: new Date("2026-10-10T12:00:00"), userId },
+        { bankAccountId: account.id, amount: 117.49, type: "EXPENSE", description: "AJUSTE IMPORTACAO EXTRATO", date: new Date("2026-10-15T12:00:00"), userId },
+        { bankAccountId: account.id, amount: 50, type: "INCOME", description: "AJUSTE_MANUAL:CORRECAO", date: new Date("2026-10-16T12:00:00"), userId },
       ],
     })
     await prisma.transaction.createMany({
@@ -566,6 +568,7 @@ describe("monthly-closing.service — VA (benefício)", () => {
     expect(closing.summary.totalToPay).toBe(100)
     expect(closing.benefitExpenses).toHaveLength(2)
     expect(closing.benefitExpenses.reduce((total, item) => total + item.amount, 0)).toBeCloseTo(200.8)
+    expect(closing.benefitExpenses.some((item) => item.description?.trim().toLowerCase().startsWith("ajuste"))).toBe(false)
     expect(closing.summary.incomeItems.some((item) => item.name === "Adiantamento VA")).toBe(false)
     expect(closing.summary.incomeItems.some((item) => item.name === "VA (benefício)" && item.amount === 500)).toBe(true)
   })

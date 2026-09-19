@@ -55,4 +55,36 @@ describe("benefit helpers", () => {
     expect(totals.spent).toBe(30.05)
     expect(totals.estimated).toBe(true)
   })
+
+  it("ignora ajustes no crédito/gasto do benefício", () => {
+    const totals = computeBenefitTotals([
+      {
+        benefitDailyRate: 22,
+        movements: [
+          { amount: 500, type: "INCOME", description: "RECARGA BENEFÍCIO: SETEMBRO" },
+          { amount: 120.5, type: "EXPENSE", description: "Mercado" },
+          { amount: 80.3, type: "EXPENSE", description: "Padaria" },
+          { amount: 117.49, type: "EXPENSE", description: "AJUSTE IMPORTACAO EXTRATO" },
+          { amount: 50, type: "INCOME", description: "AJUSTE_MANUAL:CORRECAO" },
+          { amount: 30, type: "EXPENSE", description: "ajuste manual de saldo" },
+        ],
+      },
+    ], "2026-09")
+
+    expect(totals).toEqual({ credited: 500, spent: 200.8, estimated: false })
+  })
+
+  it("estima quando o mês só tem ajustes lançados", () => {
+    const totals = computeBenefitTotals([
+      {
+        benefitDailyRate: 22,
+        movements: [
+          { amount: 117.49, type: "EXPENSE", description: "AJUSTE IMPORTACAO EXTRATO" },
+          { amount: 50, type: "INCOME", description: "Ajuste manual" },
+        ],
+      },
+    ], "2026-09")
+
+    expect(totals).toEqual({ credited: 484, spent: 0, estimated: true })
+  })
 })

@@ -487,18 +487,48 @@ export async function importBenefitStatement(
     const currentBalance = subtractMoney(sumMoney([account.initialBalance, income]), expense)
     const diff = subtractMoney(finalBalance, currentBalance)
 
-    if (Math.abs(diff) >= 0.005) {
+    const existingAdjustments = await db.bankAccountMovement.findMany({
+      where: { bankAccountId, userId, description: "AJUSTE IMPORTACAO EXTRATO" },
+      orderBy: { createdAt: "asc" },
+    })
+
+    if (Math.abs(diff) >= 0.005 || existingAdjustments.length > 1) {
       const lastDate = movements.reduce((latest, movement) => (movement.date > latest ? movement.date : latest), movements[0].date)
-      await db.bankAccountMovement.create({
-        data: {
-          bankAccountId,
-          amount: Math.abs(diff),
-          type: diff > 0 ? "INCOME" : "EXPENSE",
-          description: "AJUSTE IMPORTACAO EXTRATO",
-          date: lastDate,
-          userId,
-        },
-      })
+      const adjustmentBalance = sumMoney(
+        existingAdjustments.map((movement) => (movement.type === "INCOME" ? moneyToNumber(movement.amount) : -moneyToNumber(movement.amount))),
+      )
+      const consolidated = sumMoney([adjustmentBalance, diff])
+
+      if (Math.abs(consolidated) < 0.005) {
+        if (existingAdjustments.length > 0) {
+          await db.bankAccountMovement.deleteMany({ where: { id: { in: existingAdjustments.map((movement) => movement.id) }, userId } })
+        }
+      } else if (existingAdjustments.length === 0) {
+        await db.bankAccountMovement.create({
+          data: {
+            bankAccountId,
+            amount: Math.abs(consolidated),
+            type: consolidated > 0 ? "INCOME" : "EXPENSE",
+            description: "AJUSTE IMPORTACAO EXTRATO",
+            date: lastDate,
+            userId,
+          },
+        })
+      } else {
+        const [first, ...extra] = existingAdjustments
+        await db.bankAccountMovement.update({
+          where: { id: first.id },
+          data: {
+            amount: Math.abs(consolidated),
+            type: consolidated > 0 ? "INCOME" : "EXPENSE",
+            date: lastDate,
+          },
+        })
+        if (extra.length > 0) {
+          await db.bankAccountMovement.deleteMany({ where: { id: { in: extra.map((movement) => movement.id) }, userId } })
+        }
+      }
+
       balanceAdjusted = diff
     }
   }

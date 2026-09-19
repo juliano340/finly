@@ -9,7 +9,7 @@ import { moneyToNumber, sumMoney, type MoneyValue } from "@/lib/money"
 import { composeMonthlyFinancialSources } from "@/features/monthly-plan/monthly-plan.sources"
 import { calculateInvoiceTotals } from "@/features/card-invoices/invoice-calculation"
 import { buildExpenseEvolution } from "./expense-evolution"
-import { computeBenefitTotals } from "@/features/bank-accounts/benefit"
+import { computeBenefitTotals, isBenefitAdjustment } from "@/features/bank-accounts/benefit"
 
 type FixedCostOccurrenceClient = Pick<PrismaClient, "fixedCost" | "fixedCostOccurrence">
 
@@ -153,13 +153,13 @@ export async function getMonthlyClosing(
       benefitDailyRate: account.benefitDailyRate === null ? null : moneyToNumber(account.benefitDailyRate),
       movements: account.movements
         .filter((movement) => movement.date >= monthStart && movement.date < monthEnd)
-        .map((movement) => ({ amount: moneyToNumber(movement.amount), type: movement.type })),
+        .map((movement) => ({ amount: moneyToNumber(movement.amount), type: movement.type, description: movement.description })),
     })),
     month,
   )
   const benefitExpenses = benefitAccounts.flatMap((account) =>
     account.movements
-      .filter((movement) => movement.type === "EXPENSE" && movement.date >= monthStart && movement.date < monthEnd)
+      .filter((movement) => movement.type === "EXPENSE" && movement.date >= monthStart && movement.date < monthEnd && !isBenefitAdjustment(movement.description))
       .map((movement) => ({
         id: movement.id,
         description: movement.description,
@@ -348,7 +348,7 @@ export async function getMonthlyClosingSummary(
         benefitDailyRate: true,
         movements: {
           where: { date: { gte: new Date(year, m - 1, 1), lt: new Date(year, m, 1) } },
-          select: { amount: true, type: true },
+          select: { amount: true, type: true, description: true },
         },
       },
     }),
@@ -393,6 +393,7 @@ export async function getMonthlyClosingSummary(
       movements: account.movements.map((movement) => ({
         amount: moneyToNumber(movement.amount),
         type: movement.type,
+        description: movement.description,
       })),
     })),
     month,

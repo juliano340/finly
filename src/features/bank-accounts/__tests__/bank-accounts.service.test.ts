@@ -593,6 +593,12 @@ describe("bank-accounts.service", () => {
     expect(adjustment?.type).toBe("EXPENSE")
     expect(Number(adjustment?.amount)).toBeCloseTo(117.49, 2)
     expect(adjustment?.date.toISOString().slice(0, 10)).toBe("2026-09-14")
+
+    const totals = computeBenefitTotals(
+      [{ benefitDailyRate: null, movements: movements.map((movement) => ({ amount: Number(movement.amount), type: movement.type, description: movement.description })) }],
+      "2026-09",
+    )
+    expect(totals).toEqual({ credited: 466.2, spent: 18.5, estimated: false })
   })
 
   it("não cria ajuste duplicado ao reimportar extrato reconciliado", async () => {
@@ -699,5 +705,88 @@ describe("bank-accounts.service", () => {
     expect(result?.manualReplaced).toBe(0)
     const movements = await prisma.bankAccountMovement.findMany({ where: { bankAccountId: benefit.id } })
     expect(movements.some((movement) => movement.description?.startsWith("AJUSTE_MANUAL"))).toBe(true)
+  })
+
+  it("atualiza o ajuste existente em vez de acumular ao reconciliar de novo", async () => {
+    const benefit = await createBankAccount(
+      userId,
+      { name: `Benefício ajuste único ${Date.now()}`, institution: "FLASH", type: "BENEFIT", color: "#16A34A", initialBalance: 118, overdraftLimit: 0, benefitDailyRate: null, active: true },
+      prisma,
+    )
+    const csv = [
+      "Data,Hora,Movimentação,Valor,Meio de Pagamento,Saldo",
+      '14/09/2026,11:31,"JOAO RENATO","-R$ 18,50",Cartão,"R$ 448,21"',
+      '29/08/2026,00:31,"Depósito transferido","R$ 466,20",Depósito,"R$ 466,71"',
+    ].join("\n")
+
+    await importBenefitStatement(benefit.id, userId, csv, {}, prisma)
+    await createBankAccountMovement(benefit.id, userId, { amount: 50, type: "INCOME", description: "ENTRADA EXTRA", date: new Date(2026, 8, 20, 12) }, prisma)
+
+    const result = await importBenefitStatement(benefit.id, userId, csv, {}, prisma)
+
+    expect(result?.balanceAdjusted).toBe(-50)
+    const adjustments = await prisma.bankAccountMovement.findMany({ where: { bankAccountId: benefit.id, description: "AJUSTE IMPORTACAO EXTRATO" } })
+    expect(adjustments).toHaveLength(1)
+    expect(adjustments[0].type).toBe("EXPENSE")
+    expect(Number(adjustments[0].amount)).toBeCloseTo(167.49, 2)
+
+    const movements = await prisma.bankAccountMovement.findMany({ where: { bankAccountId: benefit.id } })
+    const balance = movements.reduce((total, movement) => total + (movement.type === "INCOME" ? Number(movement.amount) : -Number(movement.amount)), 118)
+    expect(balance).toBeCloseTo(448.21, 2)
+  })
+
+  it("deleta o ajuste quando o diff zera o valor existente", async () => {
+    const benefit = await createBankAccount(
+      userId,
+      { name: `Benefício ajuste zera ${Date.now()}`, institution: "FLASH", type: "BENEFIT", color: "#16A34A", initialBalance: 118, overdraftLimit: 0, benefitDailyRate: null, active: true },
+      prisma,
+    )
+    const csv = [
+      "Data,Hora,Movimentação,Valor,Meio de Pagamento,Saldo",
+      '14/09/2026,11:31,"JOAO RENATO","-R$ 18,50",Cartão,"R$ 448,21"',
+      '29/08/2026,00:31,"Depósito transferido","R$ 466,20",Depósito,"R$ 466,71"',
+    ].join("\n")
+
+    await importBenefitStatement(benefit.id, userId, csv, {}, prisma)
+    await createBankAccountMovement(benefit.id, userId, { amount: 117.49, type: "EXPENSE", description: "GASTO EXTRA", date: new Date(2026, 8, 20, 12) }, prisma)
+
+    const result = await importBenefitStatement(benefit.id, userId, csv, {}, prisma)
+
+    expect(result?.balanceAdjusted).toBe(117.49)
+    await expect(prisma.bankAccountMovement.count({ where: { bankAccountId: benefit.id, description: "AJUSTE IMPORTACAO EXTRATO" } })).resolves.toBe(0)
+
+    const movements = await prisma.bankAccountMovement.findMany({ where: { bankAccountId: benefit.id } })
+    const balance = movements.reduce((total, movement) => total + (movement.type === "INCOME" ? Number(movement.amount) : -Number(movement.amount)), 118)
+    expect(balance).toBeCloseTo(448.21, 2)
+  })
+
+  it("consolida dois ajustes antigos em um único ao reconciliar", async () => {
+    const benefit = await createBankAccount(
+      userId,
+      { name: `Benefício ajustes antigos ${Date.now()}`, institution: "FLASH", type: "BENEFIT", color: "#16A34A", initialBalance: 118, overdraftLimit: 0, benefitDailyRate: null, active: true },
+      prisma,
+    )
+    const csv = [
+      "Data,Hora,Movimentação,Valor,Meio de Pagamento,Saldo",
+      '14/09/2026,11:31,"JOAO RENATO","-R$ 18,50",Cartão,"R$ 448,21"',
+      '29/08/2026,00:31,"Depósito transferido","R$ 466,20",Depósito,"R$ 466,71"',
+    ].join("\n")
+
+    await importBenefitStatement(benefit.id, userId, csv, {}, prisma)
+    await prisma.bankAccountMovement.create({
+      data: { bankAccountId: benefit.id, amount: 10, type: "EXPENSE", description: "AJUSTE IMPORTACAO EXTRATO", date: new Date(2026, 8, 21, 12), userId },
+    })
+    await createBankAccountMovement(benefit.id, userId, { amount: 10, type: "INCOME", description: "ENTRADA EXTRA", date: new Date(2026, 8, 22, 12) }, prisma)
+
+    const result = await importBenefitStatement(benefit.id, userId, csv, {}, prisma)
+
+    expect(result?.balanceAdjusted).toBe(0)
+    const adjustments = await prisma.bankAccountMovement.findMany({ where: { bankAccountId: benefit.id, description: "AJUSTE IMPORTACAO EXTRATO" } })
+    expect(adjustments).toHaveLength(1)
+    expect(Number(adjustments[0].amount)).toBeCloseTo(127.49, 2)
+
+    const movements = await prisma.bankAccountMovement.findMany({ where: { bankAccountId: benefit.id } })
+    const balance = movements.reduce((total, movement) => total + (movement.type === "INCOME" ? Number(movement.amount) : -Number(movement.amount)), 118)
+    expect(balance).toBeCloseTo(448.21, 2)
   })
 })

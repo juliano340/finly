@@ -1,12 +1,16 @@
 export interface BenefitAccountInfo {
   benefitDailyRate: number | null
-  movements: { amount: number; type: "INCOME" | "EXPENSE" }[]
+  movements: { amount: number; type: "INCOME" | "EXPENSE"; description?: string | null }[]
 }
 
 export interface BenefitTotals {
   credited: number
   spent: number
   estimated: boolean
+}
+
+export function isBenefitAdjustment(description?: string | null): boolean {
+  return (description ?? "").trim().toLowerCase().startsWith("ajuste")
 }
 
 export function businessDaysInMonth(month: string): number {
@@ -32,6 +36,7 @@ export function computeBenefitTotals(accounts: BenefitAccountInfo[], month: stri
   for (const account of accounts) {
     let hasCredit = false
     for (const movement of account.movements) {
+      if (isBenefitAdjustment(movement.description)) continue
       if (movement.type === "INCOME") {
         credited += movement.amount
         hasCredit = true

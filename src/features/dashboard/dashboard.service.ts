@@ -158,7 +158,7 @@ export async function getDashboardStats(
           benefitDailyRate: true,
           movements: {
             where: { date: { gte: startDate, lt: endDate } },
-            select: { amount: true, type: true },
+            select: { amount: true, type: true, description: true },
           },
         },
       }),
@@ -170,6 +170,7 @@ export async function getDashboardStats(
       movements: account.movements.map((movement) => ({
         amount: moneyToNumber(movement.amount),
         type: movement.type,
+        description: movement.description,
       })),
     })),
     month,
