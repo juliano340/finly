@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.70] - 2026-09-19
+
+### Adicionado
+
+- Ao importar o extrato com a opção de substituir registros manuais, os ajustes de saldo antigos da conta são absorvidos no ajuste único da importação: a lista fica limpa e o saldo continua igual ao do arquivo.
+
 ## [0.2.69] - 2026-09-19
 
 ### Corrigido

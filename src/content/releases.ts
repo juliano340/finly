@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.69"
+export const CURRENT_VERSION = "0.2.70"
 
 export const releases = [
+  {
+    version: "0.2.70",
+    date: "2026-09-19",
+    changes: [
+      { type: "feat", description: "Ao importar o extrato com a opção de substituir registros manuais, os ajustes de saldo antigos da conta são absorvidos no ajuste único da importação: a lista fica limpa e o saldo continua igual ao do arquivo." },
+    ],
+  },
   {
     version: "0.2.69",
     date: "2026-09-19",
