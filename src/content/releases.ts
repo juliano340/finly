@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.64"
+export const CURRENT_VERSION = "0.2.65"
 
 export const releases = [
+  {
+    version: "0.2.65",
+    date: "2026-09-19",
+    changes: [
+      { type: "feat", description: "Agora dá para importar o extrato CSV do benefício (FLASH) direto na conta de benefício: o botão 'Importar extrato' lança as entradas e saídas no saldo, no Fechamento e no gráfico de evolução, e reimportar o mesmo arquivo não duplica lançamentos." },
+    ],
+  },
   {
     version: "0.2.64",
     date: "2026-09-18",

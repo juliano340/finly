@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.65] - 2026-09-19
+
+### Adicionado
+
+- Agora dá para importar o extrato CSV do benefício (FLASH) direto na conta de benefício: o botão 'Importar extrato' lança as entradas e saídas no saldo, no Fechamento e no gráfico de evolução, e reimportar o mesmo arquivo não duplica lançamentos.
+
 ## [0.2.64] - 2026-09-18
 
 ### Adicionado
