@@ -108,6 +108,7 @@ function DashboardPageContent() {
       bg: "bg-success/10",
       benefit: summary.benefitCredited,
       benefitEstimated: summary.benefitEstimated,
+      benefitBreakdown: true,
     },
     {
       label: "Despesas do mês",
@@ -117,6 +118,7 @@ function DashboardPageContent() {
       bg: "bg-destructive/10",
       benefit: summary.benefitSpent,
       benefitEstimated: false,
+      benefitBreakdown: false,
     },
     {
       label: "Resultado líquido",
@@ -126,6 +128,7 @@ function DashboardPageContent() {
       bg: summary.balance >= 0 ? "bg-success/10" : "bg-destructive/10",
       benefit: 0,
       benefitEstimated: false,
+      benefitBreakdown: false,
     },
   ]
   const totalToPay = closing?.summary.totalToPay ?? 0
@@ -169,7 +172,7 @@ function DashboardPageContent() {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <MobileFinanceItem label="Receitas" value={summary.income} icon={<ArrowUp className="h-4 w-4" />} tone="good" benefit={summary.benefitCredited} benefitEstimated={summary.benefitEstimated} loading={loading} />
+            <MobileFinanceItem label="Receitas" value={summary.income} icon={<ArrowUp className="h-4 w-4" />} tone="good" benefit={summary.benefitCredited} benefitEstimated={summary.benefitEstimated} benefitBreakdown loading={loading} />
             <MobileFinanceItem label="Despesas" value={summary.expense} icon={<ArrowDown className="h-4 w-4" />} tone="bad" benefit={summary.benefitSpent} loading={loading} />
           </div>
         </CardContent>
@@ -197,11 +200,23 @@ function DashboardPageContent() {
                   )}
                 </p>
                 {!loading && card.benefit > 0 && (
-                  <p className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                    <Badge variant="secondary" className="h-4 px-1 text-[10px] font-semibold uppercase tracking-wide">VA</Badge>
-                    <span className="tabular-nums">{formatCurrency(card.benefit)}</span>
-                    {card.benefitEstimated && <span>· estimado</span>}
-                  </p>
+                  card.benefitBreakdown ? (
+                    <p className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11px] text-muted-foreground">
+                      <span className="tabular-nums">{formatCurrency(card.value - card.benefit)}</span>
+                      <span>+</span>
+                      <Badge variant="secondary" className="h-4 px-1 text-[10px] font-semibold uppercase tracking-wide">VA</Badge>
+                      <span className="tabular-nums">{formatCurrency(card.benefit)}</span>
+                      {card.benefitEstimated && <span>· estimado</span>}
+                      <span>=</span>
+                      <span className="font-medium text-foreground tabular-nums">{formatCurrency(card.value)}</span>
+                    </p>
+                  ) : (
+                    <p className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <Badge variant="secondary" className="h-4 px-1 text-[10px] font-semibold uppercase tracking-wide">VA</Badge>
+                      <span className="tabular-nums">{formatCurrency(card.benefit)}</span>
+                      {card.benefitEstimated && <span>· estimado</span>}
+                    </p>
+                  )
                 )}
               </div>
             </CardContent>
@@ -441,6 +456,7 @@ function MobileFinanceItem({
   tone,
   benefit = 0,
   benefitEstimated = false,
+  benefitBreakdown = false,
   loading = false,
 }: {
   label: string
@@ -449,6 +465,7 @@ function MobileFinanceItem({
   tone: "good" | "bad"
   benefit?: number
   benefitEstimated?: boolean
+  benefitBreakdown?: boolean
   loading?: boolean
 }) {
   const toneClass = tone === "good" ? "text-success" : "text-destructive"
@@ -465,10 +482,22 @@ function MobileFinanceItem({
         {loading ? <span className="inline-block h-4 w-20 animate-pulse rounded bg-muted" /> : formatCurrency(value)}
       </p>
       {!loading && benefit > 0 && (
-        <p className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground">
-          <Badge variant="secondary" className="h-4 px-1 text-[10px] font-semibold uppercase tracking-wide">VA</Badge>
-          <span className="truncate tabular-nums">{formatCurrency(benefit)}{benefitEstimated ? " · estimado" : ""}</span>
-        </p>
+        benefitBreakdown ? (
+          <p className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11px] text-muted-foreground">
+            <span className="tabular-nums">{formatCurrency(value - benefit)}</span>
+            <span>+</span>
+            <Badge variant="secondary" className="h-4 px-1 text-[10px] font-semibold uppercase tracking-wide">VA</Badge>
+            <span className="tabular-nums">{formatCurrency(benefit)}</span>
+            {benefitEstimated && <span>· estimado</span>}
+            <span>=</span>
+            <span className="font-medium text-foreground tabular-nums">{formatCurrency(value)}</span>
+          </p>
+        ) : (
+          <p className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground">
+            <Badge variant="secondary" className="h-4 px-1 text-[10px] font-semibold uppercase tracking-wide">VA</Badge>
+            <span className="truncate tabular-nums">{formatCurrency(benefit)}{benefitEstimated ? " · estimado" : ""}</span>
+          </p>
+        )
       )}
     </div>
   )
