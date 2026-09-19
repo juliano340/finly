@@ -5,6 +5,7 @@ import Link from "next/link"
 import { ArrowUpDown, ChevronDown, ChevronUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { dueLabel, formatCurrency, formatDate } from "@/lib/utils"
 import { resolveOccurrencePayment } from "@/features/fixed-costs/occurrence-payment"
 import { MonthNavigator, changeMonth, getCurrentMonth } from "@/components/month-navigator"
@@ -16,11 +17,12 @@ import { ExpenseEvolutionChart } from "./_components/expense-evolution-chart"
 
   interface ClosingData {
     summary: {
-    cardInvoicesTotal: number; cardInvoicesPaidTotal: number; fixedCostsTotal: number; fixedCostsInsideCardTotal: number; cardForecastsWithoutInvoiceTotal: number; fixedCostsOutsideCardTotal: number; fixedCostsOutsideCardTotalAll: number; fixedIncomeTotal: number; looseExpensesTotal: number; incomeTotal: number; receivedIncomeTotal: number; totalToPay: number; totalSpent: number; projectedBalance: number
+    cardInvoicesTotal: number; cardInvoicesPaidTotal: number; fixedCostsTotal: number; fixedCostsInsideCardTotal: number; cardForecastsWithoutInvoiceTotal: number; fixedCostsOutsideCardTotal: number; fixedCostsOutsideCardTotalAll: number; fixedIncomeTotal: number; looseExpensesTotal: number; incomeTotal: number; receivedIncomeTotal: number; benefitCredited: number; benefitSpent: number; benefitEstimated: boolean; totalToPay: number; totalSpent: number; projectedBalance: number
     estimatedInvoicesByCard: { cardId: string; cardName: string; estimatedAmount: number; invoiceAmount: number; difference: number }[]
     incomeItems: { name: string; amount: number; type: "FIXED" | "LOOSE"; status: "PENDING" | "PAID" }[]
   }
   invoices: { id: string; amount: number; dueDate: string; status: "PENDING" | "PAID"; card: { name: string }; items: { id: string; description: string; amount: number }[] }[]
+  benefitExpenses: { id: string; description: string | null; amount: number }[]
   fixedCosts: {
     id: string
     dueDate: string | null
@@ -94,12 +96,14 @@ function MonthlyClosingPageContent() {
   const paidFormula = [
     { label: "Faturas pagas", value: summary?.cardInvoicesPaidTotal ?? 0 },
     { label: "Fixos fora pagos", value: (summary?.fixedCostsOutsideCardTotalAll ?? 0) - (summary?.fixedCostsOutsideCardTotal ?? 0) },
+    ...(summary?.benefitSpent ? [{ label: "VA (benefício)", value: summary.benefitSpent, badge: "VA" }] : []),
   ]
   const totalFormula = [
     { label: "Faturas", value: (summary?.cardInvoicesTotal ?? 0) + (summary?.cardInvoicesPaidTotal ?? 0) },
     ...(summary?.cardForecastsWithoutInvoiceTotal ? [{ label: "Fixos no cartão sem fatura", value: summary.cardForecastsWithoutInvoiceTotal }] : []),
     { label: "Fixos fora", value: summary?.fixedCostsOutsideCardTotalAll ?? 0 },
     { label: "Avulsas", value: summary?.looseExpensesTotal ?? 0 },
+    ...(summary?.benefitSpent ? [{ label: "VA (benefício)", value: summary.benefitSpent, badge: "VA" }] : []),
   ]
   const invoiceCardIds = new Set((data?.invoices ?? []).map((invoice) => invoice.card.name))
   const paymentOf = (item: ClosingData["fixedCosts"][number]) => resolveOccurrencePayment(item)
@@ -125,6 +129,12 @@ function MonthlyClosingPageContent() {
     "Fixos no cartão sem fatura": (data?.fixedCosts ?? [])
       .filter((item) => item.fixedCost.type === "EXPENSE" && paymentOf(item).paidInsideCard && (!effectiveCardName(item) || !invoiceCardIds.has(effectiveCardName(item)!)))
       .map((item) => ({ id: item.id, name: item.fixedCost.name, amount: item.amount, status: item.status })),
+    "VA (benefício)": (data?.benefitExpenses ?? []).map((item) => ({
+      id: item.id,
+      name: item.description ?? "Saída VA",
+      amount: item.amount,
+      status: "PAID" as const,
+    })),
   }
 
   const bills: BillRow[] = [
@@ -192,6 +202,9 @@ function MonthlyClosingPageContent() {
           result={summary?.projectedBalance ?? 0}
           paid={paidTotal}
           pending={summary?.totalToPay ?? 0}
+          benefitCredited={summary?.benefitCredited ?? 0}
+          benefitSpent={summary?.benefitSpent ?? 0}
+          benefitEstimated={summary?.benefitEstimated ?? false}
           loading={loading}
         />
         <ExpenseComposition items={totalFormula} pendingItems={pendingFormula} details={expenseDetails} loading={loading} month={month} />
@@ -264,16 +277,19 @@ type BillRow = {
   payable?: boolean
   invoicedInsideCard?: boolean
 }
-type DetailItem = { name?: string; label?: string; amount?: number; value?: number; status?: string }
+type DetailItem = { name?: string; label?: string; amount?: number; value?: number; status?: string; badge?: string }
 type ExpenseDetail = { id: string; name: string; amount: number; status: string; children?: { id: string; name: string; amount: number }[] }
 
-function MonthlyOverview({ income, receivedIncome, expenses, result, paid, pending, loading }: {
+function MonthlyOverview({ income, receivedIncome, expenses, result, paid, pending, benefitCredited, benefitSpent, benefitEstimated, loading }: {
   income: number
   receivedIncome: number
   expenses: number
   result: number
   paid: number
   pending: number
+  benefitCredited: number
+  benefitSpent: number
+  benefitEstimated: boolean
   loading: boolean
 }) {
   const total = paid + pending
@@ -287,8 +303,22 @@ function MonthlyOverview({ income, receivedIncome, expenses, result, paid, pendi
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="grid gap-4 sm:grid-cols-3">
-          <OverviewValue label="Receitas do mês" value={income} detail={`${formatCurrency(receivedIncome)} recebido`} loading={loading} />
-          <OverviewValue label="Despesas do mês" value={expenses} detail="Pagas e pendentes" loading={loading} />
+          <OverviewValue
+            label="Receitas do mês"
+            value={income}
+            detail={benefitCredited > 0
+              ? `${formatCurrency(receivedIncome)} recebido · inclui VA ${formatCurrency(benefitCredited)}${benefitEstimated ? " (estimado)" : ""}`
+              : `${formatCurrency(receivedIncome)} recebido`}
+            badge={benefitCredited > 0 ? <BenefitBadge estimated={benefitEstimated} /> : undefined}
+            loading={loading}
+          />
+          <OverviewValue
+            label="Despesas do mês"
+            value={expenses}
+            detail={benefitSpent > 0 ? `Pagas e pendentes · inclui VA ${formatCurrency(benefitSpent)}` : "Pagas e pendentes"}
+            badge={benefitSpent > 0 ? <BenefitBadge /> : undefined}
+            loading={loading}
+          />
           <OverviewValue label={result >= 0 ? "Saldo projetado" : "Déficit projetado"} value={result} detail="Receitas menos despesas" loading={loading} tone={result >= 0 ? "positive" : "negative"} />
         </div>
         <div className="rounded-lg bg-muted/60 p-4">
@@ -309,16 +339,29 @@ function MonthlyOverview({ income, receivedIncome, expenses, result, paid, pendi
   )
 }
 
-function OverviewValue({ label, value, detail, loading, tone = "default" }: {
+function BenefitBadge({ estimated = false }: { estimated?: boolean }) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      <Badge variant="secondary" className="h-4 px-1 text-[10px] font-semibold uppercase tracking-wide">VA</Badge>
+      {estimated && <span className="text-[10px] text-muted-foreground">estimado</span>}
+    </span>
+  )
+}
+
+function OverviewValue({ label, value, detail, loading, tone = "default", badge }: {
   label: string
   value: number
   detail: string
   loading: boolean
   tone?: "default" | "positive" | "negative"
+  badge?: React.ReactNode
 }) {
   return (
     <div>
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        {label}
+        {badge}
+      </p>
       <p className={`mt-1 text-xl font-bold tabular-nums ${tone === "positive" ? "text-success" : tone === "negative" ? "text-destructive" : ""}`}>
         {loading ? <span className="inline-block h-6 w-32 animate-pulse rounded bg-muted" /> : formatCurrency(value)}
       </p>
@@ -342,6 +385,7 @@ function ExpenseComposition({ items, pendingItems, details, loading, month }: { 
     "Fixos fora": `/fixed-costs?${monthQuery}`,
     Avulsas: `/transactions?${monthQuery}`,
     "Fixos no cartão sem fatura": `/fixed-costs?${monthQuery}`,
+    "VA (benefício)": "/bank-accounts",
   }
   const totals = items.reduce(
     (acc, item) => {
@@ -396,6 +440,9 @@ function ExpenseComposition({ items, pendingItems, details, loading, month }: { 
                       >
                         {item.label}
                       </button>
+                      {item.badge && (
+                        <Badge variant="secondary" className="h-4 shrink-0 px-1 text-[10px] font-semibold uppercase tracking-wide">{item.badge}</Badge>
+                      )}
                       {itemDetails.length > 0 && <Link href={links[label] ?? "#"} className="shrink-0 text-xs text-muted-foreground hover:text-foreground">Abrir lista</Link>}
                     </div>
                     <span className="text-right font-semibold tabular-nums">{formatCurrency(total)}</span>
@@ -816,7 +863,12 @@ function BreakdownRows({ items, className = "bg-muted/50" }: { items: DetailItem
     <div className="space-y-1.5">
       {items.map((item) => (
         <div key={item.name ?? item.label} className={`flex items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-xs ${className}`}>
-          <span className="min-w-0 truncate">{item.name ?? item.label}</span>
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate">{item.name ?? item.label}</span>
+            {item.badge && (
+              <Badge variant="secondary" className="h-4 shrink-0 px-1 text-[10px] font-semibold uppercase tracking-wide">{item.badge}</Badge>
+            )}
+          </span>
           <span className="shrink-0 font-semibold tabular-nums">{formatCurrency(item.amount ?? item.value ?? 0)}</span>
         </div>
       ))}

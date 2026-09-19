@@ -227,3 +227,144 @@ describe("Dashboard Service", () => {
     expect(may?.cards[nubank.id]).toBe(200)
   })
 })
+
+describe("Dashboard Service — VA (benefício)", () => {
+  const userId = `user_benefit_dash_${Date.now()}`
+  const multiUserId = `user_benefit_multi_${Date.now()}`
+  const month = "2026-10"
+  const estimatedMonth = "2026-11"
+  const multiMonth = "2026-12"
+  let benefitAccountId = ""
+
+  beforeAll(async () => {
+    await prisma.user.create({
+      data: { id: userId, name: "Benefit Dash", email: `benefit-dash-${Date.now()}@test.com` },
+    })
+    const expenseCategory = await prisma.category.create({
+      data: { name: "Mercado VA", type: "EXPENSE", color: "#22C55E", icon: "ShoppingCart", userId },
+    })
+    const incomeCategory = await prisma.category.create({
+      data: { name: "Salário VA", type: "INCOME", color: "#0EA882", icon: "Banknote", userId },
+    })
+
+    const account = await prisma.bankAccount.create({
+      data: { name: `VA ${Date.now()}`, type: "BENEFIT", benefitDailyRate: 22, userId },
+    })
+    benefitAccountId = account.id
+    await prisma.bankAccountMovement.createMany({
+      data: [
+        { bankAccountId: account.id, amount: 500, type: "INCOME", description: "RECARGA BENEFÍCIO: OUTUBRO", date: new Date("2026-10-01T12:00:00"), userId },
+        { bankAccountId: account.id, amount: 120.5, type: "EXPENSE", description: "Mercado do mês", date: new Date("2026-10-05T12:00:00"), userId },
+        { bankAccountId: account.id, amount: 80.3, type: "EXPENSE", description: "Lanchonete", date: new Date("2026-10-10T12:00:00"), userId },
+      ],
+    })
+
+    await prisma.transaction.create({
+      data: { amount: 999, type: "INCOME", categoryId: incomeCategory.id, bankAccountId: account.id, userId, date: new Date("2026-10-01T12:00:00") },
+    })
+    await prisma.transaction.create({
+      data: { amount: 5000, type: "INCOME", categoryId: incomeCategory.id, userId, date: new Date("2026-10-02T12:00:00") },
+    })
+    await prisma.transaction.create({
+      data: { amount: 100, type: "EXPENSE", categoryId: expenseCategory.id, userId, date: new Date("2026-10-03T12:00:00") },
+    })
+
+    await prisma.user.create({
+      data: { id: multiUserId, name: "Benefit Multi", email: `benefit-multi-${Date.now()}@test.com` },
+    })
+    const multiAccount = await prisma.bankAccount.create({
+      data: { name: `VA multi ${Date.now()}`, type: "BENEFIT", benefitDailyRate: null, userId: multiUserId },
+    })
+    await prisma.bankAccount.create({
+      data: { name: `VA estimada ${Date.now()}`, type: "BENEFIT", benefitDailyRate: 15.75, userId: multiUserId },
+    })
+    await prisma.bankAccountMovement.createMany({
+      data: [
+        { bankAccountId: multiAccount.id, amount: 100.1, type: "INCOME", description: "RECARGA BENEFÍCIO: DEZEMBRO", date: new Date("2026-12-01T12:00:00"), userId: multiUserId },
+        { bankAccountId: multiAccount.id, amount: 30.05, type: "EXPENSE", description: "Padaria", date: new Date("2026-12-05T12:00:00"), userId: multiUserId },
+      ],
+    })
+  })
+
+  afterAll(async () => {
+    await prisma.bankAccountMovement.deleteMany({ where: { userId } })
+    await prisma.transaction.deleteMany({ where: { userId } })
+    await prisma.bankAccount.deleteMany({ where: { userId } })
+    await prisma.financialMonth.deleteMany({ where: { userId } })
+    await prisma.fixedCostOccurrence.deleteMany({ where: { userId } })
+    await prisma.fixedCost.deleteMany({ where: { userId } })
+    await prisma.category.deleteMany({ where: { userId } })
+    await prisma.user.deleteMany({ where: { id: userId } })
+
+    await prisma.bankAccountMovement.deleteMany({ where: { userId: multiUserId } })
+    await prisma.bankAccount.deleteMany({ where: { userId: multiUserId } })
+    await prisma.financialMonth.deleteMany({ where: { userId: multiUserId } })
+    await prisma.fixedCostOccurrence.deleteMany({ where: { userId: multiUserId } })
+    await prisma.user.deleteMany({ where: { id: multiUserId } })
+  })
+
+  it("soma VA recebido/gasto no mês e ignora Transaction INCOME da conta BENEFIT", async () => {
+    const stats = await getDashboardStats(userId, month, prisma)
+
+    expect(stats.income).toBe(5500)
+    expect(stats.expense).toBe(300.8)
+    expect(stats.balance).toBe(5199.2)
+    expect(stats.benefitCredited).toBe(500)
+    expect(stats.benefitSpent).toBe(200.8)
+    expect(stats.benefitEstimated).toBe(false)
+    expect(benefitAccountId).not.toBe("")
+  })
+
+  it("marca estimado quando o mês não tem crédito e usa rate x dias úteis", async () => {
+    const stats = await getDashboardStats(userId, estimatedMonth, prisma)
+
+    expect(stats.benefitEstimated).toBe(true)
+    expect(stats.benefitCredited).toBe(462)
+    expect(stats.benefitSpent).toBe(0)
+    expect(stats.income).toBe(462)
+    expect(stats.expense).toBe(0)
+  })
+
+  it("multi-conta: credita real, estima a conta sem crédito e arredonda centavos", async () => {
+    const stats = await getDashboardStats(multiUserId, multiMonth, prisma)
+
+    expect(stats.benefitCredited).toBe(462.35)
+    expect(stats.benefitSpent).toBe(30.05)
+    expect(stats.benefitEstimated).toBe(true)
+    expect(stats.income).toBe(462.35)
+    expect(stats.expense).toBe(30.05)
+  })
+
+  it("sem conta BENEFIT mantém os totais idênticos aos atuais", async () => {
+    const plainId = `${userId}_plain`
+    await prisma.user.create({
+      data: { id: plainId, name: "Plain Dash", email: `plain-dash-${Date.now()}@test.com` },
+    })
+    const category = await prisma.category.create({
+      data: { name: "Geral", type: "EXPENSE", color: "#9CA3AF", icon: "Tag", userId: plainId },
+    })
+    await prisma.transaction.createMany({
+      data: [
+        { amount: 1000, type: "INCOME", categoryId: category.id, userId: plainId, date: new Date("2026-10-01T12:00:00") },
+        { amount: 250, type: "EXPENSE", categoryId: category.id, userId: plainId, date: new Date("2026-10-05T12:00:00") },
+      ],
+    })
+
+    const stats = await getDashboardStats(plainId, month, prisma)
+
+    expect(stats).toMatchObject({
+      income: 1000,
+      expense: 250,
+      balance: 750,
+      benefitCredited: 0,
+      benefitSpent: 0,
+      benefitEstimated: false,
+    })
+
+    await prisma.transaction.deleteMany({ where: { userId: plainId } })
+    await prisma.financialMonth.deleteMany({ where: { userId: plainId } })
+    await prisma.fixedCostOccurrence.deleteMany({ where: { userId: plainId } })
+    await prisma.category.deleteMany({ where: { userId: plainId } })
+    await prisma.user.delete({ where: { id: plainId } })
+  })
+})

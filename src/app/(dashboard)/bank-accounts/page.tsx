@@ -16,7 +16,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { TransferWizard } from "@/features/bank-accounts/components/transfer-wizard"
+import { businessDaysInMonth, estimateBenefitCredit } from "@/features/bank-accounts/benefit"
 import { formatCurrency } from "@/lib/utils"
+import { getCurrentMonth } from "@/lib/months"
 import { isAccountNegative, getAvailableBalance } from "@/lib/balance"
 import { ariaSort, sortButtonLabel } from "@/lib/accessible-sort"
 
@@ -513,7 +515,7 @@ export default function BankAccountsPage() {
                               <p className="text-sm font-medium">Conta de benefício pré-pago</p>
                               <p className="text-xs text-muted-foreground">
                                 {selectedAccount.benefitDailyRate
-                                  ? `${formatCurrency(selectedAccount.benefitDailyRate)} por dia • estimativa deste mês: ${formatCurrency(estimatedBenefitCredit(selectedAccount.benefitDailyRate))}`
+                                  ? `${formatCurrency(selectedAccount.benefitDailyRate)} por dia • estimativa deste mês: ${formatCurrency(estimateBenefitCredit(selectedAccount.benefitDailyRate, getCurrentMonth()))}`
                                   : "As recargas não entram como receita livre."}
                               </p>
                             </div>
@@ -563,14 +565,14 @@ export default function BankAccountsPage() {
                         <FormSection icon={Gift} title="Recarga">
                           <FormField
                             label="Valor creditado pela empresa"
-                            hint={selectedAccount.benefitDailyRate ? `${businessDaysInCurrentMonth()} dias úteis × ${formatCurrency(selectedAccount.benefitDailyRate)}. Ajuste se houve feriado, férias ou ausência.` : undefined}
+                            hint={selectedAccount.benefitDailyRate ? `${businessDaysInMonth(getCurrentMonth())} dias úteis × ${formatCurrency(selectedAccount.benefitDailyRate)}. Ajuste se houve feriado, férias ou ausência.` : undefined}
                           >
                             <Input
                               name="amount"
                               type="number"
                               step="0.01"
                               min="0.01"
-                              defaultValue={selectedAccount.benefitDailyRate ? estimatedBenefitCredit(selectedAccount.benefitDailyRate).toFixed(2) : undefined}
+                              defaultValue={selectedAccount.benefitDailyRate ? estimateBenefitCredit(selectedAccount.benefitDailyRate, getCurrentMonth()).toFixed(2) : undefined}
                               placeholder="0,00"
                               required
                             />
@@ -914,22 +916,6 @@ function formatMovementDescription(description: string | null, type: "INCOME" | 
   if (description.startsWith("RECARGA BENEFÍCIO:")) return description.replace("RECARGA BENEFÍCIO:", "Recarga:")
   if (description.startsWith("TRANSAÇÃO:")) return description.replace("TRANSAÇÃO: ", "")
   return description
-}
-
-function businessDaysInCurrentMonth(reference = new Date()) {
-  const year = reference.getFullYear()
-  const month = reference.getMonth()
-  const lastDay = new Date(year, month + 1, 0).getDate()
-  let businessDays = 0
-  for (let day = 1; day <= lastDay; day++) {
-    const weekDay = new Date(year, month, day).getDay()
-    if (weekDay !== 0 && weekDay !== 6) businessDays++
-  }
-  return businessDays
-}
-
-function estimatedBenefitCredit(dailyRate: number) {
-  return dailyRate * businessDaysInCurrentMonth()
 }
 
 function AdjustSubmitButton({ submitting }: { submitting: boolean }) {

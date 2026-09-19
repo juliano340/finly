@@ -9,6 +9,7 @@ import { moneyToNumber, sumMoney, type MoneyValue } from "@/lib/money"
 import { composeMonthlyFinancialSources } from "@/features/monthly-plan/monthly-plan.sources"
 import { calculateInvoiceTotals } from "@/features/card-invoices/invoice-calculation"
 import { buildExpenseEvolution } from "./expense-evolution"
+import { computeBenefitTotals } from "@/features/bank-accounts/benefit"
 
 type FixedCostOccurrenceClient = Pick<PrismaClient, "fixedCost" | "fixedCostOccurrence">
 
@@ -40,6 +41,9 @@ export interface MonthlyClosingSummary {
   looseExpensesTotal: number
   incomeTotal: number
   receivedIncomeTotal: number
+  benefitCredited: number
+  benefitSpent: number
+  benefitEstimated: boolean
   totalToPay: number
   totalSpent: number
   projectedBalance: number
@@ -103,7 +107,8 @@ export async function getMonthlyClosing(
       where: { userId, type: "BENEFIT" },
       select: {
         initialBalance: true,
-        movements: { select: { date: true, amount: true, type: true } },
+        benefitDailyRate: true,
+        movements: { select: { id: true, date: true, amount: true, type: true, description: true } },
       },
     }),
   ])
@@ -139,17 +144,40 @@ export async function getMonthlyClosing(
   const totalToPay = cardInvoicesTotal + cardForecastsWithoutInvoiceTotal + fixedCostsOutsideCardTotal + looseExpenses
 
   const allCardInvoices = sum(invoicesWithTotals.map((inv) => inv.amount))
+
+  const [year, monthNumber] = month.split("-").map(Number)
+  const monthStart = new Date(Date.UTC(year, monthNumber - 1, 1))
+  const monthEnd = new Date(Date.UTC(year, monthNumber, 1))
+  const benefit = computeBenefitTotals(
+    benefitAccounts.map((account) => ({
+      benefitDailyRate: account.benefitDailyRate === null ? null : moneyToNumber(account.benefitDailyRate),
+      movements: account.movements
+        .filter((movement) => movement.date >= monthStart && movement.date < monthEnd)
+        .map((movement) => ({ amount: moneyToNumber(movement.amount), type: movement.type })),
+    })),
+    month,
+  )
+  const benefitExpenses = benefitAccounts.flatMap((account) =>
+    account.movements
+      .filter((movement) => movement.type === "EXPENSE" && movement.date >= monthStart && movement.date < monthEnd)
+      .map((movement) => ({
+        id: movement.id,
+        description: movement.description,
+        amount: moneyToNumber(movement.amount),
+      })),
+  )
+
   const totalSpent = moneyToNumber(
     composeMonthlyFinancialSources({
       invoices,
       occurrences,
       variableSpent: new Prisma.Decimal(looseExpenses),
     }).committedExpenses.plus(looseExpenses),
-  )
+  ) + benefit.spent
   const looseIncomeTotal = sum(looseIncome.map((tx) => tx.amount))
-  const totalIncome = fixedIncomeTotal + looseIncomeTotal
+  const totalIncome = fixedIncomeTotal + looseIncomeTotal + benefit.credited
   const receivedFixedIncomeTotal = sum(incomeOccurrences.filter((item) => item.status === "PAID").map((item) => item.amount))
-  const receivedIncomeTotal = receivedFixedIncomeTotal + looseIncomeTotal
+  const receivedIncomeTotal = receivedFixedIncomeTotal + looseIncomeTotal + (benefit.estimated ? 0 : benefit.credited)
 
   const incomeItems = [
     ...incomeOccurrences.map((item) => ({
@@ -164,10 +192,15 @@ export async function getMonthlyClosing(
       type: "LOOSE" as const,
       status: "PAID" as const,
     })),
+    ...(benefit.credited > 0
+      ? [{
+          name: "VA (benefício)",
+          amount: benefit.credited,
+          type: "LOOSE" as const,
+          status: benefit.estimated ? "PENDING" as const : "PAID" as const,
+        }]
+      : []),
   ]
-
-  const [year, monthNumber] = month.split("-").map(Number)
-  const monthStart = new Date(Date.UTC(year, monthNumber - 1, 1))
 
   const expenseEvolution = buildExpenseEvolution({
     invoices: invoicesWithTotals.map((invoice) => ({
@@ -226,6 +259,7 @@ export async function getMonthlyClosing(
     invoices: invoicesWithTotals,
     fixedCosts: expenseOccurrences,
     looseExpenses: looseExpenseItems,
+    benefitExpenses,
     expenseEvolution,
     summary: {
       month,
@@ -240,6 +274,9 @@ export async function getMonthlyClosing(
       looseExpensesTotal: looseExpenses,
       incomeTotal: totalIncome,
       receivedIncomeTotal,
+      benefitCredited: benefit.credited,
+      benefitSpent: benefit.spent,
+      benefitEstimated: benefit.estimated,
       totalToPay,
       totalSpent,
       projectedBalance: totalIncome - totalSpent,
@@ -266,7 +303,8 @@ export async function getMonthlyClosingSummary(
 
   await ensureFixedCostOccurrences(userId, month, financialMonth.id, db)
 
-  const [invoices, occurrences, looseExpenses, income] = await Promise.all([
+  const [year, m] = month.split("-").map(Number)
+  const [invoices, occurrences, looseExpenses, income, benefitAccounts] = await Promise.all([
     db.cardInvoice.findMany({
       where: { userId, month },
       select: {
@@ -304,6 +342,16 @@ export async function getMonthlyClosingSummary(
     }),
     aggregateTransactions(userId, month, "EXPENSE", db),
     aggregateTransactions(userId, month, "INCOME", db),
+    db.bankAccount.findMany({
+      where: { userId, type: "BENEFIT" },
+      select: {
+        benefitDailyRate: true,
+        movements: {
+          where: { date: { gte: new Date(year, m - 1, 1), lt: new Date(year, m, 1) } },
+          select: { amount: true, type: true },
+        },
+      },
+    }),
   ])
 
   const paymentById = new Map(occurrences.map((item) => [item.id, resolveOccurrencePayment(item)]))
@@ -339,7 +387,17 @@ export async function getMonthlyClosingSummary(
       variableSpent: new Prisma.Decimal(looseExpenses),
     }).committedExpenses.plus(looseExpenses),
   )
-  const incomeTotal = income + fixedIncomeTotal
+  const benefit = computeBenefitTotals(
+    benefitAccounts.map((account) => ({
+      benefitDailyRate: account.benefitDailyRate === null ? null : moneyToNumber(account.benefitDailyRate),
+      movements: account.movements.map((movement) => ({
+        amount: moneyToNumber(movement.amount),
+        type: movement.type,
+      })),
+    })),
+    month,
+  )
+  const incomeTotal = income + fixedIncomeTotal + benefit.credited
 
   return {
     month,
@@ -353,10 +411,13 @@ export async function getMonthlyClosingSummary(
     fixedIncomeTotal,
     looseExpensesTotal: looseExpenses,
     incomeTotal,
-    receivedIncomeTotal,
+    receivedIncomeTotal: receivedIncomeTotal + (benefit.estimated ? 0 : benefit.credited),
+    benefitCredited: benefit.credited,
+    benefitSpent: benefit.spent,
+    benefitEstimated: benefit.estimated,
     totalToPay,
-    totalSpent,
-    projectedBalance: incomeTotal - totalSpent,
+    totalSpent: totalSpent + benefit.spent,
+    projectedBalance: incomeTotal - (totalSpent + benefit.spent),
     estimatedInvoicesByCard: [],
     incomeItems: [],
   } satisfies MonthlyClosingSummary
@@ -807,6 +868,7 @@ async function getLooseIncomeTransactions(
     where: {
       userId,
       type: "INCOME",
+      OR: [{ bankAccountId: null }, { bankAccount: { type: { not: "BENEFIT" } } }],
       date: { gte: new Date(year, m - 1, 1), lt: new Date(year, m, 1) },
     },
     select: {

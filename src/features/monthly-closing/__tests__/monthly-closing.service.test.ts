@@ -2,7 +2,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest"
 import { getTestClient } from "@/__tests__/prisma"
 import { registerUser } from "@/features/auth/auth.service"
-import { ensureFixedCostOccurrences, getMonthlyClosing, markCardInvoiceFixedCostsPaid, markCardInvoiceFixedCostsPending, payFixedCostOccurrence, unpayFixedCostOccurrence } from "../monthly-closing.service"
+import { ensureFixedCostOccurrences, getMonthlyClosing, getMonthlyClosingSummary, markCardInvoiceFixedCostsPaid, markCardInvoiceFixedCostsPending, payFixedCostOccurrence, unpayFixedCostOccurrence } from "../monthly-closing.service"
 
 const prisma = getTestClient()
 
@@ -504,5 +504,97 @@ describe("monthly-closing.service", () => {
 
     expect(closing.expenseEvolution.total).toBe(500)
     expect(Math.abs(closing.expenseEvolution.total - closing.summary.totalSpent)).toBeLessThanOrEqual(0.01)
+  })
+})
+
+describe("monthly-closing.service — VA (benefício)", () => {
+  const userId = `user_benefit_closing_${Date.now()}`
+  const month = "2026-10"
+  const estimatedMonth = "2026-11"
+
+  beforeAll(async () => {
+    await prisma.user.create({
+      data: { id: userId, name: "Benefit Closing", email: `benefit-closing-${Date.now()}@test.com` },
+    })
+    const expenseCategory = await prisma.category.create({
+      data: { name: "VA Mercado", type: "EXPENSE", color: "#22C55E", userId },
+    })
+    const incomeCategory = await prisma.category.create({
+      data: { name: "VA Salário", type: "INCOME", color: "#0EA882", userId },
+    })
+    const account = await prisma.bankAccount.create({
+      data: { name: `VA closing ${Date.now()}`, type: "BENEFIT", benefitDailyRate: 22, userId },
+    })
+
+    await prisma.bankAccountMovement.createMany({
+      data: [
+        { bankAccountId: account.id, amount: 500, type: "INCOME", description: "RECARGA BENEFÍCIO: OUTUBRO", date: new Date("2026-10-01T12:00:00"), userId },
+        { bankAccountId: account.id, amount: 120.5, type: "EXPENSE", description: "Mercado do mês", date: new Date("2026-10-05T12:00:00"), userId },
+        { bankAccountId: account.id, amount: 80.3, type: "EXPENSE", description: "Lanchonete", date: new Date("2026-10-10T12:00:00"), userId },
+      ],
+    })
+    await prisma.transaction.createMany({
+      data: [
+        { amount: 4000, type: "INCOME", categoryId: incomeCategory.id, userId, date: new Date("2026-10-01T12:00:00") },
+        { amount: 999, type: "INCOME", description: "Adiantamento VA", categoryId: incomeCategory.id, bankAccountId: account.id, userId, date: new Date("2026-10-01T12:00:00") },
+        { amount: 100, type: "EXPENSE", categoryId: expenseCategory.id, userId, date: new Date("2026-10-03T12:00:00") },
+      ],
+    })
+  })
+
+  afterAll(async () => {
+    await prisma.bankAccountMovement.deleteMany({ where: { userId } })
+    await prisma.transaction.deleteMany({ where: { userId } })
+    await prisma.bankAccount.deleteMany({ where: { userId } })
+    await prisma.financialMonth.deleteMany({ where: { userId } })
+    await prisma.fixedCostOccurrence.deleteMany({ where: { userId } })
+    await prisma.fixedCost.deleteMany({ where: { userId } })
+    await prisma.category.deleteMany({ where: { userId } })
+    await prisma.user.delete({ where: { id: userId } })
+  })
+
+  it("getMonthlyClosing soma VA no total e ignora Transaction INCOME da conta BENEFIT", async () => {
+    const closing = await getMonthlyClosing(userId, month, prisma)
+
+    expect(closing.summary.incomeTotal).toBe(4500)
+    expect(closing.summary.totalSpent).toBe(300.8)
+    expect(closing.summary.projectedBalance).toBe(4199.2)
+    expect(closing.summary.receivedIncomeTotal).toBe(4500)
+    expect(closing.summary.benefitCredited).toBe(500)
+    expect(closing.summary.benefitSpent).toBe(200.8)
+    expect(closing.summary.benefitEstimated).toBe(false)
+    expect(closing.summary.totalToPay).toBe(100)
+    expect(closing.benefitExpenses).toHaveLength(2)
+    expect(closing.benefitExpenses.reduce((total, item) => total + item.amount, 0)).toBeCloseTo(200.8)
+    expect(closing.summary.incomeItems.some((item) => item.name === "Adiantamento VA")).toBe(false)
+    expect(closing.summary.incomeItems.some((item) => item.name === "VA (benefício)" && item.amount === 500)).toBe(true)
+  })
+
+  it("getMonthlyClosingSummary reflete os mesmos totais de VA", async () => {
+    const summary = await getMonthlyClosingSummary(userId, month, prisma)
+
+    expect(summary.incomeTotal).toBe(4500)
+    expect(summary.totalSpent).toBe(300.8)
+    expect(summary.projectedBalance).toBe(4199.2)
+    expect(summary.receivedIncomeTotal).toBe(4500)
+    expect(summary.benefitCredited).toBe(500)
+    expect(summary.benefitSpent).toBe(200.8)
+    expect(summary.benefitEstimated).toBe(false)
+  })
+
+  it("marca estimado no mês sem crédito (rate x dias úteis)", async () => {
+    const closing = await getMonthlyClosing(userId, estimatedMonth, prisma)
+
+    expect(closing.summary.benefitEstimated).toBe(true)
+    expect(closing.summary.benefitCredited).toBe(462)
+    expect(closing.summary.benefitSpent).toBe(0)
+    expect(closing.summary.incomeTotal).toBe(462)
+    expect(closing.summary.totalSpent).toBe(0)
+    expect(closing.summary.receivedIncomeTotal).toBe(0)
+
+    const summary = await getMonthlyClosingSummary(userId, estimatedMonth, prisma)
+    expect(summary.benefitEstimated).toBe(true)
+    expect(summary.benefitCredited).toBe(462)
+    expect(summary.incomeTotal).toBe(462)
   })
 })

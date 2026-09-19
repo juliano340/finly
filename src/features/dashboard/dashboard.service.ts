@@ -4,11 +4,15 @@ import { ensureFinancialMonth } from "@/features/financial-months/financial-mont
 import { ensureFixedCostOccurrences, ensureFixedCostOccurrencesForMonths } from "@/features/monthly-closing/monthly-closing.service"
 import { moneyToNumber, sumMoney } from "@/lib/money"
 import { calculateInvoiceTotals } from "@/features/card-invoices/invoice-calculation"
+import { computeBenefitTotals } from "@/features/bank-accounts/benefit"
 
 export interface DashboardStats {
   balance: number
   income: number
   expense: number
+  benefitCredited: number
+  benefitSpent: number
+  benefitEstimated: boolean
   byCategory: { name: string; value: number; color: string }[]
   dailyTrend: { date: string; income: number; expense: number }[]
   recentTransactions: {
@@ -73,10 +77,15 @@ export async function getDashboardStats(
   const financialMonth = await ensureFinancialMonth(userId, month, db)
   await ensureFixedCostOccurrences(userId, month, financialMonth.id, db)
 
-  const [incomeTotal, expenseTotal, byCategory, dailyTrend, recentTransactions, fixedCostOccurrences, invoices] =
+  const [incomeTotal, expenseTotal, byCategory, dailyTrend, recentTransactions, fixedCostOccurrences, invoices, benefitAccounts] =
     await Promise.all([
       db.transaction.aggregate({
-        where: { userId, type: "INCOME", date: { gte: startDate, lt: endDate } },
+        where: {
+          userId,
+          type: "INCOME",
+          OR: [{ bankAccountId: null }, { bankAccount: { type: { not: "BENEFIT" } } }],
+          date: { gte: startDate, lt: endDate },
+        },
         _sum: { amount: true },
       }),
       db.transaction.aggregate({
@@ -143,7 +152,28 @@ export async function getDashboardStats(
           card: { select: { id: true, name: true, color: true } },
         },
       }),
+      db.bankAccount.findMany({
+        where: { userId, type: "BENEFIT" },
+        select: {
+          benefitDailyRate: true,
+          movements: {
+            where: { date: { gte: startDate, lt: endDate } },
+            select: { amount: true, type: true },
+          },
+        },
+      }),
     ])
+
+  const benefit = computeBenefitTotals(
+    benefitAccounts.map((account) => ({
+      benefitDailyRate: account.benefitDailyRate === null ? null : moneyToNumber(account.benefitDailyRate),
+      movements: account.movements.map((movement) => ({
+        amount: moneyToNumber(movement.amount),
+        type: movement.type,
+      })),
+    })),
+    month,
+  )
 
   const categoryIds = byCategory.map((c) => c.categoryId)
   const categories = await db.category.findMany({
@@ -283,13 +313,16 @@ export async function getDashboardStats(
     .filter((occ) => occ.fixedCost.type === "EXPENSE" && !occ.fixedCost.paidInsideCard)
     .reduce((sum, occ) => sumMoney([sum, occ.amount]), 0)
 
-  const income = sumMoney([incomeTotal._sum.amount ?? 0, fixedIncome])
-  const expense = sumMoney([expenseTotal._sum.amount ?? 0, fixedExpense, invoiceTotal])
+  const income = sumMoney([incomeTotal._sum.amount ?? 0, fixedIncome, benefit.credited])
+  const expense = sumMoney([expenseTotal._sum.amount ?? 0, fixedExpense, invoiceTotal, benefit.spent])
 
   return {
     balance: income - expense,
     income,
     expense,
+    benefitCredited: benefit.credited,
+    benefitSpent: benefit.spent,
+    benefitEstimated: benefit.estimated,
     byCategory: byCategoryFinal,
     dailyTrend: dailyTrendFormatted,
     recentTransactions: recentFormatted,

@@ -11,6 +11,7 @@ import {
   Wallet,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ExpenseByCategoryChart } from "./_components/expense-by-category-chart"
@@ -88,8 +89,15 @@ function DashboardPageContent() {
   }, [session, fetchStats, isMonthReady])
 
   const summary = stats
-    ? { balance: stats.balance, income: stats.income, expense: stats.expense }
-    : { balance: 0, income: 0, expense: 0 }
+    ? {
+        balance: stats.balance,
+        income: stats.income,
+        expense: stats.expense,
+        benefitCredited: stats.benefitCredited,
+        benefitSpent: stats.benefitSpent,
+        benefitEstimated: stats.benefitEstimated,
+      }
+    : { balance: 0, income: 0, expense: 0, benefitCredited: 0, benefitSpent: 0, benefitEstimated: false }
 
   const cards = [
     {
@@ -98,6 +106,8 @@ function DashboardPageContent() {
       icon: ArrowUp,
       color: "text-success",
       bg: "bg-success/10",
+      benefit: summary.benefitCredited,
+      benefitEstimated: summary.benefitEstimated,
     },
     {
       label: "Despesas do mês",
@@ -105,6 +115,8 @@ function DashboardPageContent() {
       icon: ArrowDown,
       color: "text-destructive",
       bg: "bg-destructive/10",
+      benefit: summary.benefitSpent,
+      benefitEstimated: false,
     },
     {
       label: "Resultado líquido",
@@ -112,6 +124,8 @@ function DashboardPageContent() {
       icon: Wallet,
       color: summary.balance >= 0 ? "text-success" : "text-destructive",
       bg: summary.balance >= 0 ? "bg-success/10" : "bg-destructive/10",
+      benefit: 0,
+      benefitEstimated: false,
     },
   ]
   const totalToPay = closing?.summary.totalToPay ?? 0
@@ -155,8 +169,8 @@ function DashboardPageContent() {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <MobileFinanceItem label="Receitas" value={summary.income} icon={<ArrowUp className="h-4 w-4" />} tone="good" loading={loading} />
-            <MobileFinanceItem label="Despesas" value={summary.expense} icon={<ArrowDown className="h-4 w-4" />} tone="bad" loading={loading} />
+            <MobileFinanceItem label="Receitas" value={summary.income} icon={<ArrowUp className="h-4 w-4" />} tone="good" benefit={summary.benefitCredited} benefitEstimated={summary.benefitEstimated} loading={loading} />
+            <MobileFinanceItem label="Despesas" value={summary.expense} icon={<ArrowDown className="h-4 w-4" />} tone="bad" benefit={summary.benefitSpent} loading={loading} />
           </div>
         </CardContent>
       </Card>
@@ -182,6 +196,13 @@ function DashboardPageContent() {
                     })
                   )}
                 </p>
+                {!loading && card.benefit > 0 && (
+                  <p className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                    <Badge variant="secondary" className="h-4 px-1 text-[10px] font-semibold uppercase tracking-wide">VA</Badge>
+                    <span className="tabular-nums">{formatCurrency(card.benefit)}</span>
+                    {card.benefitEstimated && <span>· estimado</span>}
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -418,12 +439,16 @@ function MobileFinanceItem({
   value,
   icon,
   tone,
+  benefit = 0,
+  benefitEstimated = false,
   loading = false,
 }: {
   label: string
   value: number
   icon: React.ReactNode
   tone: "good" | "bad"
+  benefit?: number
+  benefitEstimated?: boolean
   loading?: boolean
 }) {
   const toneClass = tone === "good" ? "text-success" : "text-destructive"
@@ -439,6 +464,12 @@ function MobileFinanceItem({
       <p className={`mt-2 truncate text-sm font-bold tabular-nums ${toneClass}`}>
         {loading ? <span className="inline-block h-4 w-20 animate-pulse rounded bg-muted" /> : formatCurrency(value)}
       </p>
+      {!loading && benefit > 0 && (
+        <p className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground">
+          <Badge variant="secondary" className="h-4 px-1 text-[10px] font-semibold uppercase tracking-wide">VA</Badge>
+          <span className="truncate tabular-nums">{formatCurrency(benefit)}{benefitEstimated ? " · estimado" : ""}</span>
+        </p>
+      )}
     </div>
   )
 }
