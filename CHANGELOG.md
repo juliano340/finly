@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.66] - 2026-09-19
+
+### Corrigido
+
+- Após excluir transações em lote, a lista se atualiza sozinha, sem precisar recarregar a página.
+
 ## [0.2.65] - 2026-09-19
 
 ### Adicionado
