@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.61"
+export const CURRENT_VERSION = "0.2.62"
 
 export const releases = [
+  {
+    version: "0.2.62",
+    date: "2026-09-18",
+    changes: [
+      { type: "feat", description: "O benefício (VA) agora entra nas receitas e despesas do Dashboard e do Fechamento Mensal, com badge VA e selo 'estimado' na previsão por dias úteis quando o mês ainda não tem crédito lançado; receitas lançadas na conta de benefício não contam em dobro." },
+    ],
+  },
   {
     version: "0.2.61",
     date: "2026-09-17",

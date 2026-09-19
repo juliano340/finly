@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.62] - 2026-09-18
+
+### Adicionado
+
+- O benefício (VA) agora entra nas receitas e despesas do Dashboard e do Fechamento Mensal, com badge VA e selo 'estimado' na previsão por dias úteis quando o mês ainda não tem crédito lançado; receitas lançadas na conta de benefício não contam em dobro.
+
 ## [0.2.61] - 2026-09-17
 
 ### Corrigido
