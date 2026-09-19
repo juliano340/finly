@@ -2,7 +2,8 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest"
 import { getTestClient } from "@/__tests__/prisma"
 import { registerUser } from "@/features/auth/auth.service"
-import { adjustBankAccountBalance, createBankAccount, createBankAccountMovement, deleteBankAccountMovement, getBankAccounts, getBankAccountsTotal, rechargeBenefitAccount, transferBetweenBankAccounts } from "../bank-accounts.service"
+import { adjustBankAccountBalance, createBankAccount, createBankAccountMovement, deleteBankAccountMovement, getBankAccounts, getBankAccountsTotal, importBenefitStatement, rechargeBenefitAccount, transferBetweenBankAccounts } from "../bank-accounts.service"
+import { computeBenefitTotals } from "../benefit"
 
 const prisma = getTestClient()
 
@@ -476,5 +477,71 @@ describe("bank-accounts.service", () => {
     const result = await deleteBankAccountMovement(adjustment!.id, userId, prisma)
     expect(result).toEqual({ error: "Ajustes de saldo não são estornáveis — faça um novo ajuste para corrigir o saldo." })
     await expect(prisma.bankAccountMovement.findUnique({ where: { id: adjustment!.id } })).resolves.not.toBeNull()
+  })
+
+  it("importa extrato de benefício e ignora duplicados na reimportação", async () => {
+    const benefit = await createBankAccount(
+      userId,
+      {
+        name: `Benefício extrato ${Date.now()}`,
+        institution: "FLASH",
+        type: "BENEFIT",
+        color: "#16A34A",
+        initialBalance: 0,
+        overdraftLimit: 0,
+        benefitDailyRate: null,
+        active: true,
+      },
+      prisma,
+    )
+
+    const csv = [
+      "Data,Hora,Movimentação,Valor,Meio de Pagamento,Saldo",
+      '29/08/2026,00:31,"Depósito transferido","R$ 466,20",Depósito,"R$ 466,71"',
+      '14/09/2026,11:31,"JOAO RENATO ROSSETI PORTO ALEGRE BRA","-R$ 18,50",Cartão,"R$ 0,89"',
+    ].join("\n")
+
+    await expect(importBenefitStatement(benefit.id, userId, csv, prisma)).resolves.toEqual({
+      imported: 2,
+      duplicates: 0,
+      errors: [],
+    })
+
+    const movements = await prisma.bankAccountMovement.findMany({
+      where: { bankAccountId: benefit.id },
+      orderBy: { date: "asc" },
+    })
+    expect(movements).toHaveLength(2)
+    expect(movements[0].type).toBe("INCOME")
+    expect(Number(movements[0].amount)).toBe(466.2)
+    expect(movements[1].type).toBe("EXPENSE")
+    expect(Number(movements[1].amount)).toBe(18.5)
+
+    const totals = computeBenefitTotals(
+      [{ benefitDailyRate: null, movements: movements.map((movement) => ({ amount: Number(movement.amount), type: movement.type })) }],
+      "2026-09",
+    )
+    expect(totals).toEqual({ credited: 466.2, spent: 18.5, estimated: false })
+
+    await expect(importBenefitStatement(benefit.id, userId, csv, prisma)).resolves.toEqual({
+      imported: 0,
+      duplicates: 2,
+      errors: [],
+    })
+    await expect(prisma.bankAccountMovement.count({ where: { bankAccountId: benefit.id } })).resolves.toBe(2)
+  })
+
+  it("rejeita importação de extrato em conta que não é benefício", async () => {
+    const account = await createBankAccount(
+      userId,
+      { name: `Sem benefício ${Date.now()}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 0, active: true, overdraftLimit: 0 },
+      prisma,
+    )
+    const csv = [
+      "Data,Movimentação,Valor",
+      '29/08/2026,"Depósito transferido","R$ 10,00"',
+    ].join("\n")
+
+    await expect(importBenefitStatement(account.id, userId, csv, prisma)).resolves.toBeNull()
   })
 })

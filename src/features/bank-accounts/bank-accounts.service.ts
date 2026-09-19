@@ -3,6 +3,7 @@ import type { PrismaClient } from "@/generated/prisma/client"
 import { randomUUID } from "node:crypto"
 import { moneyToNumber, subtractMoney, sumMoney } from "@/lib/money"
 import type { BankAccountAdjustmentInput, BankAccountInput, BankAccountMovementInput, BankAccountTransferInput, BenefitRechargeInput } from "./bank-accounts.schema"
+import { parseBenefitStatementCsv, type BenefitStatementMovement } from "./benefit-statement"
 
 export async function getBankAccounts(userId: string, client?: PrismaClient) {
   const db = client ?? defaultPrisma
@@ -349,6 +350,76 @@ export async function rechargeBenefitAccount(
       userId,
     },
   })
+}
+
+export interface BenefitStatementImportResult {
+  imported: number
+  duplicates: number
+  errors: string[]
+}
+
+function movementDedupeKey(movement: { date: Date; type: string; amount: number; description: string | null }): string {
+  return `${movement.date.toISOString().slice(0, 10)}|${movement.type}|${movement.amount.toFixed(2)}|${movement.description ?? ""}`
+}
+
+export async function importBenefitStatement(
+  bankAccountId: string,
+  userId: string,
+  csvContent: string,
+  client?: PrismaClient,
+): Promise<BenefitStatementImportResult | null> {
+  const db = client ?? defaultPrisma
+  const account = await db.bankAccount.findFirst({
+    where: { id: bankAccountId, userId, type: "BENEFIT", active: true },
+    select: { id: true },
+  })
+  if (!account) return null
+
+  const { movements, errors } = parseBenefitStatementCsv(csvContent)
+
+  const existingMovements = await db.bankAccountMovement.findMany({
+    where: { bankAccountId, userId },
+    select: { date: true, type: true, amount: true, description: true },
+  })
+  const seen = new Set(
+    existingMovements.map((movement) =>
+      movementDedupeKey({
+        date: movement.date,
+        type: movement.type,
+        amount: moneyToNumber(movement.amount),
+        description: movement.description,
+      })
+    )
+  )
+
+  const toCreate: BenefitStatementMovement[] = []
+  let duplicates = 0
+  for (const movement of movements) {
+    const key = movementDedupeKey(movement)
+    if (seen.has(key)) {
+      duplicates += 1
+      continue
+    }
+    seen.add(key)
+    toCreate.push(movement)
+  }
+
+  let imported = 0
+  if (toCreate.length > 0) {
+    const created = await db.bankAccountMovement.createMany({
+      data: toCreate.map((movement) => ({
+        bankAccountId,
+        amount: movement.amount,
+        type: movement.type,
+        description: movement.description || null,
+        date: movement.date,
+        userId,
+      })),
+    })
+    imported = created.count
+  }
+
+  return { imported, duplicates, errors }
 }
 
 export async function transferBetweenBankAccounts(

@@ -3,7 +3,7 @@
 import type { FormEvent } from "react"
 import { useEffect, useRef, useState } from "react"
 import { useFormStatus } from "react-dom"
-import { ArrowLeftRight, ArrowUp, ArrowDown, ArrowUpDown, Coins, Eye, Gift, Info, Loader2, Pencil, Plus, Settings, SlidersHorizontal, Trash2, Undo2, Wallet } from "lucide-react"
+import { ArrowLeftRight, ArrowUp, ArrowDown, ArrowUpDown, Coins, Eye, Gift, Info, Loader2, Pencil, Plus, Settings, SlidersHorizontal, Trash2, Undo2, Upload, Wallet } from "lucide-react"
 import { toast } from "sonner"
 import { AddButton } from "@/components/ui/add-button"
 import { Button } from "@/components/ui/button"
@@ -76,6 +76,8 @@ export default function BankAccountsPage() {
   const [movementType, setMovementType] = useState<"INCOME" | "EXPENSE">("INCOME")
   const [confirmReversal, setConfirmReversal] = useState<string | null>(null)
   const [reversingId, setReversingId] = useState<string | null>(null)
+  const [importingStatement, setImportingStatement] = useState(false)
+  const statementInputRef = useRef<HTMLInputElement>(null)
   const updateInFlightRef = useRef(false)
 
   const fetchAccounts = async () => {
@@ -227,6 +229,25 @@ export default function BankAccountsPage() {
     }
     setShowForm(null)
     fetchAccounts()
+  }
+
+  const handleImportStatement = async (accountId: string, file: File) => {
+    setImportingStatement(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      const res = await fetch(`/api/bank-accounts/${accountId}/import-statement`, { method: "POST", body: formData })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) {
+        toast.success(`${data.imported} importados · ${data.duplicates} duplicados · ${data.errors?.length ?? 0} erros`)
+        await fetchAccounts()
+      } else {
+        toast.error(data.error ?? "Não foi possível importar o extrato.")
+      }
+    } finally {
+      setImportingStatement(false)
+      if (statementInputRef.current) statementInputRef.current.value = ""
+    }
   }
 
   const handleReverse = async (accountId: string, movementId: string) => {
@@ -519,12 +540,28 @@ export default function BankAccountsPage() {
                                   : "As recargas não entram como receita livre."}
                               </p>
                             </div>
-                            <Button
-                              size="sm"
-                              onClick={() => { setDetailTab("movements"); setShowForm("recharge") }}
-                            >
-                              <Gift className="mr-2 h-4 w-4" />Recarregar
-                            </Button>
+                            <div className="flex shrink-0 items-center gap-2">
+                              <input
+                                ref={statementInputRef}
+                                type="file"
+                                accept=".csv"
+                                className="hidden"
+                                onChange={(event) => {
+                                  const file = event.target.files?.[0]
+                                  if (file) void handleImportStatement(selectedAccount.id, file)
+                                }}
+                              />
+                              <Button size="sm" variant="outline" disabled={importingStatement} onClick={() => statementInputRef.current?.click()}>
+                                {importingStatement ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                                Importar extrato
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => { setDetailTab("movements"); setShowForm("recharge") }}
+                              >
+                                <Gift className="mr-2 h-4 w-4" />Recarregar
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       )}
