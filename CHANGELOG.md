@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.69] - 2026-09-19
+
+### Corrigido
+
+- Lançamentos estornados (excluídos) deixam de contar nos totais do Dashboard, do Fechamento Mensal, do Plano do Mês e dos Orçamentos: agora só lançamentos ativos entram nas somas.
+
 ## [0.2.68] - 2026-09-19
 
 ### Corrigido

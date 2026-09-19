@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.68"
+export const CURRENT_VERSION = "0.2.69"
 
 export const releases = [
+  {
+    version: "0.2.69",
+    date: "2026-09-19",
+    changes: [
+      { type: "fix", description: "Lançamentos estornados (excluídos) deixam de contar nos totais do Dashboard, do Fechamento Mensal, do Plano do Mês e dos Orçamentos: agora só lançamentos ativos entram nas somas." },
+    ],
+  },
   {
     version: "0.2.68",
     date: "2026-09-19",
