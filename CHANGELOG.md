@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.68] - 2026-09-19
+
+### Corrigido
+
+- Os ajustes de saldo não entram mais nos valores de VA do Dashboard e do Fechamento Mensal: o crédito e o gasto do benefício mostram só o fluxo real de recargas e compras. A reconciliação do extrato também mantém um único ajuste de importação, atualizado a cada reimportação.
+
 ## [0.2.67] - 2026-09-19
 
 ### Adicionado

@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.67"
+export const CURRENT_VERSION = "0.2.68"
 
 export const releases = [
+  {
+    version: "0.2.68",
+    date: "2026-09-19",
+    changes: [
+      { type: "fix", description: "Os ajustes de saldo não entram mais nos valores de VA do Dashboard e do Fechamento Mensal: o crédito e o gasto do benefício mostram só o fluxo real de recargas e compras. A reconciliação do extrato também mantém um único ajuste de importação, atualizado a cada reimportação." },
+    ],
+  },
   {
     version: "0.2.67",
     date: "2026-09-19",
