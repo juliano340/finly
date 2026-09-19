@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.63] - 2026-09-18
+
+### Adicionado
+
+- O card Receitas do mês agora mostra a composição do valor: renda + VA (benefício) = total, no desktop e no celular, com o selo 'estimado' quando o crédito do mês ainda não foi lançado.
+
 ## [0.2.62] - 2026-09-18
 
 ### Adicionado
