@@ -367,7 +367,8 @@ export interface BenefitStatementImportResult {
   totalOut: number
 }
 
-const MANUAL_MOVEMENT_PREFIXES = ["AJUSTE_MANUAL", "AJUSTE MANUAL DE SALDO", "TRANSAÇÃO"]
+const MANUAL_ADJUSTMENT_PREFIXES = ["AJUSTE_MANUAL", "AJUSTE MANUAL DE SALDO"]
+const MANUAL_TRANSACTION_PREFIX = "TRANSAÇÃO"
 
 function movementDedupeKey(movement: { date: Date; type: string; amount: number; description: string | null }): string {
   return `${movement.date.toISOString().slice(0, 10)}|${movement.type}|${movement.amount.toFixed(2)}|${movement.description ?? ""}`
@@ -384,19 +385,29 @@ async function replaceManualMovements(
   const windowStart = new Date(`${firstDate.toISOString().slice(0, 10)}T00:00:00.000Z`)
   const windowEnd = new Date(`${lastDate.toISOString().slice(0, 10)}T23:59:59.999Z`)
 
-  const manualMovements = await db.bankAccountMovement.findMany({
-    where: {
-      bankAccountId,
-      userId,
-      date: { gte: windowStart, lte: windowEnd },
-      OR: MANUAL_MOVEMENT_PREFIXES.map((prefix) => ({ description: { startsWith: prefix } })),
-    },
-    select: { id: true, transactionId: true },
-  })
+  const [windowTransactions, adjustments] = await Promise.all([
+    db.bankAccountMovement.findMany({
+      where: {
+        bankAccountId,
+        userId,
+        date: { gte: windowStart, lte: windowEnd },
+        description: { startsWith: MANUAL_TRANSACTION_PREFIX },
+      },
+      select: { id: true, transactionId: true },
+    }),
+    db.bankAccountMovement.findMany({
+      where: {
+        bankAccountId,
+        userId,
+        OR: MANUAL_ADJUSTMENT_PREFIXES.map((prefix) => ({ description: { startsWith: prefix } })),
+      },
+      select: { id: true },
+    }),
+  ])
 
   let manualReplaced = 0
   let deleteTransaction: ((id: string, userId: string, client?: PrismaClient) => Promise<boolean>) | null = null
-  for (const movement of manualMovements) {
+  for (const movement of windowTransactions) {
     if (movement.transactionId) {
       if (!deleteTransaction) {
         const transactionsService = await import("@/features/transactions/transactions.service")
@@ -408,6 +419,11 @@ async function replaceManualMovements(
       const deleted = await db.bankAccountMovement.deleteMany({ where: { id: movement.id, userId } })
       if (deleted.count > 0) manualReplaced += 1
     }
+  }
+
+  for (const adjustment of adjustments) {
+    const deleted = await db.bankAccountMovement.deleteMany({ where: { id: adjustment.id, userId } })
+    if (deleted.count > 0) manualReplaced += 1
   }
 
   return manualReplaced

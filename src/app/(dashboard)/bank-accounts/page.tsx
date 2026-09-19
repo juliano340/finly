@@ -581,7 +581,7 @@ export default function BankAccountsPage() {
                               checked={replaceManual}
                               onChange={(event) => setReplaceManual(event.target.checked)}
                             />
-                            <span>Substituir registros manuais anteriores (ajustes e transações dentro do período do arquivo)</span>
+                            <span>Substituir registros manuais anteriores (transações do período do arquivo e ajustes de saldo antigos)</span>
                           </label>
                         </div>
                       )}
