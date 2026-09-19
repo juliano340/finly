@@ -118,7 +118,7 @@ function DashboardPageContent() {
       bg: "bg-destructive/10",
       benefit: summary.benefitSpent,
       benefitEstimated: false,
-      benefitBreakdown: false,
+      benefitBreakdown: true,
     },
     {
       label: "Resultado líquido",
@@ -173,7 +173,7 @@ function DashboardPageContent() {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <MobileFinanceItem label="Receitas" value={summary.income} icon={<ArrowUp className="h-4 w-4" />} tone="good" benefit={summary.benefitCredited} benefitEstimated={summary.benefitEstimated} benefitBreakdown loading={loading} />
-            <MobileFinanceItem label="Despesas" value={summary.expense} icon={<ArrowDown className="h-4 w-4" />} tone="bad" benefit={summary.benefitSpent} loading={loading} />
+            <MobileFinanceItem label="Despesas" value={summary.expense} icon={<ArrowDown className="h-4 w-4" />} tone="bad" benefit={summary.benefitSpent} benefitBreakdown loading={loading} />
           </div>
         </CardContent>
       </Card>
