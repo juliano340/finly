@@ -230,7 +230,7 @@ function DashboardPageContent() {
               </p>
               <p className="mt-1 text-[11px] text-muted-foreground">Disponível depois do que falta pagar</p>
             </div>
-            <CoverageBadge bankTotal={bankTotal} totalToPay={totalToPay} />
+            <CoverageBadge bankTotal={bankTotal} totalToPay={totalToPay} loading={loading} />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <MobileFinanceItem label="Saldo" value={bankTotal} icon={<Landmark className="h-4 w-4" />} tone={hasCoverage ? "good" : "bad"} loading={loading} />
@@ -265,7 +265,7 @@ function DashboardPageContent() {
                 <p className="text-[11px] text-muted-foreground">Saldo − a pagar</p>
               </div>
             </div>
-            <CoverageBadge bankTotal={bankTotal} totalToPay={totalToPay} />
+            <CoverageBadge bankTotal={bankTotal} totalToPay={totalToPay} loading={loading} />
           </CardContent>
         </Card>
         <RitmoDoMesCard plan={monthlyPlan} month={month} loading={loading} />
@@ -407,7 +407,10 @@ function ZoneTitle({ children }: { children: React.ReactNode }) {
   return <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{children}</h2>
 }
 
-function CoverageBadge({ bankTotal, totalToPay }: { bankTotal: number; totalToPay: number }) {
+function CoverageBadge({ bankTotal, totalToPay, loading = false }: { bankTotal: number; totalToPay: number; loading?: boolean }) {
+  if (loading) {
+    return <span className="inline-flex h-6 w-28 shrink-0 animate-pulse rounded-full bg-muted" aria-hidden="true" />
+  }
   if (totalToPay <= 0) {
     return <span className="inline-flex shrink-0 rounded-full bg-success/10 px-2.5 py-1 text-xs font-medium text-success">Sem contas a pagar</span>
   }

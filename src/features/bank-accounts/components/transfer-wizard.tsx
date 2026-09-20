@@ -161,7 +161,7 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent className="flex h-full w-full flex-col gap-0 p-0 sm:max-w-lg">
+      <SheetContent className="flex h-full w-full flex-col gap-0 p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-2xl">
         <SheetHeader className="border-b p-4 sm:p-6">
           <SheetTitle>Transferir entre contas</SheetTitle>
           <div className="pt-4">
@@ -182,8 +182,8 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
                         <SelectTrigger className="w-full">
                           {fromId && fromAccount ? (
                             <div className="flex w-full items-center justify-between gap-2 pr-2">
-                              <span>{fromAccount.name}</span>
-                              <span className="text-xs text-muted-foreground">{formatCurrency(fromAccount.balance)}</span>
+                              <span className="min-w-0 truncate">{fromAccount.name}</span>
+                              <span className="shrink-0 text-xs text-muted-foreground">{formatCurrency(fromAccount.balance)}</span>
                             </div>
                           ) : (
                             <span className="text-muted-foreground">Selecione</span>
@@ -195,11 +195,11 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
                           ) : fromAccounts.map((a) => (
                             <SelectItem key={a.id} value={a.id}>
                               <div className="flex w-full items-center justify-between gap-4">
-                                <span className="flex items-center gap-2">
+                                <span className="flex min-w-0 items-center gap-2">
                                   <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: a.color }} />
-                                  {a.name}
+                                  <span className="min-w-0 truncate">{a.name}</span>
                                 </span>
-                                <span className={isAccountNegative(a.balance, a.overdraftLimit) ? "text-red-600" : "text-muted-foreground"}>{formatCurrency(a.balance)}</span>
+                                <span className={`shrink-0 ${isAccountNegative(a.balance, a.overdraftLimit) ? "text-red-600" : "text-muted-foreground"}`}>{formatCurrency(a.balance)}</span>
                               </div>
                             </SelectItem>
                           ))}
@@ -220,8 +220,8 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
                         <SelectTrigger className="w-full">
                           {toId && toAccount ? (
                             <div className="flex w-full items-center justify-between gap-2 pr-2">
-                              <span>{toAccount.name}</span>
-                              <span className="text-xs text-muted-foreground">{formatCurrency(toAccount.balance)}</span>
+                              <span className="min-w-0 truncate">{toAccount.name}</span>
+                              <span className="shrink-0 text-xs text-muted-foreground">{formatCurrency(toAccount.balance)}</span>
                             </div>
                           ) : (
                             <span className="text-muted-foreground">Selecione</span>
@@ -233,11 +233,11 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
                           ) : toAccounts.map((a) => (
                             <SelectItem key={a.id} value={a.id}>
                               <div className="flex w-full items-center justify-between gap-4">
-                                <span className="flex items-center gap-2">
+                                <span className="flex min-w-0 items-center gap-2">
                                   <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: a.color }} />
-                                  {a.name}
+                                  <span className="min-w-0 truncate">{a.name}</span>
                                 </span>
-                                <span className={isAccountNegative(a.balance, a.overdraftLimit) ? "text-red-600" : "text-muted-foreground"}>{formatCurrency(a.balance)}</span>
+                                <span className={`shrink-0 ${isAccountNegative(a.balance, a.overdraftLimit) ? "text-red-600" : "text-muted-foreground"}`}>{formatCurrency(a.balance)}</span>
                               </div>
                             </SelectItem>
                           ))}

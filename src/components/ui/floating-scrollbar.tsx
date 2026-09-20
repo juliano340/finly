@@ -21,7 +21,7 @@ interface Metrics {
 
 /**
  * Scroll container com thumb overlay de altura LIMITADA:
- * proporcional ao viewport, mas com teto (maxThumb) â€” nunca vira "linha" de ponta a ponta.
+ * proporcional ao viewport, mas com teto (maxThumb) — nunca vira "linha" de ponta a ponta.
  * Esconde a scrollbar nativa; pill flutuante a direita com respiro fixo (gutter).
  * Roda do mouse/teclado continuam nativos.
  */
