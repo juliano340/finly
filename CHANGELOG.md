@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.77] - 2026-09-20
+
+### Adicionado
+
+- O Fechamento Mensal e o Dashboard agora destacam os valores em dinheiro (sem o benefício): o composto 'Com benefício: ...' fica no detalhe, com o selo VA.
+
 ## [0.2.76] - 2026-09-20
 
 ### Adicionado

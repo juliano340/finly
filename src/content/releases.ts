@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.76"
+export const CURRENT_VERSION = "0.2.77"
 
 export const releases = [
+  {
+    version: "0.2.77",
+    date: "2026-09-20",
+    changes: [
+      { type: "feat", description: "O Fechamento Mensal e o Dashboard agora destacam os valores em dinheiro (sem o benefício): o composto 'Com benefício: ...' fica no detalhe, com o selo VA." },
+    ],
+  },
   {
     version: "0.2.76",
     date: "2026-09-20",
