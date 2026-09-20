@@ -4,7 +4,6 @@ import { useState } from "react"
 import {
   ComposedChart,
   Area,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -31,8 +30,17 @@ function EvolutionTooltip({ active, payload }: { active?: boolean; payload?: Arr
       <div className="font-medium">{formatDayMonth(point.date)}</div>
       <div className="text-sm text-muted-foreground">No dia: {formatCurrency(point.daily)}</div>
       <div className="text-sm text-muted-foreground">Acumulado: {formatCurrency(point.cumulative)}</div>
-      {point.benefitBalance !== null && (
-        <div className="text-sm text-muted-foreground">Saldo do benefício: {formatCurrency(point.benefitBalance)}</div>
+      {point.items.length > 0 && (
+        <div className="mt-1 space-y-0.5 border-t pt-1">
+          {point.items.map((item, index) => (
+            <div key={`${item.description}-${index}`} className="text-xs text-muted-foreground">
+              • {item.description} — {formatCurrency(item.amount)}
+            </div>
+          ))}
+          {point.itemsTotal > point.items.length && (
+            <div className="text-xs text-muted-foreground">… +{point.itemsTotal - point.items.length}</div>
+          )}
+        </div>
       )}
     </div>
   )
@@ -51,7 +59,7 @@ export function ExpenseEvolutionChart({ evolution }: ExpenseEvolutionChartProps)
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-col gap-2">
         <SegmentedControl
           options={[
             { value: "cumulative", label: "Acumulado" },
@@ -60,19 +68,13 @@ export function ExpenseEvolutionChart({ evolution }: ExpenseEvolutionChartProps)
           value={mode}
           onValueChange={setMode}
           aria-label="Modo do gráfico"
-          className="w-full sm:w-64"
+          className="w-full sm:w-80"
         />
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-[#0EA882]" />
             Gastos
           </span>
-          {evolution.hasBenefit && (
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#FF9800]" />
-              Saldo do benefício
-            </span>
-          )}
         </div>
       </div>
 
@@ -96,9 +98,6 @@ export function ExpenseEvolutionChart({ evolution }: ExpenseEvolutionChartProps)
             fill="url(#fillExpenseEvolution)"
             name="Gastos"
           />
-          {evolution.hasBenefit && (
-            <Line type="monotone" dataKey="benefitBalance" stroke="#FF9800" strokeWidth={2} dot={false} name="Benefício" />
-          )}
         </ComposedChart>
       </ResponsiveContainer>
     </div>

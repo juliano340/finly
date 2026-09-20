@@ -8,7 +8,8 @@ import { validateExpenseLimit } from "@/features/bank-accounts/bank-accounts.ser
 import { moneyToNumber, sumMoney, type MoneyValue } from "@/lib/money"
 import { composeMonthlyFinancialSources } from "@/features/monthly-plan/monthly-plan.sources"
 import { calculateInvoiceTotals } from "@/features/card-invoices/invoice-calculation"
-import { buildExpenseEvolution } from "./expense-evolution"
+import { buildExpenseEvolution, dayKey } from "./expense-evolution"
+import { buildBenefitEvolution } from "./benefit-evolution"
 import { computeBenefitTotals, isBenefitAdjustment } from "@/features/bank-accounts/benefit"
 
 type FixedCostOccurrenceClient = Pick<PrismaClient, "fixedCost" | "fixedCostOccurrence">
@@ -242,7 +243,7 @@ export async function getMonthlyClosing(
     looseExpenses: looseExpenseItems.map((expense) => ({
       amount: expense.amount,
       date: expense.date,
-      description: expense.description,
+      description: expense.description ?? expense.category.name,
     })),
     benefitAccounts: benefitAccounts.map((account) => ({
       initialBalance: moneyToNumber(account.initialBalance),
@@ -254,6 +255,25 @@ export async function getMonthlyClosing(
     })),
   })
 
+  const monthEndKey = dayKey(new Date(Date.UTC(year, monthNumber, 0)))
+  const referenceEndKey = expenseEvolution.periodEnd ?? monthEndKey
+  const creditStartKey = latestCreditKeyUpTo(benefitAccounts, referenceEndKey)
+  const benefitStartKey = creditStartKey ?? expenseEvolution.periodStart ?? dayKey(monthStart)
+  const movementEndKey = latestMovementKeyFrom(benefitAccounts, benefitStartKey)
+  const benefitEndKey = maxDayKey(monthEndKey, movementEndKey, benefitStartKey)
+  const benefitEvolution = buildBenefitEvolution(
+    benefitAccounts.map((account) => ({
+      initialBalance: moneyToNumber(account.initialBalance),
+      movements: account.movements.map((movement) => ({
+        date: movement.date,
+        amount: moneyToNumber(movement.amount),
+        type: movement.type,
+        description: movement.description,
+      })),
+    })),
+    { start: new Date(`${benefitStartKey}T00:00:00.000Z`), end: new Date(`${benefitEndKey}T00:00:00.000Z`), creditStart: creditStartKey },
+  )
+
   return {
     financialMonth,
     invoices: invoicesWithTotals,
@@ -261,6 +281,7 @@ export async function getMonthlyClosing(
     looseExpenses: looseExpenseItems,
     benefitExpenses,
     expenseEvolution,
+    benefitEvolution,
     summary: {
       month,
       cardInvoicesTotal,
@@ -808,6 +829,43 @@ async function occurrenceIdsPaidInsideCard(
       return payment.paidInsideCard && payment.cardId === cardId
     })
     .map((item) => item.id)
+}
+
+function latestCreditKeyUpTo(
+  accounts: { movements: { date: Date; type: "INCOME" | "EXPENSE"; description: string | null }[] }[],
+  upToKey: string,
+): string | null {
+  let latest: string | null = null
+  for (const account of accounts) {
+    for (const movement of account.movements) {
+      if (movement.type !== "INCOME" || isBenefitAdjustment(movement.description)) continue
+      const key = dayKey(movement.date)
+      if (key <= upToKey && (!latest || key > latest)) latest = key
+    }
+  }
+  return latest
+}
+
+function maxDayKey(...keys: (string | null)[]): string {
+  let max = ""
+  for (const key of keys) {
+    if (key && key > max) max = key
+  }
+  return max
+}
+
+function latestMovementKeyFrom(
+  accounts: { movements: { date: Date }[] }[],
+  startKey: string,
+): string | null {
+  let latest: string | null = null
+  for (const account of accounts) {
+    for (const movement of account.movements) {
+      const key = dayKey(movement.date)
+      if (key >= startKey && (!latest || key > latest)) latest = key
+    }
+  }
+  return latest
 }
 
 async function aggregateTransactions(

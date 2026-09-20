@@ -33,7 +33,7 @@ describe("buildExpenseEvolution", () => {
       ...noBenefit,
     })
     expect(result.points).toHaveLength(1)
-    expect(result.points[0]).toEqual({ date: "2026-09-15", daily: 100, cumulative: 100, benefitBalance: null })
+    expect(result.points[0]).toEqual({ date: "2026-09-15", daily: 100, cumulative: 100, benefitBalance: null, items: [{ description: "Mercado", amount: 100 }], itemsTotal: 1 })
     expect(result.total).toBe(100)
     expect(result.expenseCount).toBe(1)
     expect(result.periodStart).toBe("2026-09-15")
@@ -84,7 +84,7 @@ describe("buildExpenseEvolution", () => {
       ...noBenefit,
     })
     expect(result.points).toHaveLength(1)
-    expect(result.points[0]).toEqual({ date: "2026-09-28", daily: 200, cumulative: 200, benefitBalance: null })
+    expect(result.points[0]).toEqual({ date: "2026-09-28", daily: 200, cumulative: 200, benefitBalance: null, items: [{ description: "Compra set", amount: 200 }], itemsTotal: 1 })
     expect(result.total).toBe(200)
   })
 
@@ -150,8 +150,27 @@ describe("buildExpenseEvolution", () => {
       ...noBenefit,
     })
     expect(result.points).toHaveLength(1)
-    expect(result.points[0]).toEqual({ date: "2026-10-10", daily: 350, cumulative: 350, benefitBalance: null })
+    expect(result.points[0]).toEqual({ date: "2026-10-10", daily: 350, cumulative: 350, benefitBalance: null, items: [{ description: "Ajuste da fatura", amount: 350 }], itemsTotal: 1 })
     expect(result.expenseCount).toBe(1)
+  })
+
+  it("lista os lançamentos do dia ordenados por valor e limita a 4", () => {
+    const result = buildExpenseEvolution({
+      invoices: [],
+      outsideCardOccurrences: [],
+      looseExpenses: [
+        { amount: 5, date: new Date("2026-09-15T09:00:00"), description: "A" },
+        { amount: 25, date: new Date("2026-09-15T10:00:00"), description: "B" },
+        { amount: 10, date: new Date("2026-09-15T11:00:00"), description: "C" },
+        { amount: 20, date: new Date("2026-09-15T12:00:00"), description: "D" },
+        { amount: 15, date: new Date("2026-09-15T13:00:00"), description: "E" },
+      ],
+      ...noBenefit,
+    })
+    expect(result.points).toHaveLength(1)
+    expect(result.points[0].items.map((item) => item.description)).toEqual(["B", "D", "E", "C"])
+    expect(result.points[0].items.map((item) => item.amount)).toEqual([25, 20, 15, 10])
+    expect(result.points[0].itemsTotal).toBe(5)
   })
 
   it("ajuste fina a fatura no effectiveTotal com arredondamento de 2 casas", () => {

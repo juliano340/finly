@@ -629,3 +629,85 @@ describe("monthly-closing.service — VA (benefício)", () => {
     expect(summary.incomeTotal).toBe(462)
   })
 })
+
+describe("monthly-closing.service — benefitEvolution", () => {
+  let userId = ""
+  let categoryId = ""
+
+  beforeAll(async () => {
+    const result = await registerUser(
+      { name: "Benefit Evolution", email: `benefit-evolution-${Date.now()}@test.com`, password: "Senha123" },
+      prisma,
+    )
+    userId = ("user" in result ? result.user : null)?.id ?? ""
+    const category = await prisma.category.create({
+      data: { name: `BE ${Date.now()}`, userId, type: "EXPENSE" },
+    })
+    categoryId = category.id
+
+    const account = await prisma.bankAccount.create({
+      data: { name: `VA evo ${Date.now()}`, type: "BENEFIT", benefitDailyRate: 22, userId },
+    })
+    await prisma.bankAccountMovement.createMany({
+      data: [
+        { bankAccountId: account.id, amount: 100, type: "INCOME", description: "RECARGA BENEFÍCIO: MAIO", date: new Date("2027-05-01T12:00:00Z"), userId },
+        { bankAccountId: account.id, amount: 30, type: "EXPENSE", description: "Mercado", date: new Date("2027-05-04T12:00:00Z"), userId },
+        { bankAccountId: account.id, amount: 20, type: "EXPENSE", description: "Padaria", date: new Date("2027-05-06T12:00:00Z"), userId },
+        { bankAccountId: account.id, amount: 10, type: "EXPENSE", description: "Pós-janela", date: new Date("2027-05-15T12:00:00Z"), userId },
+      ],
+    })
+    await prisma.transaction.create({
+      data: { amount: 50, type: "EXPENSE", categoryId, userId, date: new Date("2027-05-06T12:00:00Z") },
+    })
+    await prisma.transaction.create({
+      data: { amount: 20, type: "EXPENSE", categoryId, userId, date: new Date("2027-05-10T12:00:00Z") },
+    })
+  })
+
+  afterAll(async () => {
+    await prisma.bankAccountMovement.deleteMany({ where: { userId } })
+    await prisma.transaction.deleteMany({ where: { userId } })
+    await prisma.bankAccount.deleteMany({ where: { userId } })
+    await prisma.financialMonth.deleteMany({ where: { userId } })
+    await prisma.fixedCostOccurrence.deleteMany({ where: { userId } })
+    await prisma.fixedCost.deleteMany({ where: { userId } })
+    await prisma.category.deleteMany({ where: { userId } })
+    await prisma.user.delete({ where: { id: userId } })
+  })
+
+  it("estende a janela para o crédito anterior e inclui movimentos após o periodEnd", async () => {
+    const closing = await getMonthlyClosing(userId, "2027-05", prisma)
+
+    expect(closing.expenseEvolution.periodEnd).toBe("2027-05-10")
+    expect(closing.benefitEvolution.points[0].date).toBe("2027-05-01")
+    expect(closing.benefitEvolution.points.at(-1)?.date).toBe("2027-05-31")
+    expect(closing.benefitEvolution.points).toHaveLength(31)
+    expect(closing.benefitEvolution.movementEnd).toBe("2027-05-15")
+    expect(closing.benefitEvolution.creditStart).toBe("2027-05-01")
+    const balances = closing.benefitEvolution.points.map((point) => point.balance)
+    expect(balances[0]).toBe(100)
+    expect(balances[14]).toBe(40)
+    expect(balances.at(-1)).toBe(40)
+    expect(closing.benefitEvolution.points.filter((point) => point.daily > 0).map((point) => point.daily)).toEqual([30, 20, 10])
+    expect(closing.benefitEvolution.credited).toBe(100)
+    expect(closing.benefitEvolution.spent).toBe(60)
+    expect(closing.benefitEvolution.averageDaily).toBe(4)
+    expect(closing.benefitEvolution.currentBalance).toBe(40)
+
+    const expenseDay = closing.expenseEvolution.points.find((point) => point.date === "2027-05-06")
+    expect(expenseDay?.items).toHaveLength(1)
+    expect(expenseDay?.items[0].amount).toBe(50)
+    expect(expenseDay?.items[0].description).toBeTruthy()
+    expect(expenseDay?.itemsTotal).toBe(1)
+    const benefitDay = closing.benefitEvolution.points.find((point) => point.date === "2027-05-04")
+    expect(benefitDay?.items).toEqual([{ description: "Mercado", amount: 30 }])
+    expect(benefitDay?.itemsTotal).toBe(1)
+
+    const movements = await prisma.bankAccountMovement.findMany({ where: { userId } })
+    const accountBalance = movements.reduce(
+      (total, movement) => total + (movement.type === "INCOME" ? Number(movement.amount) : -Number(movement.amount)),
+      0,
+    )
+    expect(closing.benefitEvolution.currentBalance).toBe(accountBalance)
+  })
+})

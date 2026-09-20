@@ -13,7 +13,9 @@ import { useMonthParam } from "@/hooks/use-month-param"
 import { useTableSelection } from "@/components/data-table/use-table-selection"
 import { formatMonth } from "@/lib/months"
 import type { ExpenseEvolution } from "@/features/monthly-closing/expense-evolution"
+import type { BenefitEvolution } from "@/features/monthly-closing/benefit-evolution"
 import { ExpenseEvolutionChart } from "./_components/expense-evolution-chart"
+import { BenefitEvolutionChart } from "./_components/benefit-evolution-chart"
 
   interface ClosingData {
     summary: {
@@ -39,6 +41,11 @@ import { ExpenseEvolutionChart } from "./_components/expense-evolution-chart"
   }[]
   looseExpenses: { id: string; amount: number; description: string | null; category: { name: string } }[]
   expenseEvolution: ExpenseEvolution
+  benefitEvolution: BenefitEvolution
+}
+
+function formatDayMonth(date: string) {
+  return `${date.slice(8, 10)}/${date.slice(5, 7)}`
 }
 
 export default function MonthlyClosingPage() {
@@ -210,32 +217,65 @@ function MonthlyClosingPageContent() {
         <ExpenseComposition items={totalFormula} pendingItems={pendingFormula} details={expenseDetails} loading={loading} month={month} />
       </div>
 
-      <Card className="border-0 shadow-sm">
-        <CardHeader className="pb-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-1">
-              <CardTitle className="text-base">Evolução dos gastos que impactam este mês</CardTitle>
-              <p className="text-sm text-muted-foreground">Lançamentos na data real que estão formando o fechamento de {formatMonth(month)}.</p>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="flex flex-col border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-h-[4.25rem] space-y-1">
+                <CardTitle className="text-base">Evolução dos gastos</CardTitle>
+                <p className="text-sm text-muted-foreground">Lançamentos na data real da compra que estão formando o fechamento de {formatMonth(month)}. Inclui compras de meses anteriores que caem na fatura deste mês.</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                <span>Total já comprometido: <span className="font-medium text-foreground tabular-nums">{formatCurrency(data?.expenseEvolution.total ?? 0)}</span></span>
+                <span>{data?.expenseEvolution.expenseCount ?? 0} {(data?.expenseEvolution.expenseCount ?? 0) === 1 ? "despesa" : "despesas"}</span>
+                {data?.expenseEvolution.periodStart && data.expenseEvolution.periodEnd && (
+                  <span>
+                    Período: {data.expenseEvolution.periodStart.slice(8, 10)}/{data.expenseEvolution.periodStart.slice(5, 7)} → {data.expenseEvolution.periodEnd.slice(8, 10)}/{data.expenseEvolution.periodEnd.slice(5, 7)}
+                  </span>
+                )}
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-              <span>Total já comprometido: <span className="font-medium text-foreground tabular-nums">{formatCurrency(data?.expenseEvolution.total ?? 0)}</span></span>
-              <span>{data?.expenseEvolution.expenseCount ?? 0} {(data?.expenseEvolution.expenseCount ?? 0) === 1 ? "despesa" : "despesas"}</span>
-              {data?.expenseEvolution.periodStart && data.expenseEvolution.periodEnd && (
-                <span>
-                  Período: {data.expenseEvolution.periodStart.slice(8, 10)}/{data.expenseEvolution.periodStart.slice(5, 7)} → {data.expenseEvolution.periodEnd.slice(8, 10)}/{data.expenseEvolution.periodEnd.slice(5, 7)}
-                </span>
-              )}
+          </CardHeader>
+          <CardContent className="flex flex-1 flex-col justify-end px-4 pb-4 pt-0">
+            {data ? (
+              <ExpenseEvolutionChart evolution={data.expenseEvolution} />
+            ) : (
+              <div className="h-[280px] animate-pulse rounded bg-muted" />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="flex flex-col border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-h-[4.25rem] space-y-1">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  Evolução do saldo do benefício
+                  <BenefitBadge />
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  {data?.benefitEvolution.creditStart && data.benefitEvolution.movementEnd
+                    ? `Ciclo do benefício: da última recarga (${formatDayMonth(data.benefitEvolution.creditStart)}) até o último movimento (${formatDayMonth(data.benefitEvolution.movementEnd)}).`
+                    : "Entrou → consumi: o saldo do cartão ao longo do período."}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                <span>Entrou: <span className="font-medium text-foreground tabular-nums">{formatCurrency(data?.benefitEvolution.credited ?? 0)}</span></span>
+                <span>Gasto: <span className="font-medium text-foreground tabular-nums">{formatCurrency(data?.benefitEvolution.spent ?? 0)}</span></span>
+                <span>Média/dia: <span className="font-medium text-foreground tabular-nums">{formatCurrency(data?.benefitEvolution.averageDaily ?? 0)}</span></span>
+                <span>Saldo atual: <span className="font-medium text-foreground tabular-nums">{formatCurrency(data?.benefitEvolution.currentBalance ?? 0)}</span></span>
+              </div>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent className="px-4 pb-4 pt-0">
-          {data ? (
-            <ExpenseEvolutionChart evolution={data.expenseEvolution} />
-          ) : (
-            <div className="h-[280px] animate-pulse rounded bg-muted" />
-          )}
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent className="flex flex-1 flex-col justify-end px-4 pb-4 pt-0">
+            {data ? (
+              <BenefitEvolutionChart evolution={data.benefitEvolution} />
+            ) : (
+              <div className="h-[280px] animate-pulse rounded bg-muted" />
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       <section className="grid gap-4 lg:grid-cols-2">
         <Card className="border-0 shadow-sm lg:col-span-2">
@@ -307,7 +347,7 @@ function MonthlyOverview({ income, receivedIncome, expenses, result, paid, pendi
             label="Receitas do mês"
             value={income}
             detail={benefitCredited > 0
-              ? `${formatCurrency(receivedIncome)} recebido · inclui VA ${formatCurrency(benefitCredited)}${benefitEstimated ? " (estimado)" : ""}`
+              ? `${formatCurrency(income - benefitCredited)} em dinheiro + ${formatCurrency(benefitCredited)} em benefícios${benefitEstimated ? " · estimado" : ""}`
               : `${formatCurrency(receivedIncome)} recebido`}
             badge={benefitCredited > 0 ? <BenefitBadge estimated={benefitEstimated} /> : undefined}
             loading={loading}
