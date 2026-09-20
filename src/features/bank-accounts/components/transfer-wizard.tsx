@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { AlertTriangle, ArrowLeft, ArrowLeftRight, ArrowRight, CalendarDays, Check, Coins, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { FormField } from "@/components/ui/form-field"
 import { FloatingScrollbar } from "@/components/ui/floating-scrollbar"
 import { FormSection } from "@/components/ui/form-section"
@@ -160,18 +160,17 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-xl p-3 sm:p-4 max-h-[90dvh] overflow-hidden">
-        <FloatingScrollbar className="max-h-[calc(90dvh-1.5rem)]">
-        <DialogHeader>
-          <DialogTitle>Transferir entre contas</DialogTitle>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetContent className="flex h-full w-full flex-col gap-0 p-0 sm:max-w-lg">
+        <SheetHeader className="border-b p-4 sm:p-6">
+          <SheetTitle>Transferir entre contas</SheetTitle>
+          <div className="pt-4">
+            <Stepper steps={steps} currentStep={step} onStepClick={goToStep} />
+          </div>
+        </SheetHeader>
 
-        <div className="py-4">
-          <Stepper steps={steps} currentStep={step} onStepClick={goToStep} />
-        </div>
-
-        <div className="min-h-[260px]">
+        <FloatingScrollbar className="min-h-0 flex-1">
+          <div className="min-h-[260px] p-4 sm:p-6">
           {step === 0 && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">Selecione a conta de origem e destino da transferência.</p>
@@ -492,9 +491,10 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
               {error && <p className="text-sm text-destructive">{error}</p>}
             </div>
           )}
-        </div>
+          </div>
+        </FloatingScrollbar>
 
-        <div className="flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 border-t p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div>
             {step > 0 ? (
               <Button type="button" variant="ghost" onClick={goBack} disabled={submitting} className="w-full sm:w-auto">
@@ -542,8 +542,7 @@ export function TransferWizard({ open, onOpenChange, accounts, onSuccess }: Tran
             )}
           </div>
         </div>
-        </FloatingScrollbar>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   )
 }
