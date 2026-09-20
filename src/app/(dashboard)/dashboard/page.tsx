@@ -93,9 +93,9 @@ function DashboardPageContent() {
         balance: stats.balance,
         income: stats.income,
         expense: stats.expense,
-        benefitCredited: stats.benefitCredited,
-        benefitSpent: stats.benefitSpent,
-        benefitEstimated: stats.benefitEstimated,
+        benefitCredited: stats.benefitCredited ?? 0,
+        benefitSpent: stats.benefitSpent ?? 0,
+        benefitEstimated: stats.benefitEstimated ?? false,
       }
     : { balance: 0, income: 0, expense: 0, benefitCredited: 0, benefitSpent: 0, benefitEstimated: false }
 
