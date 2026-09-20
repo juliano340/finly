@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.75] - 2026-09-20
+
+### Adicionado
+
+- A conta de benefício ganhou a aba Recargas (histórico, total, recarga média e intervalo médio dos últimos 12 meses) e o card do benefício no Fechamento acende um badge quando o mês anterior fecha sem recarga (a partir do dia 26).
+
 ## [0.2.74] - 2026-09-19
 
 ### Adicionado
