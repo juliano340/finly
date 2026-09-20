@@ -9,7 +9,7 @@ import { moneyToNumber, sumMoney, type MoneyValue } from "@/lib/money"
 import { composeMonthlyFinancialSources } from "@/features/monthly-plan/monthly-plan.sources"
 import { calculateInvoiceTotals } from "@/features/card-invoices/invoice-calculation"
 import { buildExpenseEvolution, dayKey } from "./expense-evolution"
-import { buildBenefitEvolution } from "./benefit-evolution"
+import { buildBenefitEvolution, resolveBenefitRechargeAlert } from "./benefit-evolution"
 import { computeBenefitTotals, isBenefitAdjustment } from "@/features/bank-accounts/benefit"
 
 type FixedCostOccurrenceClient = Pick<PrismaClient, "fixedCost" | "fixedCostOccurrence">
@@ -273,6 +273,11 @@ export async function getMonthlyClosing(
     })),
     { start: new Date(`${benefitStartKey}T00:00:00.000Z`), end: new Date(`${benefitEndKey}T00:00:00.000Z`), creditStart: creditStartKey },
   )
+  const benefitRechargeAlert = resolveBenefitRechargeAlert({
+    selectedMonth: month,
+    creditDates: benefitEvolution.creditDates,
+    today: new Date(),
+  })
 
   return {
     financialMonth,
@@ -282,6 +287,7 @@ export async function getMonthlyClosing(
     benefitExpenses,
     expenseEvolution,
     benefitEvolution,
+    benefitRechargeAlert,
     summary: {
       month,
       cardInvoicesTotal,

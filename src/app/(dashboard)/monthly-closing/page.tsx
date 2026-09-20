@@ -42,10 +42,18 @@ import { BenefitEvolutionChart } from "./_components/benefit-evolution-chart"
   looseExpenses: { id: string; amount: number; description: string | null; category: { name: string } }[]
   expenseEvolution: ExpenseEvolution
   benefitEvolution: BenefitEvolution
+  benefitRechargeAlert: { late: boolean; referenceMonth: string; daysSinceLastCredit: number | null }
 }
 
 function formatDayMonth(date: string) {
   return `${date.slice(8, 10)}/${date.slice(5, 7)}`
+}
+
+const MONTHS_SHORT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+
+function formatMonthShort(month: string) {
+  const [year, monthNumber] = month.split("-").map(Number)
+  return `${MONTHS_SHORT[monthNumber - 1]}/${year}`
 }
 
 export default function MonthlyClosingPage() {
@@ -91,6 +99,7 @@ function MonthlyClosingPageContent() {
     fetchClosing(month)
   }
   const summary = data?.summary
+  const rechargeAlert = data?.benefitRechargeAlert
 
   const pendingFormula = [
     { label: "Faturas pendentes", value: summary?.cardInvoicesTotal ?? 0 },
@@ -249,14 +258,24 @@ function MonthlyClosingPageContent() {
           <CardHeader className="pb-3">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-h-[4.25rem] space-y-1">
-                <CardTitle className="flex items-center gap-2 text-base">
+                <CardTitle className="flex flex-wrap items-center gap-2 text-base">
                   Evolução do saldo do benefício
                   <BenefitBadge />
+                  {rechargeAlert?.late && (
+                    <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-400">
+                      Sem recarga em {formatMonthShort(rechargeAlert.referenceMonth)}
+                    </Badge>
+                  )}
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
                   {data?.benefitEvolution.creditStart && data.benefitEvolution.movementEnd
                     ? `Ciclo do benefício: da última recarga (${formatDayMonth(data.benefitEvolution.creditStart)}) até o último movimento (${formatDayMonth(data.benefitEvolution.movementEnd)}).`
                     : "Entrou → consumi: o saldo do cartão ao longo do período."}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {data?.benefitEvolution.lastCreditDate
+                    ? `Última recarga: ${formatDayMonth(data.benefitEvolution.lastCreditDate)}${rechargeAlert?.daysSinceLastCredit != null ? ` · há ${rechargeAlert.daysSinceLastCredit} ${rechargeAlert.daysSinceLastCredit === 1 ? "dia" : "dias"}` : ""}`
+                    : "Nenhuma recarga registrada"}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">

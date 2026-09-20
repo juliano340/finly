@@ -23,6 +23,14 @@ export interface BenefitEvolution {
   averageDaily: number
   movementEnd: string | null
   creditStart: string | null
+  lastCreditDate: string | null
+  creditDates: string[]
+}
+
+export interface BenefitRechargeAlert {
+  late: boolean
+  referenceMonth: string
+  daysSinceLastCredit: number | null
 }
 
 const DAY_IN_MS = 86_400_000
@@ -31,12 +39,38 @@ function roundMoney(value: number): number {
   return Math.round(value * 100) / 100
 }
 
+export function resolveBenefitRechargeAlert(input: {
+  selectedMonth: string
+  creditDates: string[]
+  today: Date
+}): BenefitRechargeAlert {
+  const [year, month] = input.selectedMonth.split("-").map(Number)
+  const referenceDate = new Date(Date.UTC(year, month - 2, 1))
+  const referenceMonth = `${referenceDate.getUTCFullYear()}-${String(referenceDate.getUTCMonth() + 1).padStart(2, "0")}`
+  const referenceStart = dayKey(referenceDate)
+  const referenceEndDate = new Date(Date.UTC(referenceDate.getUTCFullYear(), referenceDate.getUTCMonth() + 1, 0))
+  const referenceEnd = dayKey(referenceEndDate)
+  const grace = dayKey(new Date(referenceEndDate.getTime() - 3 * DAY_IN_MS))
+  const todayKey = dayKey(input.today)
+  const currentMonth = todayKey.slice(0, 7)
+  const lastCreditDate = input.creditDates.length > 0 ? [...input.creditDates].sort().at(-1)! : null
+  const hasCreditInReference = input.creditDates.some((date) => date >= referenceStart && date <= referenceEnd)
+  const late = input.selectedMonth >= currentMonth && !hasCreditInReference && todayKey >= grace
+  const daysSinceLastCredit = lastCreditDate
+    ? Math.round(
+        (new Date(`${todayKey}T00:00:00.000Z`).getTime() - new Date(`${lastCreditDate}T00:00:00.000Z`).getTime()) / DAY_IN_MS,
+      )
+    : null
+
+  return { late, referenceMonth, daysSinceLastCredit }
+}
+
 export function buildBenefitEvolution(
   accounts: BenefitEvolutionAccount[],
   window: { start: Date; end: Date; creditStart?: string | null },
 ): BenefitEvolution {
   if (accounts.length === 0) {
-    return { points: [], credited: 0, spent: 0, currentBalance: 0, averageDaily: 0, movementEnd: null, creditStart: null }
+    return { points: [], credited: 0, spent: 0, currentBalance: 0, averageDaily: 0, movementEnd: null, creditStart: null, lastCreditDate: null, creditDates: [] }
   }
 
   const start = utcDayStart(window.start)
@@ -49,6 +83,7 @@ export function buildBenefitEvolution(
   let openingBalance = sumMoney(accounts.map((account) => account.initialBalance))
   let currentBalance = openingBalance
   let movementEndKey: string | null = null
+  const creditKeys = new Set<string>()
   const dailyByDay = new Map<string, number>()
   const balanceByDay = new Map<string, number>()
   const itemsByDay = new Map<string, ExpenseEvolutionItem[]>()
@@ -59,6 +94,10 @@ export function buildBenefitEvolution(
       const signed = movement.type === "INCOME" ? movement.amount : -movement.amount
 
       currentBalance = sumMoney([currentBalance, signed])
+
+      if (movement.type === "INCOME" && !isBenefitAdjustment(movement.description)) {
+        creditKeys.add(key)
+      }
 
       if (key < startKey) {
         openingBalance = sumMoney([openingBalance, signed])
@@ -97,6 +136,8 @@ export function buildBenefitEvolution(
     : points.length
   const averageDaily = movementDays > 0 ? roundMoney(spent / movementDays) : 0
 
+  const creditDates = [...creditKeys].sort()
+
   return {
     points,
     credited,
@@ -105,5 +146,7 @@ export function buildBenefitEvolution(
     averageDaily,
     movementEnd: movementEndKey,
     creditStart: window.creditStart ?? null,
+    lastCreditDate: creditDates.at(-1) ?? null,
+    creditDates,
   }
 }
