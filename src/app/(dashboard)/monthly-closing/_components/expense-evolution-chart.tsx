@@ -22,12 +22,18 @@ function formatDayMonth(date: string) {
   return `${date.slice(8, 10)}/${date.slice(5, 7)}`
 }
 
+function formatWeekdayDayMonth(date: string) {
+  const weekday = new Date(`${date}T00:00:00.000Z`).toLocaleDateString("pt-BR", { weekday: "short", timeZone: "UTC" })
+  const label = weekday.replace(".", "")
+  return `${label.charAt(0).toUpperCase()}${label.slice(1)} ${formatDayMonth(date)}`
+}
+
 function EvolutionTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: ExpenseEvolutionPoint }> }) {
   if (!active || !payload?.length) return null
   const point = payload[0].payload
   return (
     <div className="rounded-lg border bg-background p-3 shadow-md">
-      <div className="font-medium">{formatDayMonth(point.date)}</div>
+      <div className="font-medium">{formatWeekdayDayMonth(point.date)}</div>
       <div className="text-sm text-muted-foreground">No dia: {formatCurrency(point.daily)}</div>
       <div className="text-sm text-muted-foreground">Acumulado: {formatCurrency(point.cumulative)}</div>
       {point.items.length > 0 && (
