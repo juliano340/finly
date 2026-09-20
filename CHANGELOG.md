@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.72] - 2026-09-19
+
+### Adicionado
+
+- Os tooltips dos gráficos do Fechamento Mensal agora mostram o dia da semana abreviado na data (ex.: Qui 01/10).
+
 ## [0.2.71] - 2026-09-19
 
 ### Adicionado

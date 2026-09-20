@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.71"
+export const CURRENT_VERSION = "0.2.72"
 
 export const releases = [
+  {
+    version: "0.2.72",
+    date: "2026-09-19",
+    changes: [
+      { type: "feat", description: "Os tooltips dos gráficos do Fechamento Mensal agora mostram o dia da semana abreviado na data (ex.: Qui 01/10)." },
+    ],
+  },
   {
     version: "0.2.71",
     date: "2026-09-19",
