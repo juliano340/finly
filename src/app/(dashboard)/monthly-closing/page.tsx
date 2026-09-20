@@ -334,6 +334,9 @@ function MonthlyOverview({ income, receivedIncome, expenses, result, paid, pendi
 }) {
   const total = paid + pending
   const paidPercent = total > 0 ? Math.min(100, Math.max(0, (paid / total) * 100)) : 0
+  const benefitNet = benefitCredited - benefitSpent
+  const resultWithoutBenefit = result - benefitNet
+  const hasBenefit = benefitCredited > 0 || benefitSpent > 0
 
   return (
     <Card className="border-0 shadow-sm">
@@ -359,7 +362,15 @@ function MonthlyOverview({ income, receivedIncome, expenses, result, paid, pendi
             badge={benefitSpent > 0 ? <BenefitBadge /> : undefined}
             loading={loading}
           />
-          <OverviewValue label={result >= 0 ? "Saldo projetado" : "Déficit projetado"} value={result} detail="Receitas menos despesas" loading={loading} tone={result >= 0 ? "positive" : "negative"} />
+          <OverviewValue
+            label={result >= 0 ? "Saldo projetado" : "Déficit projetado"}
+            value={result}
+            detail={hasBenefit
+              ? `Sem VA: ${formatCurrency(resultWithoutBenefit)} · Benefício: ${benefitNet >= 0 ? "+" : ""}${formatCurrency(benefitNet)}${benefitEstimated ? " (estimado)" : ""}`
+              : "Receitas menos despesas"}
+            loading={loading}
+            tone={result >= 0 ? "positive" : "negative"}
+          />
         </div>
         <div className="rounded-lg bg-muted/60 p-4">
           <div className="flex items-center justify-between gap-3 text-sm">

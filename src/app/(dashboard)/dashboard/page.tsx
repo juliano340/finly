@@ -99,6 +99,10 @@ function DashboardPageContent() {
       }
     : { balance: 0, income: 0, expense: 0, benefitCredited: 0, benefitSpent: 0, benefitEstimated: false }
 
+  const benefitNet = summary.benefitCredited - summary.benefitSpent
+  const resultWithoutBenefit = summary.balance - benefitNet
+  const hasBenefit = summary.benefitCredited > 0 || summary.benefitSpent > 0
+
   const cards = [
     {
       label: "Receitas do mês",
@@ -129,6 +133,7 @@ function DashboardPageContent() {
       benefit: 0,
       benefitEstimated: false,
       benefitBreakdown: false,
+      resultBreakdown: hasBenefit ? { without: resultWithoutBenefit, benefit: benefitNet, estimated: summary.benefitEstimated } : undefined,
     },
   ]
   const totalToPay = closing?.summary.totalToPay ?? 0
@@ -166,6 +171,11 @@ function DashboardPageContent() {
               <p className={`mt-1 text-2xl font-bold tabular-nums ${summary.balance >= 0 ? "text-success" : "text-destructive"}`}>
                 {loading ? <span className="inline-block h-6 w-32 animate-pulse rounded bg-muted" /> : formatCurrency(summary.balance)}
               </p>
+              {!loading && hasBenefit && (
+                <p className="mt-1 text-[11px] text-muted-foreground tabular-nums">
+                  Sem VA: {formatCurrency(resultWithoutBenefit)} · Benefício: {benefitNet >= 0 ? "+" : ""}{formatCurrency(benefitNet)}{summary.benefitEstimated ? " (estimado)" : ""}
+                </p>
+              )}
             </div>
             <div className={`rounded-xl p-3 ${summary.balance >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
               <Wallet className="h-5 w-5" />
@@ -199,6 +209,11 @@ function DashboardPageContent() {
                     })
                   )}
                 </p>
+                {!loading && card.resultBreakdown && (
+                  <p className="mt-1 text-[11px] text-muted-foreground tabular-nums">
+                    Sem VA: {formatCurrency(card.resultBreakdown.without)} · Benefício: {card.resultBreakdown.benefit >= 0 ? "+" : ""}{formatCurrency(card.resultBreakdown.benefit)}{card.resultBreakdown.estimated ? " (estimado)" : ""}
+                  </p>
+                )}
                 {!loading && card.benefit > 0 && (
                   card.benefitBreakdown ? (
                     <p className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11px] text-muted-foreground">
