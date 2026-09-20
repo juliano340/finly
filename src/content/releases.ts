@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.70"
+export const CURRENT_VERSION = "0.2.71"
 
 export const releases = [
+  {
+    version: "0.2.71",
+    date: "2026-09-19",
+    changes: [
+      { type: "feat", description: "O Fechamento Mensal ganhou dois gráficos: 'Evolução dos gastos' (sem misturar o VA) e 'Evolução do saldo do benefício', com o ciclo desde a última recarga, média de gasto por dia, opção de ver até o fim do mês e tooltip listando os lançamentos do dia." },
+    ],
+  },
   {
     version: "0.2.70",
     date: "2026-09-19",

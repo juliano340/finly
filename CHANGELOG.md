@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.71] - 2026-09-19
+
+### Adicionado
+
+- O Fechamento Mensal ganhou dois gráficos: 'Evolução dos gastos' (sem misturar o VA) e 'Evolução do saldo do benefício', com o ciclo desde a última recarga, média de gasto por dia, opção de ver até o fim do mês e tooltip listando os lançamentos do dia.
+
 ## [0.2.70] - 2026-09-19
 
 ### Adicionado
