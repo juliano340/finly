@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto"
 import { moneyToNumber, subtractMoney, sumMoney } from "@/lib/money"
 import type { BankAccountAdjustmentInput, BankAccountInput, BankAccountMovementInput, BankAccountTransferInput, BenefitRechargeInput } from "./bank-accounts.schema"
 import { parseBenefitStatementCsv, type BenefitStatementMovement } from "./benefit-statement"
+import { isBenefitAdjustment } from "./benefit"
 
 export async function getBankAccounts(userId: string, client?: PrismaClient) {
   const db = client ?? defaultPrisma
@@ -16,11 +17,18 @@ export async function getBankAccounts(userId: string, client?: PrismaClient) {
     orderBy: [{ active: "desc" }, { name: "asc" }],
   })
 
-  const sums = await db.bankAccountMovement.groupBy({
-    by: ["bankAccountId", "type"],
-    where: { userId },
-    _sum: { amount: true },
-  })
+  const [sums, rechargeMovements] = await Promise.all([
+    db.bankAccountMovement.groupBy({
+      by: ["bankAccountId", "type"],
+      where: { userId },
+      _sum: { amount: true },
+    }),
+    db.bankAccountMovement.findMany({
+      where: { userId, type: "INCOME", bankAccount: { type: "BENEFIT" } },
+      select: { id: true, bankAccountId: true, date: true, amount: true, description: true },
+      orderBy: { date: "desc" },
+    }),
+  ])
 
   return accounts.map((account) => {
     const income = sums.find((sum) => sum.bankAccountId === account.id && sum.type === "INCOME")?._sum.amount ?? 0
@@ -34,6 +42,16 @@ export async function getBankAccounts(userId: string, client?: PrismaClient) {
         ...movement,
         amount: moneyToNumber(movement.amount),
       })),
+      recharges: account.type === "BENEFIT"
+        ? rechargeMovements
+            .filter((movement) => movement.bankAccountId === account.id && !isBenefitAdjustment(movement.description))
+            .map((movement) => ({
+              id: movement.id,
+              date: movement.date,
+              amount: moneyToNumber(movement.amount),
+              description: movement.description,
+            }))
+        : [],
       balance: subtractMoney(sumMoney([account.initialBalance, income]), expense),
     }
   })

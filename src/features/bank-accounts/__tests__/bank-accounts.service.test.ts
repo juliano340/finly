@@ -850,4 +850,29 @@ describe("bank-accounts.service", () => {
     const balance = movements.reduce((total, movement) => total + (movement.type === "INCOME" ? Number(movement.amount) : -Number(movement.amount)), 118)
     expect(balance).toBeCloseTo(448.21, 2)
   })
+
+  it("expõe recharges apenas em contas de benefício, sem ajustes e em ordem decrescente", async () => {
+    const suffix = Date.now()
+    const benefit = await createBankAccount(
+      userId,
+      { name: `Benefício recharges ${suffix}`, institution: "FLASH", type: "BENEFIT", color: "#16A34A", initialBalance: 0, overdraftLimit: 0, benefitDailyRate: null, active: true },
+      prisma,
+    )
+    await createBankAccountMovement(benefit.id, userId, { amount: 100, type: "INCOME", description: "RECARGA ANTIGA", date: new Date(2026, 7, 10, 12) }, prisma)
+    await createBankAccountMovement(benefit.id, userId, { amount: 200, type: "INCOME", description: "RECARGA NOVA", date: new Date(2026, 8, 10, 12) }, prisma)
+    await createBankAccountMovement(benefit.id, userId, { amount: 50, type: "INCOME", description: "AJUSTE_MANUAL:ENTRADA", date: new Date(2026, 8, 15, 12) }, prisma)
+    await createBankAccountMovement(benefit.id, userId, { amount: 30, type: "EXPENSE", description: "Compra", date: new Date(2026, 8, 12, 12) }, prisma)
+    const digital = await createBankAccount(
+      userId,
+      { name: `Digital recharges ${suffix}`, institution: "Teste", type: "DIGITAL", color: "#22C55E", initialBalance: 0, active: true, overdraftLimit: 0 },
+      prisma,
+    )
+
+    const accounts = await getBankAccounts(userId, prisma)
+    const benefitAccount = accounts.find((account) => account.id === benefit.id)
+    expect(benefitAccount?.recharges.map((recharge) => recharge.description)).toEqual(["RECARGA NOVA", "RECARGA ANTIGA"])
+    expect(benefitAccount?.recharges[0].amount).toBe(200)
+    expect(benefitAccount?.recharges[0].date.toISOString().slice(0, 10)).toBe("2026-09-10")
+    expect(accounts.find((account) => account.id === digital.id)?.recharges).toEqual([])
+  })
 })

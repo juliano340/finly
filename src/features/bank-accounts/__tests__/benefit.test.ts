@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest"
-import { businessDaysInMonth, computeBenefitTotals, estimateBenefitCredit } from "../benefit"
+import { businessDaysInMonth, computeBenefitTotals, estimateBenefitCredit, summarizeRecharges } from "../benefit"
 
 describe("benefit helpers", () => {
   it("conta dias úteis (seg-sex) de meses conhecidos", () => {
@@ -86,5 +86,38 @@ describe("benefit helpers", () => {
     ], "2026-09")
 
     expect(totals).toEqual({ credited: 484, spent: 0, estimated: true })
+  })
+
+  describe("summarizeRecharges", () => {
+    it("resume total/contagem/média e intervalo médio das recargas dos últimos 12 meses", () => {
+      const summary = summarizeRecharges([
+        { date: new Date("2026-08-10T12:00:00Z"), amount: 200 },
+        { date: new Date("2026-07-10T12:00:00Z"), amount: 100 },
+        { date: new Date("2026-06-10T12:00:00Z"), amount: 300 },
+        { date: new Date("2024-01-10T12:00:00Z"), amount: 999 },
+      ], new Date("2026-09-19T12:00:00Z"))
+
+      expect(summary.count12m).toBe(3)
+      expect(summary.total12m).toBe(600)
+      expect(summary.average).toBe(200)
+      expect(summary.averageIntervalDays).toBe(30.5)
+    })
+
+    it("não calcula intervalo com uma recarga e zera o resumo sem recargas", () => {
+      const single = summarizeRecharges(
+        [{ date: new Date("2026-08-10T12:00:00Z"), amount: 200 }],
+        new Date("2026-09-19T12:00:00Z"),
+      )
+      expect(single.averageIntervalDays).toBeNull()
+      expect(single.count12m).toBe(1)
+      expect(single.total12m).toBe(200)
+
+      expect(summarizeRecharges([], new Date("2026-09-19T12:00:00Z"))).toEqual({
+        total12m: 0,
+        count12m: 0,
+        average: 0,
+        averageIntervalDays: null,
+      })
+    })
   })
 })

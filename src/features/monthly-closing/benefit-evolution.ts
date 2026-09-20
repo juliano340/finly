@@ -50,12 +50,12 @@ export function resolveBenefitRechargeAlert(input: {
   const referenceStart = dayKey(referenceDate)
   const referenceEndDate = new Date(Date.UTC(referenceDate.getUTCFullYear(), referenceDate.getUTCMonth() + 1, 0))
   const referenceEnd = dayKey(referenceEndDate)
-  const grace = dayKey(new Date(referenceEndDate.getTime() - 3 * DAY_IN_MS))
+  const grace = `${referenceMonth}-25`
   const todayKey = dayKey(input.today)
   const currentMonth = todayKey.slice(0, 7)
   const lastCreditDate = input.creditDates.length > 0 ? [...input.creditDates].sort().at(-1)! : null
   const hasCreditInReference = input.creditDates.some((date) => date >= referenceStart && date <= referenceEnd)
-  const late = input.selectedMonth >= currentMonth && !hasCreditInReference && todayKey >= grace
+  const late = input.selectedMonth >= currentMonth && !hasCreditInReference && todayKey > grace
   const daysSinceLastCredit = lastCreditDate
     ? Math.round(
         (new Date(`${todayKey}T00:00:00.000Z`).getTime() - new Date(`${lastCreditDate}T00:00:00.000Z`).getTime()) / DAY_IN_MS,

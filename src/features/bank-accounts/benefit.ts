@@ -13,6 +13,44 @@ export function isBenefitAdjustment(description?: string | null): boolean {
   return (description ?? "").trim().toLowerCase().startsWith("ajuste")
 }
 
+export interface BenefitRechargeSummary {
+  total12m: number
+  count12m: number
+  average: number
+  averageIntervalDays: number | null
+}
+
+const DAY_IN_MS = 86_400_000
+
+function toUtcDay(date: Date): number {
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+}
+
+export function summarizeRecharges(recharges: { date: Date | string; amount: number }[], today: Date): BenefitRechargeSummary {
+  const todayUtc = toUtcDay(today)
+  const cutoff = new Date(todayUtc)
+  cutoff.setUTCFullYear(cutoff.getUTCFullYear() - 1)
+  const cutoffUtc = cutoff.getTime()
+
+  const within = recharges
+    .map((recharge) => ({ day: toUtcDay(new Date(recharge.date)), amount: recharge.amount }))
+    .filter((recharge) => recharge.day >= cutoffUtc && recharge.day <= todayUtc)
+
+  const total12m = roundMoney(within.reduce((total, recharge) => total + recharge.amount, 0))
+  const count12m = within.length
+  const average = count12m > 0 ? roundMoney(total12m / count12m) : 0
+
+  let averageIntervalDays: number | null = null
+  if (count12m >= 2) {
+    const days = within.map((recharge) => recharge.day).sort((a, b) => a - b)
+    let totalGap = 0
+    for (let i = 1; i < days.length; i += 1) totalGap += (days[i] - days[i - 1]) / DAY_IN_MS
+    averageIntervalDays = roundMoney(totalGap / (days.length - 1))
+  }
+
+  return { total12m, count12m, average, averageIntervalDays }
+}
+
 export function businessDaysInMonth(month: string): number {
   const [year, monthNumber] = month.split("-").map(Number)
   const lastDay = new Date(year, monthNumber, 0).getDate()

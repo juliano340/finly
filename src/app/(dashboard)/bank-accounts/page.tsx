@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { TransferWizard } from "@/features/bank-accounts/components/transfer-wizard"
-import { businessDaysInMonth, estimateBenefitCredit } from "@/features/bank-accounts/benefit"
+import { businessDaysInMonth, estimateBenefitCredit, summarizeRecharges } from "@/features/bank-accounts/benefit"
 import { formatCurrency } from "@/lib/utils"
 import { getCurrentMonth } from "@/lib/months"
 import { isAccountNegative, getAvailableBalance } from "@/lib/balance"
@@ -48,6 +48,7 @@ interface BankAccount {
   active: boolean
   cards: { id: string; name: string; brand: string | null }[]
   movements: { id: string; amount: number; type: "INCOME" | "EXPENSE"; description: string | null; date: string; transactionId: string | null }[]
+  recharges: { id: string; date: string; amount: number; description: string | null }[]
 }
 
 type AccountSortField = "name" | "institution" | "balance"
@@ -517,7 +518,13 @@ export default function BankAccountsPage() {
               </SheetHeader>
               <div className="flex-1 overflow-y-auto px-4 pb-4">
                 <div className="flex border-b">
-                  {([["overview", "Visão geral", Eye], ["movements", "Movimentações", ArrowUpDown], ["adjust", "Ajuste de saldo", SlidersHorizontal], ["edit", "Editar conta", Pencil]] as const).map(([tab, label, Icon]) => (
+                  {([
+                    ["overview", "Visão geral", Eye],
+                    ["movements", "Movimentações", ArrowUpDown],
+                    ...(selectedAccount.type === "BENEFIT" ? [["recargas", "Recargas", Gift] as const] : []),
+                    ["adjust", "Ajuste de saldo", SlidersHorizontal],
+                    ["edit", "Editar conta", Pencil],
+                  ] as const).map(([tab, label, Icon]) => (
                     <button key={tab} type="button" title={label} aria-label={label} onClick={() => setDetailTab(tab)} className={`flex flex-1 items-center justify-center gap-1.5 border-b-2 pb-2.5 pt-2 transition-colors ${detailTab === tab ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
                       <Icon className="h-4 w-4" />
                     </button>
@@ -542,37 +549,35 @@ export default function BankAccountsPage() {
                       </div>
                       {selectedAccount.type === "BENEFIT" && (
                         <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
-                          <div className="flex items-center justify-between gap-3">
-                            <div>
-                              <p className="text-sm font-medium">Conta de benefício pré-pago</p>
-                              <p className="text-xs text-muted-foreground">
-                                {selectedAccount.benefitDailyRate
-                                  ? `${formatCurrency(selectedAccount.benefitDailyRate)} por dia • estimativa deste mês: ${formatCurrency(estimateBenefitCredit(selectedAccount.benefitDailyRate, getCurrentMonth()))}`
-                                  : "As recargas não entram como receita livre."}
-                              </p>
-                            </div>
-                            <div className="flex shrink-0 items-center gap-2">
-                              <input
-                                ref={statementInputRef}
-                                type="file"
-                                accept=".csv"
-                                className="hidden"
-                                onChange={(event) => {
-                                  const file = event.target.files?.[0]
-                                  if (file) void handleImportStatement(selectedAccount.id, file)
-                                }}
-                              />
-                              <Button size="sm" variant="outline" disabled={importingStatement} onClick={() => statementInputRef.current?.click()}>
-                                {importingStatement ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                                Importar extrato
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={() => { setDetailTab("movements"); setShowForm("recharge") }}
-                              >
-                                <Gift className="mr-2 h-4 w-4" />Recarregar
-                              </Button>
-                            </div>
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium">Conta de benefício pré-pago</p>
+                            <p className="text-xs text-muted-foreground">
+                              {selectedAccount.benefitDailyRate
+                                ? `${formatCurrency(selectedAccount.benefitDailyRate)} por dia • estimativa deste mês: ${formatCurrency(estimateBenefitCredit(selectedAccount.benefitDailyRate, getCurrentMonth()))}`
+                                : "As recargas não entram como receita livre."}
+                            </p>
+                          </div>
+                          <div className="mt-3 flex flex-wrap items-center gap-2">
+                            <input
+                              ref={statementInputRef}
+                              type="file"
+                              accept=".csv"
+                              className="hidden"
+                              onChange={(event) => {
+                                const file = event.target.files?.[0]
+                                if (file) void handleImportStatement(selectedAccount.id, file)
+                              }}
+                            />
+                            <Button size="sm" variant="outline" disabled={importingStatement} onClick={() => statementInputRef.current?.click()}>
+                              {importingStatement ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                              Importar extrato
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => { setDetailTab("movements"); setShowForm("recharge") }}
+                            >
+                              <Gift className="mr-2 h-4 w-4" />Recarregar
+                            </Button>
                           </div>
                           <label className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
                             <input
@@ -783,6 +788,49 @@ export default function BankAccountsPage() {
                     )}
                   </div>
                 )}
+
+                {detailTab === "recargas" && selectedAccount.type === "BENEFIT" && (() => {
+                  const recharges = selectedAccount.recharges
+                  const rechargeSummary = summarizeRecharges(recharges, new Date())
+                  if (recharges.length === 0) {
+                    return (
+                      <div className="mt-4">
+                        <p className="text-sm text-muted-foreground">Nenhuma recarga registrada.</p>
+                      </div>
+                    )
+                  }
+                  return (
+                    <div className="mt-4 space-y-4">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="rounded-lg bg-muted p-3"><p className="text-xs text-muted-foreground">Total (12m)</p><p className="font-medium">{formatCurrency(rechargeSummary.total12m)}</p></div>
+                        <div className="rounded-lg bg-muted p-3"><p className="text-xs text-muted-foreground">Recarga média</p><p className="font-medium">{formatCurrency(rechargeSummary.average)}</p></div>
+                        <div className="rounded-lg bg-muted p-3"><p className="text-xs text-muted-foreground">Intervalo médio</p><p className="font-medium">{rechargeSummary.averageIntervalDays != null ? `${rechargeSummary.averageIntervalDays.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} dias` : "—"}</p></div>
+                        <div className="rounded-lg bg-muted p-3"><p className="text-xs text-muted-foreground">Recargas (12m)</p><p className="font-medium">{rechargeSummary.count12m}</p></div>
+                      </div>
+                      <div className="space-y-1">
+                        {recharges.map((recharge, index) => {
+                          const previous = recharges[index + 1]
+                          const gapDays = previous ? Math.round((new Date(recharge.date).getTime() - new Date(previous.date).getTime()) / 86_400_000) : null
+                          return (
+                            <div key={recharge.id} className="flex items-start gap-3 rounded-lg border p-2.5 text-sm">
+                              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-success/10 text-success">
+                                <Gift className="h-3.5 w-3.5" />
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <span className="truncate font-medium">{recharge.description ?? "Recarga"}</span>
+                                <p className="text-xs text-muted-foreground">
+                                  {new Date(recharge.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" })}
+                                  {gapDays != null ? ` · há ${gapDays} dias da anterior` : ""}
+                                </p>
+                              </div>
+                              <span className="shrink-0 font-medium text-success">+{formatCurrency(recharge.amount)}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })()}
 
                 {detailTab === "adjust" && selectedAccount && (
                   <div className="mt-4 space-y-4">

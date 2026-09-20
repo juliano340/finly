@@ -129,7 +129,7 @@ describe("buildBenefitEvolution", () => {
   })
 
   describe("resolveBenefitRechargeAlert", () => {
-    it("não alerta antes da folga de 3 dias", () => {
+    it("não alerta antes do dia 26 do mês de referência", () => {
       const alert = resolveBenefitRechargeAlert({
         selectedMonth: "2026-10",
         creditDates: ["2026-08-29"],
@@ -139,7 +139,24 @@ describe("buildBenefitEvolution", () => {
       expect(alert).toEqual({ late: false, referenceMonth: "2026-09", daysSinceLastCredit: 21 })
     })
 
-    it("alerta quando o mês de referência fechou sem recarga e passou a folga", () => {
+    it("acende a partir do dia 26 do mês de referência (não no dia 25)", () => {
+      const onDay25 = resolveBenefitRechargeAlert({
+        selectedMonth: "2026-10",
+        creditDates: ["2026-08-29"],
+        today: new Date("2026-09-25T12:00:00Z"),
+      })
+      const onDay26 = resolveBenefitRechargeAlert({
+        selectedMonth: "2026-10",
+        creditDates: ["2026-08-29"],
+        today: new Date("2026-09-26T12:00:00Z"),
+      })
+
+      expect(onDay25.late).toBe(false)
+      expect(onDay26.late).toBe(true)
+      expect(onDay26.referenceMonth).toBe("2026-09")
+    })
+
+    it("alerta quando o mês de referência fechou sem recarga e passou do dia 25", () => {
       const alert = resolveBenefitRechargeAlert({
         selectedMonth: "2026-10",
         creditDates: ["2026-08-29"],
