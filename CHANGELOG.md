@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.76] - 2026-09-20
+
+### Adicionado
+
+- As abas do sheet da conta agora mostram o nome no hover (tooltip do app), sem alterar o layout.
+
 ## [0.2.75] - 2026-09-20
 
 ### Adicionado

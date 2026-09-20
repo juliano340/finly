@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.75"
+export const CURRENT_VERSION = "0.2.76"
 
 export const releases = [
+  {
+    version: "0.2.76",
+    date: "2026-09-20",
+    changes: [
+      { type: "feat", description: "As abas do sheet da conta agora mostram o nome no hover (tooltip do app), sem alterar o layout." },
+    ],
+  },
   {
     version: "0.2.75",
     date: "2026-09-20",
