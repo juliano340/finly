@@ -367,28 +367,30 @@ function MonthlyOverview({ income, receivedIncome, expenses, result, paid, pendi
         <div className="grid gap-4 sm:grid-cols-3">
           <OverviewValue
             label="Receitas do mês"
-            value={income}
+            value={income - benefitCredited}
             detail={benefitCredited > 0
-              ? `${formatCurrency(income - benefitCredited)} em dinheiro + ${formatCurrency(benefitCredited)} em benefícios${benefitEstimated ? " · estimado" : ""}`
+              ? `Com benefício: ${formatCurrency(income)}${benefitEstimated ? " · estimado" : ""}`
               : `${formatCurrency(receivedIncome)} recebido`}
-            badge={benefitCredited > 0 ? <BenefitBadge estimated={benefitEstimated} /> : undefined}
+            detailBadge={benefitCredited > 0 ? <BenefitBadge /> : undefined}
             loading={loading}
           />
           <OverviewValue
             label="Despesas do mês"
-            value={expenses}
-            detail={benefitSpent > 0 ? `Pagas e pendentes · inclui VA ${formatCurrency(benefitSpent)}` : "Pagas e pendentes"}
-            badge={benefitSpent > 0 ? <BenefitBadge /> : undefined}
+            value={expenses - benefitSpent}
+            detail={benefitSpent > 0
+              ? `Com benefício: ${formatCurrency(expenses)} · inclui VA ${formatCurrency(benefitSpent)}`
+              : "Pagas e pendentes"}
+            detailBadge={benefitSpent > 0 ? <BenefitBadge /> : undefined}
             loading={loading}
           />
           <OverviewValue
-            label={result >= 0 ? "Saldo projetado" : "Déficit projetado"}
-            value={result}
+            label={resultWithoutBenefit >= 0 ? "Saldo projetado" : "Déficit projetado"}
+            value={resultWithoutBenefit}
             detail={hasBenefit
-              ? `Sem VA: ${formatCurrency(resultWithoutBenefit)} · Benefício: ${benefitNet >= 0 ? "+" : ""}${formatCurrency(benefitNet)}${benefitEstimated ? " (estimado)" : ""}`
+              ? `Com benefício: ${formatCurrency(result)} · Benefício: ${benefitNet >= 0 ? "+" : ""}${formatCurrency(benefitNet)}${benefitEstimated ? " (estimado)" : ""}`
               : "Receitas menos despesas"}
             loading={loading}
-            tone={result >= 0 ? "positive" : "negative"}
+            tone={resultWithoutBenefit >= 0 ? "positive" : "negative"}
           />
         </div>
         <div className="rounded-lg bg-muted/60 p-4">
@@ -418,24 +420,24 @@ function BenefitBadge({ estimated = false }: { estimated?: boolean }) {
   )
 }
 
-function OverviewValue({ label, value, detail, loading, tone = "default", badge }: {
+function OverviewValue({ label, value, detail, loading, tone = "default", detailBadge }: {
   label: string
   value: number
   detail: string
   loading: boolean
   tone?: "default" | "positive" | "negative"
-  badge?: React.ReactNode
+  detailBadge?: React.ReactNode
 }) {
   return (
     <div>
-      <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-        {label}
-        {badge}
-      </p>
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <p className={`mt-1 text-xl font-bold tabular-nums ${tone === "positive" ? "text-success" : tone === "negative" ? "text-destructive" : ""}`}>
         {loading ? <span className="inline-block h-6 w-32 animate-pulse rounded bg-muted" /> : formatCurrency(value)}
       </p>
-      <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
+      <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+        {detailBadge}
+        <span>{detail}</span>
+      </div>
     </div>
   )
 }

@@ -106,34 +106,30 @@ function DashboardPageContent() {
   const cards = [
     {
       label: "Receitas do mês",
-      value: summary.income,
+      value: summary.income - summary.benefitCredited,
       icon: ArrowUp,
       color: "text-success",
       bg: "bg-success/10",
-      benefit: summary.benefitCredited,
-      benefitEstimated: summary.benefitEstimated,
-      benefitBreakdown: true,
+      detail: summary.benefitCredited > 0 ? `Com benefício: ${formatCurrency(summary.income)}${summary.benefitEstimated ? " · estimado" : ""}` : undefined,
+      detailBadge: summary.benefitCredited > 0,
     },
     {
       label: "Despesas do mês",
-      value: summary.expense,
+      value: summary.expense - summary.benefitSpent,
       icon: ArrowDown,
       color: "text-destructive",
       bg: "bg-destructive/10",
-      benefit: summary.benefitSpent,
-      benefitEstimated: false,
-      benefitBreakdown: true,
+      detail: summary.benefitSpent > 0 ? `Com benefício: ${formatCurrency(summary.expense)} · inclui VA ${formatCurrency(summary.benefitSpent)}` : undefined,
+      detailBadge: summary.benefitSpent > 0,
     },
     {
       label: "Resultado líquido",
-      value: summary.balance,
+      value: resultWithoutBenefit,
       icon: Wallet,
-      color: summary.balance >= 0 ? "text-success" : "text-destructive",
-      bg: summary.balance >= 0 ? "bg-success/10" : "bg-destructive/10",
-      benefit: 0,
-      benefitEstimated: false,
-      benefitBreakdown: false,
-      resultBreakdown: hasBenefit ? { without: resultWithoutBenefit, benefit: benefitNet, estimated: summary.benefitEstimated } : undefined,
+      color: resultWithoutBenefit >= 0 ? "text-success" : "text-destructive",
+      bg: resultWithoutBenefit >= 0 ? "bg-success/10" : "bg-destructive/10",
+      detail: hasBenefit ? `Com benefício: ${formatCurrency(summary.balance)} · Benefício: ${benefitNet >= 0 ? "+" : ""}${formatCurrency(benefitNet)}${summary.benefitEstimated ? " (estimado)" : ""}` : undefined,
+      detailBadge: false,
     },
   ]
   const totalToPay = closing?.summary.totalToPay ?? 0
@@ -168,22 +164,22 @@ function DashboardPageContent() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-medium text-muted-foreground">Resultado líquido</p>
-              <p className={`mt-1 text-2xl font-bold tabular-nums ${summary.balance >= 0 ? "text-success" : "text-destructive"}`}>
-                {loading ? <span className="inline-block h-6 w-32 animate-pulse rounded bg-muted" /> : formatCurrency(summary.balance)}
+              <p className={`mt-1 text-2xl font-bold tabular-nums ${resultWithoutBenefit >= 0 ? "text-success" : "text-destructive"}`}>
+                {loading ? <span className="inline-block h-6 w-32 animate-pulse rounded bg-muted" /> : formatCurrency(resultWithoutBenefit)}
               </p>
               {!loading && hasBenefit && (
                 <p className="mt-1 text-[11px] text-muted-foreground tabular-nums">
-                  Sem VA: {formatCurrency(resultWithoutBenefit)} · Benefício: {benefitNet >= 0 ? "+" : ""}{formatCurrency(benefitNet)}{summary.benefitEstimated ? " (estimado)" : ""}
+                  Com benefício: {formatCurrency(summary.balance)} · Benefício: {benefitNet >= 0 ? "+" : ""}{formatCurrency(benefitNet)}{summary.benefitEstimated ? " (estimado)" : ""}
                 </p>
               )}
             </div>
-            <div className={`rounded-xl p-3 ${summary.balance >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
+            <div className={`rounded-xl p-3 ${resultWithoutBenefit >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
               <Wallet className="h-5 w-5" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <MobileFinanceItem label="Receitas" value={summary.income} icon={<ArrowUp className="h-4 w-4" />} tone="good" benefit={summary.benefitCredited} benefitEstimated={summary.benefitEstimated} benefitBreakdown loading={loading} />
-            <MobileFinanceItem label="Despesas" value={summary.expense} icon={<ArrowDown className="h-4 w-4" />} tone="bad" benefit={summary.benefitSpent} benefitBreakdown loading={loading} />
+            <MobileFinanceItem label="Receitas" value={summary.income - summary.benefitCredited} icon={<ArrowUp className="h-4 w-4" />} tone="good" detail={summary.benefitCredited > 0 ? `Com benefício: ${formatCurrency(summary.income)}${summary.benefitEstimated ? " · estimado" : ""}` : undefined} detailBadge={summary.benefitCredited > 0} loading={loading} />
+            <MobileFinanceItem label="Despesas" value={summary.expense - summary.benefitSpent} icon={<ArrowDown className="h-4 w-4" />} tone="bad" detail={summary.benefitSpent > 0 ? `Com benefício: ${formatCurrency(summary.expense)} · inclui VA ${formatCurrency(summary.benefitSpent)}` : undefined} detailBadge={summary.benefitSpent > 0} loading={loading} />
           </div>
         </CardContent>
       </Card>
@@ -209,29 +205,11 @@ function DashboardPageContent() {
                     })
                   )}
                 </p>
-                {!loading && card.resultBreakdown && (
-                  <p className="mt-1 text-[11px] text-muted-foreground tabular-nums">
-                    Sem VA: {formatCurrency(card.resultBreakdown.without)} · Benefício: {card.resultBreakdown.benefit >= 0 ? "+" : ""}{formatCurrency(card.resultBreakdown.benefit)}{card.resultBreakdown.estimated ? " (estimado)" : ""}
+                {!loading && card.detail && (
+                  <p className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11px] text-muted-foreground">
+                    {card.detailBadge && <Badge variant="secondary" className="h-4 px-1 text-[10px] font-semibold uppercase tracking-wide">VA</Badge>}
+                    <span className="tabular-nums">{card.detail}</span>
                   </p>
-                )}
-                {!loading && card.benefit > 0 && (
-                  card.benefitBreakdown ? (
-                    <p className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11px] text-muted-foreground">
-                      <span className="tabular-nums">{formatCurrency(card.value - card.benefit)}</span>
-                      <span>+</span>
-                      <Badge variant="secondary" className="h-4 px-1 text-[10px] font-semibold uppercase tracking-wide">VA</Badge>
-                      <span className="tabular-nums">{formatCurrency(card.benefit)}</span>
-                      {card.benefitEstimated && <span>· estimado</span>}
-                      <span>=</span>
-                      <span className="font-medium text-foreground tabular-nums">{formatCurrency(card.value)}</span>
-                    </p>
-                  ) : (
-                    <p className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                      <Badge variant="secondary" className="h-4 px-1 text-[10px] font-semibold uppercase tracking-wide">VA</Badge>
-                      <span className="tabular-nums">{formatCurrency(card.benefit)}</span>
-                      {card.benefitEstimated && <span>· estimado</span>}
-                    </p>
-                  )
                 )}
               </div>
             </CardContent>
@@ -469,18 +447,16 @@ function MobileFinanceItem({
   value,
   icon,
   tone,
-  benefit = 0,
-  benefitEstimated = false,
-  benefitBreakdown = false,
+  detail,
+  detailBadge = false,
   loading = false,
 }: {
   label: string
   value: number
   icon: React.ReactNode
   tone: "good" | "bad"
-  benefit?: number
-  benefitEstimated?: boolean
-  benefitBreakdown?: boolean
+  detail?: string
+  detailBadge?: boolean
   loading?: boolean
 }) {
   const toneClass = tone === "good" ? "text-success" : "text-destructive"
@@ -496,23 +472,11 @@ function MobileFinanceItem({
       <p className={`mt-2 truncate text-sm font-bold tabular-nums ${toneClass}`}>
         {loading ? <span className="inline-block h-4 w-20 animate-pulse rounded bg-muted" /> : formatCurrency(value)}
       </p>
-      {!loading && benefit > 0 && (
-        benefitBreakdown ? (
-          <p className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11px] text-muted-foreground">
-            <span className="tabular-nums">{formatCurrency(value - benefit)}</span>
-            <span>+</span>
-            <Badge variant="secondary" className="h-4 px-1 text-[10px] font-semibold uppercase tracking-wide">VA</Badge>
-            <span className="tabular-nums">{formatCurrency(benefit)}</span>
-            {benefitEstimated && <span>· estimado</span>}
-            <span>=</span>
-            <span className="font-medium text-foreground tabular-nums">{formatCurrency(value)}</span>
-          </p>
-        ) : (
-          <p className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground">
-            <Badge variant="secondary" className="h-4 px-1 text-[10px] font-semibold uppercase tracking-wide">VA</Badge>
-            <span className="truncate tabular-nums">{formatCurrency(benefit)}{benefitEstimated ? " · estimado" : ""}</span>
-          </p>
-        )
+      {!loading && detail && (
+        <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
+          {detailBadge && <Badge variant="secondary" className="h-4 px-1 text-[10px] font-semibold uppercase tracking-wide">VA</Badge>}
+          <span className="truncate tabular-nums">{detail}</span>
+        </p>
       )}
     </div>
   )
