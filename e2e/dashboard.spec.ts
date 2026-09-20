@@ -41,7 +41,8 @@ test.describe("Dashboard", () => {
     const monthLabel = formatMonth(getCurrentMonth())
     await expect(page.locator(`text=${monthLabel}`)).toBeVisible()
 
-    await expect(page.locator("text=Receitas vs Despesas")).toBeVisible()
+    await expect(page.locator("text=Caixa do mês")).toBeVisible()
+    await expect(page.locator("text=Ritmo do mês")).toBeVisible()
     await expect(page.locator("text=Gastos por Categoria")).toBeVisible()
     await expect(page.locator("text=Evolução Diária")).toBeVisible()
     await expect(page.locator("text=Transações Recentes")).toBeVisible()

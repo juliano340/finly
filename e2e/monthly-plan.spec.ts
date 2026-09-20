@@ -174,8 +174,8 @@ test.describe("Plano do Mês", () => {
     }))
 
     await page.goto("/dashboard")
-    await expect(page.getByRole("heading", { name: "Limite diário seguro" })).toBeVisible()
-    await expect(page.getByText("Economia projetada").first()).toBeVisible()
+    await expect(page.getByText("Ritmo do mês")).toBeVisible()
+    await expect(page.getByText("Status da meta").first()).toBeVisible()
     await expect(page.getByRole("status", { name: /Situação do plano:/ })).toBeVisible()
     await expect(page.getByRole("link", { name: "Ver Plano do Mês" })).toBeVisible()
     expect(new Set(summaryRequests).size).toBe(1)
