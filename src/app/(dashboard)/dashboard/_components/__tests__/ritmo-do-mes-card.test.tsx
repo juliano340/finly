@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { render, screen } from "@testing-library/react"
-import { DailySafeLimitCard } from "../daily-safe-limit-card"
+import { RitmoDoMesCard } from "../ritmo-do-mes-card"
 import type { MonthlyPlanDto } from "@/features/monthly-plan/monthly-plan.types"
 
 const plan: MonthlyPlanDto = {
@@ -25,13 +25,13 @@ const plan: MonthlyPlanDto = {
   incomeSource: "SUGGESTED",
 }
 
-describe("DailySafeLimitCard", () => {
-  it("mostra limite, economia projetada e situação sem recalcular o DTO", () => {
-    render(<DailySafeLimitCard plan={plan} month="2026-08" />)
+describe("RitmoDoMesCard", () => {
+  it("mostra o limite diário e a situação sem recalcular o DTO", () => {
+    render(<RitmoDoMesCard plan={plan} month="2026-08" />)
 
-    expect(screen.getByRole("heading", { name: "Limite diário seguro" })).toBeInTheDocument()
+    expect(screen.getByText("Ritmo do mês")).toBeInTheDocument()
+    expect(screen.getByText("Limite diário seguro")).toBeInTheDocument()
     expect(screen.getByText("R$ 18,25")).toBeInTheDocument()
-    expect(screen.getByText("R$ 665,00")).toBeInTheDocument()
     expect(screen.getByRole("status", { name: "Situação do plano: Normal" })).toHaveTextContent(
       "O plano está dentro da meta.",
     )
@@ -43,7 +43,7 @@ describe("DailySafeLimitCard", () => {
     ["RISK", "Risco", "A meta de economia está ameaçada."],
   ] as const)("comunica o estado %s por texto", (code, label, reason) => {
     render(
-      <DailySafeLimitCard
+      <RitmoDoMesCard
         plan={{ ...plan, status: { code, label, reason } }}
         month="2026-08"
       />,
@@ -55,7 +55,7 @@ describe("DailySafeLimitCard", () => {
   })
 
   it("abre a página completa no mês selecionado", () => {
-    render(<DailySafeLimitCard plan={plan} month="2026-08" />)
+    render(<RitmoDoMesCard plan={plan} month="2026-08" />)
 
     expect(screen.getByRole("link", { name: "Ver Plano do Mês" })).toHaveAttribute(
       "href",
@@ -64,7 +64,7 @@ describe("DailySafeLimitCard", () => {
   })
 
   it("expõe carregamento acessível sem mostrar valores antigos", () => {
-    render(<DailySafeLimitCard plan={plan} month="2026-08" loading />)
+    render(<RitmoDoMesCard plan={plan} month="2026-08" loading />)
 
     expect(screen.getByRole("status", { name: "Carregando Plano do Mês" })).toBeInTheDocument()
     expect(screen.queryByText("R$ 18,25")).not.toBeInTheDocument()

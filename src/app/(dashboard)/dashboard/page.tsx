@@ -1,6 +1,7 @@
 "use client"
 
 import { Suspense, useEffect, useState, useCallback } from "react"
+import Link from "next/link"
 import { useSession } from "next-auth/react"
 import {
   ArrowDown,
@@ -15,12 +16,11 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ExpenseByCategoryChart } from "./_components/expense-by-category-chart"
-import { IncomeVsExpenseChart } from "./_components/income-vs-expense-chart"
 import { DailyTrendChart } from "./_components/daily-trend-chart"
 import { MonthlyEvolutionChart } from "./_components/monthly-evolution-chart"
 import { CardInvoiceEvolutionChart } from "./_components/card-invoice-evolution-chart"
 import { RecentTransactions } from "./_components/recent-transactions"
-import { DailySafeLimitCard } from "./_components/daily-safe-limit-card"
+import { RitmoDoMesCard } from "./_components/ritmo-do-mes-card"
 import { formatCurrency } from "@/lib/utils"
 import { MonthNavigator } from "@/components/month-navigator"
 import type { CardInvoiceEvolutionStats, DashboardStats, MonthlyEvolutionItem, MonthlyEvolutionStats } from "@/features/dashboard/dashboard.service"
@@ -133,7 +133,6 @@ function DashboardPageContent() {
     },
   ]
   const totalToPay = closing?.summary.totalToPay ?? 0
-  const totalSpent = closing?.summary.totalSpent ?? 0
   const available = bankTotal - totalToPay
   const hasCoverage = bankTotal >= totalToPay
   const evolutionSummary = getMetricSummary(evolution?.months ?? [], evolutionMetric)
@@ -158,6 +157,8 @@ function DashboardPageContent() {
           onMonthChange={setMonth}
         />
       </div>
+
+      <ZoneTitle>O mês</ZoneTitle>
 
       <Card className="border-0 shadow-sm sm:hidden">
         <CardContent className="space-y-4 p-4">
@@ -217,7 +218,7 @@ function DashboardPageContent() {
         ))}
       </div>
 
-      <DailySafeLimitCard plan={monthlyPlan} month={month} loading={loading} />
+      <ZoneTitle>Caixa e ritmo</ZoneTitle>
 
       <Card className="border-0 shadow-sm sm:hidden">
         <CardContent className="space-y-4 p-4">
@@ -229,61 +230,48 @@ function DashboardPageContent() {
               </p>
               <p className="mt-1 text-[11px] text-muted-foreground">Disponível depois do que falta pagar</p>
             </div>
-            <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${hasCoverage ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
-              {hasCoverage ? "Coberto" : "Atenção"}
-            </span>
+            <CoverageBadge bankTotal={bankTotal} totalToPay={totalToPay} />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <MobileFinanceItem label="Saldo" value={bankTotal} icon={<Landmark className="h-4 w-4" />} tone={hasCoverage ? "good" : "bad"} loading={loading} />
             <MobileFinanceItem label="A pagar" value={totalToPay} icon={<ArrowDown className="h-4 w-4" />} tone="bad" loading={loading} />
             <MobileFinanceItem label="Disponível" value={available} icon={<Banknote className="h-4 w-4" />} tone={available >= 0 ? "good" : "bad"} loading={loading} />
-            <MobileFinanceItem label="Gastos" value={totalSpent} icon={<Banknote className="h-4 w-4" />} tone="bad" loading={loading} />
           </div>
         </CardContent>
       </Card>
 
-      <div className="hidden gap-4 sm:grid sm:grid-cols-4">
-        <Card className={`border-0 shadow-sm ${hasCoverage ? "bg-success text-white" : "bg-destructive text-white"}`}>
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="rounded-xl bg-white/20 p-3"><Landmark className="h-5 w-5 text-white" /></div>
-            <div>
-              <p className="text-xs font-medium opacity-80">Saldo em contas</p>
-              <p className="text-xl font-bold">{loading ? <span className="inline-block h-5 w-28 animate-pulse rounded bg-white/20" /> : formatCurrency(bankTotal)}</p>
-              <p className="text-[10px] opacity-60">Soma dos saldos bancários</p>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="hidden border-0 shadow-sm lg:block">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-base">Caixa do mês</CardTitle>
+            <p className="text-sm text-muted-foreground">Quanto você tem, quanto precisa pagar e o que sobra.</p>
+            <Link href="/bank-accounts" className="text-sm font-medium text-primary hover:underline">Ver contas →</Link>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3">
+              <div className="border-t border-border p-3 first:border-t-0 sm:border-t-0 sm:border-l sm:first:border-l-0">
+                <p className="text-xs font-medium text-muted-foreground">Saldo em contas</p>
+                <p className="mt-1 text-xl font-bold tabular-nums">{loading ? <span className="inline-block h-5 w-28 animate-pulse rounded bg-muted" /> : formatCurrency(bankTotal)}</p>
+                <p className="text-[11px] text-muted-foreground">Soma dos saldos bancários</p>
+              </div>
+              <div className="border-t border-border p-3 sm:border-t-0 sm:border-l">
+                <p className="text-xs font-medium text-muted-foreground">A pagar</p>
+                <p className="mt-1 text-xl font-bold tabular-nums text-destructive">{loading ? <span className="inline-block h-5 w-28 animate-pulse rounded bg-muted" /> : formatCurrency(totalToPay)}</p>
+                <p className="text-[11px] text-muted-foreground">Faturas + fixos + avulsas</p>
+              </div>
+              <div className="border-t border-border p-3 sm:border-t-0 sm:border-l">
+                <p className="text-xs font-medium text-muted-foreground">Disponível</p>
+                <p className={`mt-1 text-xl font-bold tabular-nums ${available < 0 ? "text-destructive" : ""}`}>{loading ? <span className="inline-block h-5 w-28 animate-pulse rounded bg-muted" /> : formatCurrency(available)}</p>
+                <p className="text-[11px] text-muted-foreground">Saldo − a pagar</p>
+              </div>
             </div>
+            <CoverageBadge bankTotal={bankTotal} totalToPay={totalToPay} />
           </CardContent>
         </Card>
-        <Card className="border-0 shadow-sm">
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="rounded-xl bg-destructive/10 p-3"><ArrowDown className="h-5 w-5 text-destructive" /></div>
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">A pagar</p>
-              <p className="text-xl font-bold text-destructive">{loading ? <span className="inline-block h-5 w-28 animate-pulse rounded bg-muted" /> : formatCurrency(totalToPay)}</p>
-              <p className="text-[10px] text-muted-foreground/60">Faturas pendentes + contas fixas + avulsas</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-0 shadow-sm">
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="rounded-xl bg-primary/10 p-3"><Banknote className="h-5 w-5 text-primary" /></div>
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">Disponível</p>
-              <p className="text-xl font-bold">{loading ? <span className="inline-block h-5 w-28 animate-pulse rounded bg-muted" /> : formatCurrency(available)}</p>
-              <p className="text-[10px] text-muted-foreground/60">Saldo − A pagar</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-0 shadow-sm bg-destructive/5">
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="rounded-xl bg-destructive/10 p-3"><Banknote className="h-5 w-5 text-destructive" /></div>
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">Gastos do mês</p>
-              <p className="text-xl font-bold text-destructive">{loading ? <span className="inline-block h-5 w-28 animate-pulse rounded bg-muted" /> : formatCurrency(totalSpent)}</p>
-              <p className="text-[10px] text-muted-foreground/60">Tudo que entrou na fatura + PIX + avulsas</p>
-            </div>
-          </CardContent>
-        </Card>
+        <RitmoDoMesCard plan={monthlyPlan} month={month} loading={loading} />
       </div>
+
+      <ZoneTitle>Análises</ZoneTitle>
 
       <Card className="border-0 shadow-sm">
         <CardHeader className="space-y-4">
@@ -308,18 +296,20 @@ function DashboardPageContent() {
               ))}
             </div>
           </div>
-          <div className="grid gap-3 sm:grid-cols-4">
-            <InsightCard title="Mês atual" value={formatCurrency(evolutionSummary.current)} description="Valor da métrica selecionada" loading={loading} />
-            <InsightCard
-              title="Vs mês anterior"
-              value={formatChangePercent(evolutionSummary.changePercent)}
-              description={evolutionSummary.changePercent === null ? "Sem base comparável" : formatCurrency(evolutionSummary.current - evolutionSummary.previous)}
-              tone={(evolutionSummary.changePercent ?? 0) > 0 ? "bad" : "good"}
-              loading={loading}
-            />
-            <InsightCard title="Média mensal" value={formatCurrency(evolutionSummary.average)} description="Média dos últimos 6 meses" loading={loading} />
-            <InsightCard title="Maior mês" value={evolutionSummary.highest?.label ?? "-"} description={formatCurrency(evolutionSummary.highest?.value ?? 0)} loading={loading} />
-          </div>
+          <MetricRibbon
+            loading={loading}
+            cells={[
+              { title: "Mês atual", value: formatCurrency(evolutionSummary.current), description: "Valor da métrica selecionada" },
+              {
+                title: "Vs mês anterior",
+                value: formatChangePercent(evolutionSummary.changePercent),
+                description: evolutionSummary.changePercent === null ? "Sem base comparável" : formatCurrency(evolutionSummary.current - evolutionSummary.previous),
+                tone: (evolutionSummary.changePercent ?? 0) > 0 ? "bad" : "good",
+              },
+              { title: "Média mensal", value: formatCurrency(evolutionSummary.average), description: "Média dos últimos 6 meses" },
+              { title: "Maior mês", value: evolutionSummary.highest?.label ?? "-", description: formatCurrency(evolutionSummary.highest?.value ?? 0) },
+            ]}
+          />
         </CardHeader>
         <CardContent>
           {loading ? <div className="h-[280px] animate-pulse rounded-lg bg-muted" /> : <MonthlyEvolutionChart data={evolution?.months ?? []} metric={evolutionMetric} />}
@@ -355,18 +345,20 @@ function DashboardPageContent() {
               </SelectContent>
             </Select>
           </div>
-          <div className="grid gap-3 sm:grid-cols-4">
-            <InsightCard title="Fatura atual" value={formatCurrency(cardSummary.current)} description={selectedCard?.name ?? "Todos os cartões"} loading={loading} />
-            <InsightCard
-              title="Vs mês anterior"
-              value={formatChangePercent(cardSummary.changePercent)}
-              description={cardSummary.changePercent === null ? "Sem base comparável" : formatCurrency(cardSummary.current - cardSummary.previous)}
-              tone={(cardSummary.changePercent ?? 0) > 0 ? "bad" : "good"}
-              loading={loading}
-            />
-            <InsightCard title="Média 6 meses" value={formatCurrency(cardSummary.average)} description="Média das faturas no período" loading={loading} />
-            <InsightCard title="Maior fatura" value={cardSummary.highest?.label ?? "-"} description={formatCurrency(cardSummary.highest?.value ?? 0)} loading={loading} />
-          </div>
+          <MetricRibbon
+            loading={loading}
+            cells={[
+              { title: "Fatura atual", value: formatCurrency(cardSummary.current), description: selectedCard?.name ?? "Todos os cartões" },
+              {
+                title: "Vs mês anterior",
+                value: formatChangePercent(cardSummary.changePercent),
+                description: cardSummary.changePercent === null ? "Sem base comparável" : formatCurrency(cardSummary.current - cardSummary.previous),
+                tone: (cardSummary.changePercent ?? 0) > 0 ? "bad" : "good",
+              },
+              { title: "Média 6 meses", value: formatCurrency(cardSummary.average), description: "Média das faturas no período" },
+              { title: "Maior fatura", value: cardSummary.highest?.label ?? "-", description: formatCurrency(cardSummary.highest?.value ?? 0) },
+            ]}
+          />
         </CardHeader>
         <CardContent>
           {loading ? <div className="h-[280px] animate-pulse rounded-lg bg-muted" /> : <CardInvoiceEvolutionChart data={cardEvolution?.months ?? []} cards={cardEvolution?.cards ?? []} cardId={selectedCardId} color={selectedCard?.color ?? "#2563EB"} />}
@@ -376,27 +368,13 @@ function DashboardPageContent() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <BarChart3 className="h-4 w-4" />
-              Receitas vs Despesas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? <div className="h-[280px] animate-pulse rounded-lg bg-muted" /> : <IncomeVsExpenseChart data={stats?.dailyTrend ?? []} />}
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 shadow-sm">
-          <CardHeader>
             <CardTitle className="text-base">Gastos por Categoria</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? <div className="h-[280px] animate-pulse rounded-lg bg-muted" /> : <ExpenseByCategoryChart data={stats?.byCategory ?? []} />}
           </CardContent>
         </Card>
-      </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
         <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle className="text-base">Evolução Diária</CardTitle>
@@ -405,39 +383,58 @@ function DashboardPageContent() {
             {loading ? <div className="h-[280px] animate-pulse rounded-lg bg-muted" /> : <DailyTrendChart data={stats?.dailyTrend ?? []} />}
           </CardContent>
         </Card>
-
-        <Card className="border-0 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base">Transações Recentes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? <div className="h-[280px] animate-pulse rounded-lg bg-muted" /> : <RecentTransactions transactions={stats?.recentTransactions ?? []} />}
-          </CardContent>
-        </Card>
       </div>
+
+      <Card className="border-0 shadow-sm">
+        <CardHeader>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle className="text-base">Transações Recentes</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">Últimos lançamentos do mês.</p>
+            </div>
+            <Link href={`/transactions?month=${month}`} className="text-sm font-medium text-primary hover:underline">Ver todas →</Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? <div className="h-[280px] animate-pulse rounded-lg bg-muted" /> : <RecentTransactions transactions={stats?.recentTransactions ?? []} />}
+        </CardContent>
+      </Card>
     </div>
   )
 }
 
-function InsightCard({
-  title,
-  value,
-  description,
-  tone = "neutral",
-  loading = false,
-}: {
-  title: string
-  value: string
-  description: string
-  tone?: "neutral" | "good" | "bad"
+function ZoneTitle({ children }: { children: React.ReactNode }) {
+  return <h2 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{children}</h2>
+}
+
+function CoverageBadge({ bankTotal, totalToPay }: { bankTotal: number; totalToPay: number }) {
+  if (totalToPay <= 0) {
+    return <span className="inline-flex shrink-0 rounded-full bg-success/10 px-2.5 py-1 text-xs font-medium text-success">Sem contas a pagar</span>
+  }
+  const pct = Math.round((bankTotal / totalToPay) * 100)
+  const covered = pct >= 100
+  return (
+    <span className={`inline-flex shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${covered ? "bg-success/10 text-success" : "bg-amber-500/10 text-amber-600 dark:text-amber-500"}`}>
+      Cobre {pct > 100 ? "100+" : pct}% das contas do mês
+    </span>
+  )
+}
+
+function MetricRibbon({ cells, loading = false }: {
+  cells: { title: string; value: string; description: string; tone?: "neutral" | "good" | "bad" }[]
   loading?: boolean
 }) {
-  const toneClass = tone === "good" ? "text-success" : tone === "bad" ? "text-destructive" : "text-foreground"
   return (
-    <div className="rounded-xl bg-muted p-4">
-      <p className="text-xs font-medium text-muted-foreground">{title}</p>
-      <p className={`mt-1 text-lg font-bold ${toneClass}`}>{loading ? <span className="inline-block h-5 w-24 animate-pulse rounded bg-muted" /> : value}</p>
-      <p className="mt-1 text-[10px] text-muted-foreground/70">{description}</p>
+    <div className="grid grid-cols-2 divide-x divide-border rounded-xl border sm:grid-cols-4">
+      {cells.map((cell) => (
+        <div key={cell.title} className="p-3">
+          <p className="text-[11px] text-muted-foreground">{cell.title}</p>
+          <p className={`text-base font-bold tabular-nums ${cell.tone === "good" ? "text-success" : cell.tone === "bad" ? "text-destructive" : ""}`}>
+            {loading ? <span className="inline-block h-4 w-20 animate-pulse rounded bg-muted" /> : cell.value}
+          </p>
+          <p className="text-[11px] text-muted-foreground">{cell.description}</p>
+        </div>
+      ))}
     </div>
   )
 }

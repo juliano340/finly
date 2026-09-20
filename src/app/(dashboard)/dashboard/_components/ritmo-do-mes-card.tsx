@@ -1,13 +1,13 @@
 import Link from "next/link"
 import { AlertTriangle, ArrowRight, CircleAlert, Loader2, ShieldCheck } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatCurrency } from "@/lib/utils"
 import type {
   MonthlyPlanDto,
   MonthlyPlanStatusCode,
 } from "@/features/monthly-plan/monthly-plan.types"
 
-interface DailySafeLimitCardProps {
+interface RitmoDoMesCardProps {
   plan: MonthlyPlanDto | null
   month: string
   loading?: boolean
@@ -22,10 +22,14 @@ const statusPresentation: Record<
   RISK: { icon: AlertTriangle, className: "bg-destructive/10 text-destructive" },
 }
 
-export function DailySafeLimitCard({ plan, month, loading = false }: DailySafeLimitCardProps) {
+export function RitmoDoMesCard({ plan, month, loading = false }: RitmoDoMesCardProps) {
   return (
     <Card className="border-0 shadow-sm">
-      <CardContent className="p-4 sm:p-6">
+      <CardHeader className="space-y-1">
+        <CardTitle className="text-base">Ritmo do mês</CardTitle>
+        <p className="text-sm text-muted-foreground">Quanto ainda dá pra gastar por dia sem furar a meta.</p>
+      </CardHeader>
+      <CardContent className="space-y-4">
         {loading ? (
           <div
             className="flex min-h-28 items-center justify-center gap-2 text-sm text-muted-foreground"
@@ -39,7 +43,6 @@ export function DailySafeLimitCard({ plan, month, loading = false }: DailySafeLi
           <PlanContent plan={plan} month={month} />
         ) : (
           <div className="space-y-3">
-            <h2 className="text-base font-semibold">Limite diário seguro</h2>
             <p className="text-sm text-muted-foreground">Não foi possível carregar o plano deste mês.</p>
             <PlanLink month={month} />
           </div>
@@ -54,33 +57,34 @@ function PlanContent({ plan, month }: { plan: MonthlyPlanDto; month: string }) {
   const StatusIcon = presentation.icon
 
   return (
-    <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-center">
-      <div>
-        <h2 className="text-base font-semibold">Limite diário seguro</h2>
-        <p className="mt-1 text-2xl font-bold tabular-nums">{formatCurrency(plan.dailySafeLimit)}</p>
-        <p className="text-xs text-muted-foreground">por dia durante os {plan.daysRemaining} dias restantes</p>
-      </div>
+    <>
+      <div className="grid grid-cols-1 sm:grid-cols-2">
+        <div className="border-t border-border p-3 first:border-t-0 sm:border-t-0 sm:border-l sm:first:border-l-0">
+          <p className="text-xs font-medium text-muted-foreground">Limite diário seguro</p>
+          <p className="mt-1 text-xl font-bold tabular-nums">{formatCurrency(plan.dailySafeLimit)}</p>
+          <p className="text-[11px] text-muted-foreground">por dia durante os {plan.daysRemaining} dias restantes</p>
+        </div>
 
-      <div>
-        <p className="text-xs font-medium text-muted-foreground">Economia projetada</p>
-        <p className="mt-1 text-xl font-bold tabular-nums">{formatCurrency(plan.projectedSavings)}</p>
-        <div
-          className="mt-2 flex items-start gap-2"
-          role="status"
-          aria-label={`Situação do plano: ${plan.status.label}`}
-        >
-          <span className={`mt-0.5 rounded-full p-1 ${presentation.className}`}>
-            <StatusIcon className="h-3.5 w-3.5" aria-hidden="true" />
-          </span>
-          <div>
-            <p className="text-sm font-medium">{plan.status.label}</p>
-            <p className="text-xs text-muted-foreground">{plan.status.reason}</p>
+        <div className="border-t border-border p-3 sm:border-t-0 sm:border-l">
+          <p className="text-xs font-medium text-muted-foreground">Status da meta</p>
+          <div
+            className="mt-1"
+            role="status"
+            aria-label={`Situação do plano: ${plan.status.label}`}
+          >
+            <div className="flex items-center gap-2">
+              <span className={`rounded-full p-1 ${presentation.className}`}>
+                <StatusIcon className="h-3.5 w-3.5" aria-hidden="true" />
+              </span>
+              <p className="text-base font-bold">{plan.status.label}</p>
+            </div>
+            <p className="text-[11px] text-muted-foreground">{plan.status.reason}</p>
           </div>
         </div>
       </div>
 
       <PlanLink month={month} />
-    </div>
+    </>
   )
 }
 

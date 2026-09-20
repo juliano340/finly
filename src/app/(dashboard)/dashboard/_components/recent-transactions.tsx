@@ -30,11 +30,11 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
       {transactions.map((tx) => (
         <div
           key={tx.id}
-          className="flex items-center justify-between rounded-lg border p-3"
+          className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 rounded-lg border p-3"
         >
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <div
-              className={`flex h-8 w-8 items-center justify-center rounded-full ${
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
                 tx.type === "INCOME" ? "bg-success/10" : "bg-destructive/10"
               }`}
             >
@@ -44,11 +44,11 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
                 <ArrowDown className="h-4 w-4 text-destructive" />
               )}
             </div>
-            <div>
-              <p className="text-sm font-medium">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium">
                 {tx.description ?? (tx.type === "INCOME" ? "Receita" : "Despesa")}
               </p>
-              <div className="mt-0.5 flex items-center gap-1.5">
+              <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                 <Badge
                   variant="secondary"
                   className="text-xs"
@@ -64,8 +64,11 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
               </div>
             </div>
           </div>
+          <p className="text-xs tabular-nums text-muted-foreground">
+            {new Date(tx.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "UTC" })}
+          </p>
           <p
-            className={`text-sm font-semibold ${
+            className={`min-w-[92px] text-right text-sm font-semibold tabular-nums ${
               tx.type === "INCOME" ? "text-success" : "text-destructive"
             }`}
           >

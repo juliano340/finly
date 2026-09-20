@@ -28,10 +28,9 @@ vi.mock("@/features/monthly-plan/monthly-plan.schema", () => ({
 vi.mock("../_components/monthly-evolution-chart", () => ({ MonthlyEvolutionChart: () => null }))
 vi.mock("../_components/card-invoice-evolution-chart", () => ({ CardInvoiceEvolutionChart: () => null }))
 vi.mock("../_components/expense-by-category-chart", () => ({ ExpenseByCategoryChart: () => null }))
-vi.mock("../_components/income-vs-expense-chart", () => ({ IncomeVsExpenseChart: () => null }))
 vi.mock("../_components/daily-trend-chart", () => ({ DailyTrendChart: () => null }))
 vi.mock("../_components/recent-transactions", () => ({ RecentTransactions: () => null }))
-vi.mock("../_components/daily-safe-limit-card", () => ({ DailySafeLimitCard: () => null }))
+vi.mock("../_components/ritmo-do-mes-card", () => ({ RitmoDoMesCard: () => null }))
 
 describe("DashboardPage", () => {
   beforeEach(() => {
