@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.79] - 2026-09-20
+
+### Adicionado
+
+- A transferência entre contas agora abre em um painel lateral (Sheet): cabeçalho com os 4 passos e rodapé de ações ficam fixos, e só o conteúdo rola — mesmo fluxo de antes, com mais espaço.
+
 ## [0.2.78] - 2026-09-20
 
 ### Adicionado

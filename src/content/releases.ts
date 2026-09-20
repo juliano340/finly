@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.78"
+export const CURRENT_VERSION = "0.2.79"
 
 export const releases = [
+  {
+    version: "0.2.79",
+    date: "2026-09-20",
+    changes: [
+      { type: "feat", description: "A transferência entre contas agora abre em um painel lateral (Sheet): cabeçalho com os 4 passos e rodapé de ações ficam fixos, e só o conteúdo rola — mesmo fluxo de antes, com mais espaço." },
+    ],
+  },
   {
     version: "0.2.78",
     date: "2026-09-20",
