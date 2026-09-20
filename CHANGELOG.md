@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.73] - 2026-09-19
+
+### Adicionado
+
+- O Fechamento Mensal e o Dashboard agora mostram o resultado também sem o benefício: o valor principal segue com o VA e o detalhe abre 'Sem VA: ... · Benefício: +... (estimado)' quando houver benefício.
+
 ## [0.2.72] - 2026-09-19
 
 ### Adicionado
