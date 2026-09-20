@@ -1,17 +1,17 @@
----
-status: awaiting_human_verify
-trigger: "fiz um backup da aplicação de produção e importei no servidor modo dev, mas duplicou as transações"
+﻿---
+status: resolved
+trigger: "fiz um backup da aplicaÃ§Ã£o de produÃ§Ã£o e importei no servidor modo dev, mas duplicou as transaÃ§Ãµes"
 created: 2026-08-13
 updated: 2026-08-13T20:00:00-03:00
 ---
 
 ## Symptoms
 
-- expected: Restaurar o backup de produção no ambiente dev deve reproduzir os dados uma única vez.
-- actual: Lançamentos fixos aparecem duplicados ou triplicados; PUC MINAS aparece três vezes e o total inclui todas as cópias.
-- errors: Nenhum erro visível relatado.
-- timeline: Ocorreu após importar um backup de produção no servidor em modo dev.
-- reproduction: Fazer backup da aplicação de produção, importar no ambiente dev e abrir Lançamentos Fixos > Despesas.
+- expected: Restaurar o backup de produÃ§Ã£o no ambiente dev deve reproduzir os dados uma Ãºnica vez.
+- actual: LanÃ§amentos fixos aparecem duplicados ou triplicados; PUC MINAS aparece trÃªs vezes e o total inclui todas as cÃ³pias.
+- errors: Nenhum erro visÃ­vel relatado.
+- timeline: Ocorreu apÃ³s importar um backup de produÃ§Ã£o no servidor em modo dev.
+- reproduction: Fazer backup da aplicaÃ§Ã£o de produÃ§Ã£o, importar no ambiente dev e abrir LanÃ§amentos Fixos > Despesas.
 
 ## Current Focus
 

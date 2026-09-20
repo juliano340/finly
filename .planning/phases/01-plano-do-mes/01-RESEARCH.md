@@ -440,12 +440,12 @@ export async function PUT(request: Request) {
 
 ### Wave 0 Gaps
 
-- [ ] `src/features/monthly-plan/__tests__/monthly-plan.calculation.test.ts` — fórmulas, status, Decimal, tempo.
-- [ ] `src/features/monthly-plan/__tests__/monthly-plan.service.test.ts` — fontes, double count, override, isolamento.
-- [ ] `src/features/monthly-plan/__tests__/monthly-plan.schema.test.ts` — mês e valores de entrada.
-- [ ] testes dos componentes de status/formulário/card — acessibilidade e estados.
-- [ ] `e2e/monthly-plan.spec.ts` — criar/editar/trocar mês/dashboard/mobile.
-- [ ] atualizar `src/__tests__/schema.test.ts` — equivalência de novos campos nos dois schemas.
+- [x] `src/features/monthly-plan/__tests__/monthly-plan.calculation.test.ts` — fórmulas, status, Decimal, tempo. *(entregue como `monthly-plan.calculator.test.ts`)*
+- [x] `src/features/monthly-plan/__tests__/monthly-plan.service.test.ts` — fontes, double count, override, isolamento.
+- [x] `src/features/monthly-plan/__tests__/monthly-plan.schema.test.ts` — mês e valores de entrada.
+- [x] testes dos componentes de status/formulário/card — acessibilidade e estados (`monthly-plan-summary.test.tsx`, `monthly-plan-form.test.tsx`, `page.test.tsx`, `ritmo-do-mes-card.test.tsx`).
+- [x] `e2e/monthly-plan.spec.ts` — criar/editar/trocar mês/dashboard/mobile.
+- [x] atualizar `src/__tests__/schema.test.ts` — equivalência de novos campos nos dois schemas.
 
 [ASSUMED: arquivos novos; VERIFIED: lacunas não existem no filesystem]
 

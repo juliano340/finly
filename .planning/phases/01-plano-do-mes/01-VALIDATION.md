@@ -63,16 +63,16 @@ updated: 2026-08-09
 
 ## Wave 0 / testes primeiro
 
-- [ ] `01-01-T01` — testes SQLite e PostgreSQL efêmero antes dos schemas/migration.
-- [ ] `01-02-T01` — testes de contrato/validação antes do schema Zod.
-- [ ] `01-02-T02` — testes de fórmula/Decimal/timezone/status antes da calculadora.
-- [ ] `01-03-T01` — matriz financeira/tenant antes do serviço.
-- [ ] `01-04-T01` — contrato HTTP antes da rota.
-- [ ] `01-05-T01/T02` e `01-06-T01` — testes de componentes antes da UI.
-- [ ] `01-07-T01` — jornada E2E antes do gate final.
-- [ ] `01-08-T01` — testes fail-closed e ordem antes de alterar `vercel-build.mjs`.
+- [x] `01-01-T01` — testes SQLite e PostgreSQL efêmero antes dos schemas/migration.
+- [x] `01-02-T01` — testes de contrato/validação antes do schema Zod.
+- [x] `01-02-T02` — testes de fórmula/Decimal/timezone/status antes da calculadora.
+- [x] `01-03-T01` — matriz financeira/tenant antes do serviço.
+- [x] `01-04-T01` — contrato HTTP antes da rota.
+- [x] `01-05-T01/T02` e `01-06-T01` — testes de componentes antes da UI.
+- [x] `01-07-T01` — jornada E2E antes do gate final.
+- [x] `01-08-T01` — testes fail-closed e ordem antes de alterar `vercel-build.mjs`.
 
-`wave_0_complete` permanece `false` até os arquivos serem criados e RED→GREEN executado. `nyquist_compliant` é `true` porque toda produção planejada possui comando automatizado anterior ou na mesma tarefa TDD, nenhuma cadeia de três tarefas fica sem feedback e o gate final cobre regressão completa.
+`wave_0_complete` agora `true` — os 8 planos executados em TDD (SUMMARYs em 01-01-PLAN..01-08-PLAN registram RED→GREEN), fase concluída e release publicada. `nyquist_compliant` é `true` porque toda produção planejada possui comando automatizado anterior ou na mesma tarefa TDD, nenhuma cadeia de três tarefas fica sem feedback e o gate final cobre regressão completa.
 
 ## Segurança
 

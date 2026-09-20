@@ -1,17 +1,17 @@
----
-status: awaiting_human_verify
-trigger: "tem um prolema na tela de lançamento fixos > despesas, quando navega para um mes atras, carrega, e se enquanto carrega eu avanço o mÊs novamente, as vezes ele mostra os dados do mes anterior e o mes avançado no seletor, depois de alguns segundos carrega, mas é bem etranho, fica desincronizada a tela e o seletor de mês. Entende?"
+﻿---
+status: resolved
+trigger: "tem um prolema na tela de lanÃ§amento fixos > despesas, quando navega para um mes atras, carrega, e se enquanto carrega eu avanÃ§o o mÃŠs novamente, as vezes ele mostra os dados do mes anterior e o mes avanÃ§ado no seletor, depois de alguns segundos carrega, mas Ã© bem etranho, fica desincronizada a tela e o seletor de mÃªs. Entende?"
 created: 2026-08-13
 updated: 2026-08-13T00:57:00-03:00
 ---
 
 ## Symptoms
 
-- expected: Seletor de mês, loading e despesas exibidas sempre correspondem ao mesmo mês, inclusive durante navegação rápida.
-- actual: Ao voltar um mês e avançar antes do carregamento terminar, dados do mês anterior podem aparecer sob o mês avançado até nova carga terminar.
-- errors: Nenhum erro visível relatado.
-- timeline: Não informado.
-- reproduction: Em Lançamentos fixos > Despesas, voltar um mês e avançar novamente enquanto a primeira carga ainda está em andamento.
+- expected: Seletor de mÃªs, loading e despesas exibidas sempre correspondem ao mesmo mÃªs, inclusive durante navegaÃ§Ã£o rÃ¡pida.
+- actual: Ao voltar um mÃªs e avanÃ§ar antes do carregamento terminar, dados do mÃªs anterior podem aparecer sob o mÃªs avanÃ§ado atÃ© nova carga terminar.
+- errors: Nenhum erro visÃ­vel relatado.
+- timeline: NÃ£o informado.
+- reproduction: Em LanÃ§amentos fixos > Despesas, voltar um mÃªs e avanÃ§ar novamente enquanto a primeira carga ainda estÃ¡ em andamento.
 
 ## Current Focus
 
