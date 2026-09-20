@@ -525,9 +525,18 @@ export default function BankAccountsPage() {
                     ["adjust", "Ajuste de saldo", SlidersHorizontal],
                     ["edit", "Editar conta", Pencil],
                   ] as const).map(([tab, label, Icon]) => (
-                    <button key={tab} type="button" title={label} aria-label={label} onClick={() => setDetailTab(tab)} className={`flex flex-1 items-center justify-center gap-1.5 border-b-2 pb-2.5 pt-2 transition-colors ${detailTab === tab ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-                      <Icon className="h-4 w-4" />
-                    </button>
+                    <TooltipProvider key={tab}>
+                      <Tooltip>
+                        <TooltipTrigger
+                          aria-label={label}
+                          onClick={() => setDetailTab(tab)}
+                          className={`flex flex-1 items-center justify-center gap-1.5 border-b-2 pb-2.5 pt-2 transition-colors ${detailTab === tab ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+                        >
+                          <Icon className="h-4 w-4" />
+                        </TooltipTrigger>
+                        <TooltipContent>{label}</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   ))}
                 </div>
 
