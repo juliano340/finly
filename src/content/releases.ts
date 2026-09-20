@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.77"
+export const CURRENT_VERSION = "0.2.78"
 
 export const releases = [
+  {
+    version: "0.2.78",
+    date: "2026-09-20",
+    changes: [
+      { type: "feat", description: "O Dashboard foi reorganizado em 3 zonas (O mês, Caixa e ritmo, Análises): novo card 'Caixa do mês' com badge de cobertura, 'Ritmo do mês' no lugar do limite diário, faixas de métricas nas evoluções e Transações Recentes com colunas alinhadas." },
+    ],
+  },
   {
     version: "0.2.77",
     date: "2026-09-20",

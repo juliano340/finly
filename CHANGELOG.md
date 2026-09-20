@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.78] - 2026-09-20
+
+### Adicionado
+
+- O Dashboard foi reorganizado em 3 zonas (O mês, Caixa e ritmo, Análises): novo card 'Caixa do mês' com badge de cobertura, 'Ritmo do mês' no lugar do limite diário, faixas de métricas nas evoluções e Transações Recentes com colunas alinhadas.
+
 ## [0.2.77] - 2026-09-20
 
 ### Adicionado
