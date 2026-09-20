@@ -2,6 +2,13 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.80] - 2026-09-20
+
+### Corrigido
+
+- O badge de cobertura do 'Caixa do mês' agora carrega com skeleton, sem exibir um valor enganoso antes dos dados chegarem.
+- A transferência entre contas ganhou mais espaço no painel lateral e os valores das contas não são mais cortados nos seletores.
+
 ## [0.2.79] - 2026-09-20
 
 ### Adicionado
