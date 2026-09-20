@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.73"
+export const CURRENT_VERSION = "0.2.74"
 
 export const releases = [
+  {
+    version: "0.2.74",
+    date: "2026-09-19",
+    changes: [
+      { type: "feat", description: "O card 'Evolução do saldo do benefício' no Fechamento agora mostra 'Última recarga: ... · há N dias' e acende um badge âmbar quando o mês anterior fechou sem recarga (a partir de 3 dias antes da virada do mês)." },
+    ],
+  },
   {
     version: "0.2.73",
     date: "2026-09-19",

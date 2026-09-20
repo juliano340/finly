@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.74] - 2026-09-19
+
+### Adicionado
+
+- O card 'Evolução do saldo do benefício' no Fechamento agora mostra 'Última recarga: ... · há N dias' e acende um badge âmbar quando o mês anterior fechou sem recarga (a partir de 3 dias antes da virada do mês).
+
 ## [0.2.73] - 2026-09-19
 
 ### Adicionado
