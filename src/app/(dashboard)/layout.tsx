@@ -18,6 +18,7 @@ import {
   Menu,
   X,
   LogOut,
+  MoreHorizontal,
   User as UserIcon,
 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
@@ -45,6 +46,18 @@ const navItems = [
   { href: "/categories", label: "Categorias", icon: Tags },
   { href: "/settings", label: "Configurações", icon: Settings },
 ]
+
+const mobileTabs = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/transactions", label: "Transações", icon: ArrowRightLeft },
+  { href: "/fixed-costs", label: "Fixos", icon: Repeat },
+  { href: "/bank-accounts", label: "Contas", icon: Landmark },
+]
+
+function isNavItemActive(pathname: string, href: string) {
+  if (href === "/cards") return pathname.startsWith("/cards") || pathname.startsWith("/invoices")
+  return pathname === href
+}
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -105,7 +118,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const renderNavigation = (isCollapsed: boolean, onNavigate?: () => void) => (
     <nav className="flex-1 space-y-1 p-2">
       {navItems.map((item) => {
-        const isActive = item.href === "/cards" ? pathname.startsWith("/cards") || pathname.startsWith("/invoices") : pathname === item.href
+        const isActive = isNavItemActive(pathname, item.href)
         const sharedMonth = searchParams.get("month")
         const href = sharedMonth ? `${item.href}?month=${encodeURIComponent(sharedMonth)}` : item.href
         return (
@@ -150,7 +163,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         onClick={onNavigate}
         aria-label={`Versão ${CURRENT_VERSION}. Abrir changelog`}
         title={`Finly v${CURRENT_VERSION}`}
-        className={`block rounded-md px-2 py-1 text-center text-[10px] font-medium text-sidebar-foreground/45 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground ${
+        className={`flex min-h-9 items-center justify-center rounded-md px-2 text-center text-[10px] font-medium text-sidebar-foreground/45 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground sm:min-h-0 sm:py-1 ${
           isCollapsed ? "tracking-tight" : "tracking-wide"
         }`}
       >
@@ -235,21 +248,10 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       {/* Main */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <header className="flex h-14 items-center justify-between border-b border-border bg-background px-6">
-          <div className="flex min-w-0 items-center">
-            <button
-              type="button"
-              aria-label={mobileNavOpen ? "Fechar menu" : "Abrir menu"}
-              aria-expanded={mobileNavOpen}
-              onClick={() => setMobileNavOpen((open) => !open)}
-              className="mr-3 flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground md:hidden"
-            >
-              <Menu className="h-4 w-4" aria-hidden="true" />
-            </button>
-            <h2 className="truncate text-sm font-medium text-muted-foreground">
-              {navItems.find((i) => i.href === pathname)?.label ?? ""}
-            </h2>
-          </div>
+        <header className="flex h-14 items-center justify-between border-b border-border bg-background px-4 sm:px-6">
+          <h2 className="min-w-0 truncate text-sm font-medium text-muted-foreground">
+            {navItems.find((i) => i.href === pathname)?.label ?? ""}
+          </h2>
           <div className="relative flex items-center gap-3">
             <NotificationBell />
             <AvatarMenu
@@ -267,6 +269,45 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             {children}
           </div>
         </main>
+
+        {/* Mobile bottom navigation */}
+        <nav
+          aria-label="Navegação rápida"
+          className="flex shrink-0 items-stretch border-t border-border bg-background pb-[env(safe-area-inset-bottom)] md:hidden"
+        >
+          {mobileTabs.map((tab) => {
+            const isActive = isNavItemActive(pathname, tab.href)
+            const sharedMonth = searchParams.get("month")
+            const href = sharedMonth ? `${tab.href}?month=${encodeURIComponent(sharedMonth)}` : tab.href
+            return (
+              <Link
+                key={tab.href}
+                href={href}
+                aria-current={isActive ? "page" : undefined}
+                className={`flex h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors ${
+                  isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <tab.icon className="h-5 w-5" aria-hidden="true" />
+                {tab.label}
+              </Link>
+            )
+          })}
+          <button
+            type="button"
+            aria-label="Abrir mais opções"
+            aria-expanded={mobileNavOpen}
+            onClick={() => setMobileNavOpen(true)}
+            className={`flex h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors ${
+              mobileNavOpen || !mobileTabs.some((tab) => isNavItemActive(pathname, tab.href))
+                ? "text-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <MoreHorizontal className="h-5 w-5" aria-hidden="true" />
+            Mais
+          </button>
+        </nav>
       </div>
 
       <ConfirmDialog
@@ -293,7 +334,7 @@ function AvatarMenu({ name, email, image, onLogout }: { name: string | null; ema
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="rounded-full focus:outline-none focus:ring-2 focus:ring-ring">
-        <Avatar className="h-8 w-8 cursor-pointer">
+        <Avatar className="h-9 w-9 cursor-pointer sm:h-8 sm:w-8">
           {image && <AvatarImage src={image} alt={name ?? email ?? "Usuário"} />}
           <AvatarFallback className="bg-primary text-xs text-primary-foreground">
             {initials}

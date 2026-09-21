@@ -1,4 +1,4 @@
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import Script from "next/script"
 import { Providers } from "@/components/providers"
@@ -6,6 +6,12 @@ import { version } from "../../package.json"
 import "./globals.css"
 
 const OG_IMAGE = `/og.png?v=${version}`
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+}
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
