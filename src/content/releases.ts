@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.82"
+export const CURRENT_VERSION = "0.2.83"
 
 export const releases = [
+  {
+    version: "0.2.83",
+    date: "2026-09-20",
+    changes: [
+      { type: "fix", description: "No celular, a barra de navegação inferior agora fica sempre visível na base da tela: o layout passou a usar a altura dinâmica do viewport (dvh) em vez de 100vh, eliminando a rolagem extra para alcançar o menu." },
+    ],
+  },
   {
     version: "0.2.82",
     date: "2026-09-20",

@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.83] - 2026-09-20
+
+### Corrigido
+
+- No celular, a barra de navegação inferior agora fica sempre visível na base da tela: o layout passou a usar a altura dinâmica do viewport (dvh) em vez de 100vh, eliminando a rolagem extra para alcançar o menu.
+
 ## [0.2.82] - 2026-09-20
 
 ### Adicionado
