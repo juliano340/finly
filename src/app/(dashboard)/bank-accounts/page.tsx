@@ -323,13 +323,13 @@ export default function BankAccountsPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 grid-cols-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <SummaryCard
           title="Saldo bancário"
           value={formatCurrency(bankBalance)}
           highlight
           loading={loading}
-          className="col-span-3 md:col-span-1"
+          className="col-span-2 md:col-span-1"
           infoContent={
             <div className="space-y-1.5">
               <p className="font-medium">Composição do saldo:</p>
@@ -1047,7 +1047,7 @@ function SummaryCard({ title, value, highlight = false, loading = false, infoCon
           {infoContent && (
             <TooltipProvider>
               <Tooltip>
-                <TooltipTrigger className="opacity-60 hover:opacity-100 transition-opacity">
+                <TooltipTrigger className="flex size-7 items-center justify-center opacity-60 transition-opacity hover:opacity-100 sm:size-6">
                   <Info className="h-3.5 w-3.5" />
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-xs">
@@ -1057,7 +1057,7 @@ function SummaryCard({ title, value, highlight = false, loading = false, infoCon
             </TooltipProvider>
           )}
         </div>
-        <p className="text-xl font-bold">{loading ? <Loader2 className="h-5 w-5 animate-spin opacity-60" /> : value}</p>
+        <p className="text-xl font-bold leading-tight break-words">{loading ? <Loader2 className="h-5 w-5 animate-spin opacity-60" /> : value}</p>
       </CardContent>
     </Card>
   )

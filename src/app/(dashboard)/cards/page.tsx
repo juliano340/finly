@@ -131,9 +131,9 @@ export default function CardsPage() {
         <p className="text-muted-foreground">Gerencie seus cartões de crédito e faturas mensais.</p>
       </div>
 
-      <div className="flex gap-1 rounded-md border bg-background p-1 w-fit">
-        <button type="button" onClick={() => changeTab("cards")} className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${activeTab === "cards" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Cartões</button>
-        <button type="button" onClick={() => changeTab("invoices")} className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${activeTab === "invoices" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Faturas</button>
+      <div className="flex w-fit gap-1 rounded-md border bg-background p-1">
+        <button type="button" onClick={() => changeTab("cards")} className={`min-h-9 rounded-md px-4 py-1.5 text-sm font-medium transition-colors sm:min-h-8 ${activeTab === "cards" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Cartões</button>
+        <button type="button" onClick={() => changeTab("invoices")} className={`min-h-9 rounded-md px-4 py-1.5 text-sm font-medium transition-colors sm:min-h-8 ${activeTab === "invoices" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Faturas</button>
       </div>
 
       {!tabReady ? (
@@ -232,7 +232,7 @@ export default function CardsPage() {
               <Button
                 size="icon"
                 variant="ghost"
-                className="h-8 w-8 shrink-0"
+                className="h-9 w-9 shrink-0 sm:h-8 sm:w-8"
                 aria-label="Editar cartão"
                 onClick={() => setSelectedCard(card)}
               >

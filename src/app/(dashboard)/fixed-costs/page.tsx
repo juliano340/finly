@@ -416,8 +416,8 @@ function FixedCostsPageInner() {
       </div>
 
       <div className="flex gap-1 rounded-md border bg-background p-1 w-fit">
-        <button type="button" onClick={() => setActiveTab("EXPENSE")} className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${activeTab === "EXPENSE" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Despesas</button>
-        <button type="button" onClick={() => setActiveTab("INCOME")} className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${activeTab === "INCOME" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Receitas</button>
+        <button type="button" onClick={() => setActiveTab("EXPENSE")} className={`min-h-9 rounded-md px-4 py-1.5 text-sm font-medium transition-colors sm:min-h-8 ${activeTab === "EXPENSE" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Despesas</button>
+        <button type="button" onClick={() => setActiveTab("INCOME")} className={`min-h-9 rounded-md px-4 py-1.5 text-sm font-medium transition-colors sm:min-h-8 ${activeTab === "INCOME" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>Receitas</button>
       </div>
 
       <SummaryCards
@@ -491,7 +491,7 @@ function FixedCostsPageInner() {
                     <input type="checkbox" className="h-4 w-4" checked={selectedIds.has(occ.id)} onChange={() => toggleSelect(occ.id)} />
                   </td>
                   <td className="px-4 py-3">
-                    <button type="button" onClick={() => openEditSheet(occ)} className="text-left font-medium hover:underline">
+                    <button type="button" onClick={() => openEditSheet(occ)} className="-my-1 py-1 text-left font-medium hover:underline">
                       {occ.fixedCost.name}
                     </button>
                     {customized && (
@@ -634,7 +634,7 @@ function FixedCostsPageInner() {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
-                    <button type="button" onClick={() => openEditSheet(occ)} className="min-w-0 truncate text-left font-medium hover:underline">
+                    <button type="button" onClick={() => openEditSheet(occ)} className="-my-1 min-w-0 truncate py-1 text-left font-medium hover:underline">
                       {occ.fixedCost.name}
                     </button>
                     {customized && (
@@ -694,7 +694,7 @@ function FixedCostsPageInner() {
                         variant="ghost"
                         disabled={isLoadingCard}
                         onClick={() => handlePayCard(occ.fixedCostId)}
-                        className="h-6 rounded-full bg-muted/60 px-2 text-xs text-muted-foreground"
+                        className="h-9 rounded-full bg-muted/60 px-3 text-xs text-muted-foreground sm:h-6 sm:px-2"
                       >
                         {isLoadingCard ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CreditCard className="h-3.5 w-3.5" />}
                         Pagar
@@ -708,7 +708,7 @@ function FixedCostsPageInner() {
                         variant="ghost"
                         disabled={isLoading}
                         onClick={() => handlePay(occ.fixedCostId)}
-                        className="h-6 rounded-full bg-muted/60 px-2 text-xs text-muted-foreground"
+                        className="h-9 rounded-full bg-muted/60 px-3 text-xs text-muted-foreground sm:h-6 sm:px-2"
                       >
                         {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
                         {activeTab === "INCOME" ? "Receber" : "Pagar"}
@@ -720,7 +720,7 @@ function FixedCostsPageInner() {
                   <DropdownMenuTrigger
                     type="button"
                     aria-label="Ações do lançamento"
-                    className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "h-8 w-8 shrink-0 cursor-pointer rounded-full")}
+                    className={cn(buttonVariants({ variant: "ghost", size: "icon-sm" }), "h-9 w-9 shrink-0 cursor-pointer rounded-full sm:h-8 sm:w-8")}
                   >
                     <Settings className="h-4 w-4" />
                   </DropdownMenuTrigger>
