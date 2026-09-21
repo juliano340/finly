@@ -2,6 +2,14 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.81] - 2026-09-20
+
+### Corrigido
+
+- O Dashboard no celular não trunca mais informação: valores monetários quebram linha em vez de cortar, as descrições das Transações Recentes aparecem completas e o badge de cobertura não espreme o valor.
+- Os rótulos dos gráficos de evolução no celular ficam em uma única linha e sem o prefixo R$ (ex.: '5,2 mil'), eliminando a quebra e a sobreposição entre as barras; no desktop o formato com R$ continua igual.
+- Alvos de toque no celular ganharam área mínima de 36–40px: navegador de mês, filtros de métricas, sininho de notificações, menu e links de ação.
+
 ## [0.2.80] - 2026-09-20
 
 ### Corrigido

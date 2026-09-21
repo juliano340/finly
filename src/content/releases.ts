@@ -24,9 +24,18 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.80"
+export const CURRENT_VERSION = "0.2.81"
 
 export const releases = [
+  {
+    version: "0.2.81",
+    date: "2026-09-20",
+    changes: [
+      { type: "fix", description: "O Dashboard no celular não trunca mais informação: valores monetários quebram linha em vez de cortar, as descrições das Transações Recentes aparecem completas e o badge de cobertura não espreme o valor." },
+      { type: "fix", description: "Os rótulos dos gráficos de evolução no celular ficam em uma única linha e sem o prefixo R$ (ex.: '5,2 mil'), eliminando a quebra e a sobreposição entre as barras; no desktop o formato com R$ continua igual." },
+      { type: "fix", description: "Alvos de toque no celular ganharam área mínima de 36–40px: navegador de mês, filtros de métricas, sininho de notificações, menu e links de ação." },
+    ],
+  },
   {
     version: "0.2.80",
     date: "2026-09-20",
