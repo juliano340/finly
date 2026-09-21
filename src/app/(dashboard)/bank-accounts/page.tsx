@@ -317,19 +317,48 @@ export default function BankAccountsPage() {
           <h1 className="text-2xl font-bold tracking-tight">Contas e benefícios</h1>
           <p className="text-muted-foreground">Controle dinheiro disponível e saldos de benefícios separadamente.</p>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
-          <Button variant="outline" size="sm" disabled={accounts.filter((account) => account.type !== "BENEFIT").length < 2} onClick={() => setTransferOpen(true)}><ArrowLeftRight className="mr-2 h-4 w-4" />Transferir</Button>
-          <AddButton label="Nova conta" onClick={() => setCreating(true)} />
+        <div className="flex gap-2 sm:flex-row sm:items-center">
+          <Button variant="outline" size="sm" className="h-10 flex-1 sm:h-9 sm:flex-none" disabled={accounts.filter((account) => account.type !== "BENEFIT").length < 2} onClick={() => setTransferOpen(true)}><ArrowLeftRight className="mr-2 h-4 w-4" />Transferir</Button>
+          <AddButton label="Nova conta" className="flex-1 sm:flex-none" onClick={() => setCreating(true)} />
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="space-y-3 md:hidden">
         <SummaryCard
           title="Saldo bancário"
           value={formatCurrency(bankBalance)}
           highlight
           loading={loading}
-          className="col-span-2 md:col-span-1"
+          infoContent={
+            <div className="space-y-1.5">
+              <p className="font-medium">Composição do saldo:</p>
+              {accounts.filter((a) => a.type !== "BENEFIT" && a.balance > 0).map((a) => (
+                <div key={a.id} className="flex items-center justify-between gap-4">
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: a.color }} />
+                    {a.name}
+                  </span>
+                  <span>{formatCurrency(a.balance)}</span>
+                </div>
+              ))}
+            </div>
+          }
+        />
+        <Card className="border-0 shadow-sm">
+          <CardContent className="grid grid-cols-3 gap-2 p-3">
+            <MiniStat label="Benefícios" value={formatCurrency(benefitBalance)} loading={loading} />
+            <MiniStat label="Contas ativas" value={String(activeAccounts)} loading={loading} />
+            <MiniStat label="Contas negativas" value={String(negativeAccounts)} loading={loading} />
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="hidden gap-4 md:grid md:grid-cols-4">
+        <SummaryCard
+          title="Saldo bancário"
+          value={formatCurrency(bankBalance)}
+          highlight
+          loading={loading}
           infoContent={
             <div className="space-y-1.5">
               <p className="font-medium">Composição do saldo:</p>
@@ -428,7 +457,7 @@ export default function BankAccountsPage() {
             {loading ? <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</span> : "Nenhuma conta bancária cadastrada."}
           </CardContent></Card>
         ) : accounts.map((account) => (
-          <button type="button" key={account.id} onClick={() => openDetail(account)} className="flex w-full items-center gap-3 rounded-lg border bg-card p-4 text-left transition-colors hover:bg-muted/50">
+          <button type="button" key={account.id} onClick={() => openDetail(account)} className="flex w-full items-center gap-3 rounded-lg border bg-card p-3 text-left transition-colors hover:bg-muted/50">
             <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: account.color }} />
             <div className="min-w-0 flex-1">
               <span className="font-medium truncate block">{account.name}</span>
@@ -1036,6 +1065,17 @@ function AdjustSubmitButton({ submitting }: { submitting: boolean }) {
   const { pending } = useFormStatus()
   const isPending = pending || submitting
   return <Button type="submit" className="flex-1" disabled={isPending}>{isPending ? "Ajustando..." : "Ajustar saldo"}</Button>
+}
+
+function MiniStat({ label, value, loading = false }: { label: string; value: string; loading?: boolean }) {
+  return (
+    <div className="min-w-0 p-1">
+      <p className="text-[11px] leading-tight text-muted-foreground">{label}</p>
+      <p className="mt-1 text-base font-bold leading-tight break-words">
+        {loading ? <span className="inline-block h-4 w-14 animate-pulse rounded bg-muted" /> : value}
+      </p>
+    </div>
+  )
 }
 
 function SummaryCard({ title, value, highlight = false, loading = false, infoContent, className }: { title: string; value: string; highlight?: boolean; loading?: boolean; infoContent?: React.ReactNode; className?: string }) {
