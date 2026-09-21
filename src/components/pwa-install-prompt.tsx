@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Download, Share } from "lucide-react"
+import { Download, MoreVertical, Share } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -18,6 +18,10 @@ function isIos() {
   )
 }
 
+function isAndroid() {
+  return /Android/i.test(navigator.userAgent)
+}
+
 function isStandaloneDisplay() {
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
@@ -28,11 +32,13 @@ function isStandaloneDisplay() {
 export function PwaInstallPrompt() {
   const [promptEvent, setPromptEvent] = useState<BeforeInstallPromptEvent | null>(null)
   const [ios, setIos] = useState(false)
+  const [android, setAndroid] = useState(false)
   const [standalone, setStandalone] = useState(true)
 
   useEffect(() => {
     setStandalone(isStandaloneDisplay()) // eslint-disable-line react-hooks/set-state-in-effect
     setIos(isIos())
+    setAndroid(isAndroid())
 
     const handleBeforeInstall = (event: Event) => {
       event.preventDefault()
@@ -51,7 +57,7 @@ export function PwaInstallPrompt() {
     }
   }, [])
 
-  if (standalone || (!promptEvent && !ios)) return null
+  if (standalone || (!promptEvent && !ios && !android)) return null
 
   const handleInstall = async () => {
     if (!promptEvent) return
@@ -77,10 +83,15 @@ export function PwaInstallPrompt() {
           <Button onClick={handleInstall}>
             <Download className="mr-2 h-4 w-4" /> Instalar app
           </Button>
-        ) : (
+        ) : ios ? (
           <p className="flex items-start gap-2 text-sm text-muted-foreground">
             <Share className="mt-0.5 h-4 w-4 shrink-0" />
             No Safari, toque em Compartilhar e depois em “Adicionar à Tela de Início”.
+          </p>
+        ) : (
+          <p className="flex items-start gap-2 text-sm text-muted-foreground">
+            <MoreVertical className="mt-0.5 h-4 w-4 shrink-0" />
+            No Chrome, toque no menu e escolha “Instalar app” (ou “Adicionar à Tela inicial”).
           </p>
         )}
       </CardContent>

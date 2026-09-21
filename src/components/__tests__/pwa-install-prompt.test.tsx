@@ -72,6 +72,12 @@ describe("PwaInstallPrompt", () => {
     expect(await screen.findByText(/Adicionar à Tela de Início/)).toBeInTheDocument()
   })
 
+  it("mostra o caminho pelo menu quando o Android ainda não ofereceu o prompt", async () => {
+    render(<PwaInstallPrompt />)
+
+    expect(await screen.findByText(/toque no menu/i)).toBeInTheDocument()
+  })
+
   it("não aparece quando o app já roda instalado", () => {
     mockStandalone(true)
 
