@@ -24,9 +24,16 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.85"
+export const CURRENT_VERSION = "0.2.86"
 
 export const releases = [
+  {
+    version: "0.2.86",
+    date: "2026-09-21",
+    changes: [
+      { type: "fix", description: "Ajuda para instalar o app ficou mais visível no Android: em Ajustes → Aparência, o card Aplicativo agora sempre aparece no celular Android e, quando o Chrome ainda não oferece o botão de instalar, mostra o caminho pelo menu do navegador." },
+    ],
+  },
   {
     version: "0.2.85",
     date: "2026-09-21",

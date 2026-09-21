@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.86] - 2026-09-21
+
+### Corrigido
+
+- Ajuda para instalar o app ficou mais visível no Android: em Ajustes → Aparência, o card Aplicativo agora sempre aparece no celular Android e, quando o Chrome ainda não oferece o botão de instalar, mostra o caminho pelo menu do navegador.
+
 ## [0.2.85] - 2026-09-21
 
 ### Adicionado
