@@ -24,9 +24,18 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.81"
+export const CURRENT_VERSION = "0.2.82"
 
 export const releases = [
+  {
+    version: "0.2.82",
+    date: "2026-09-20",
+    changes: [
+      { type: "feat", description: "No celular, a navegação agora fica em uma barra inferior fixa (Dashboard, Transações, Fixos, Contas e Mais), com o menu completo na aba Mais — o ícone de hambúrguer saiu do cabeçalho e a página respeita a área segura do aparelho." },
+      { type: "fix", description: "Alvos de toque em todo o app ganharam escala mobile (36–40px): botões, seletores, abas e controles segmentados, mantendo o tamanho compacto no desktop." },
+      { type: "fix", description: "Contas e Benefícios: os cards de resumo ficam em 2 colunas no celular e o saldo não é mais cortado." },
+    ],
+  },
   {
     version: "0.2.81",
     date: "2026-09-20",

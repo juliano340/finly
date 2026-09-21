@@ -2,6 +2,17 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.82] - 2026-09-20
+
+### Adicionado
+
+- No celular, a navegação agora fica em uma barra inferior fixa (Dashboard, Transações, Fixos, Contas e Mais), com o menu completo na aba Mais — o ícone de hambúrguer saiu do cabeçalho e a página respeita a área segura do aparelho.
+
+### Corrigido
+
+- Alvos de toque em todo o app ganharam escala mobile (36–40px): botões, seletores, abas e controles segmentados, mantendo o tamanho compacto no desktop.
+- Contas e Benefícios: os cards de resumo ficam em 2 colunas no celular e o saldo não é mais cortado.
+
 ## [0.2.81] - 2026-09-20
 
 ### Corrigido
