@@ -85,7 +85,7 @@ export function NotificationBell() {
       <button
         type="button"
         onClick={handleOpen}
-        className="relative rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+        className="relative flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
       >
         <Bell className="h-4 w-4" />
         {notifications.length > 0 && (

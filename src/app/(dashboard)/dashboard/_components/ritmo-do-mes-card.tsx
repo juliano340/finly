@@ -92,7 +92,7 @@ function PlanLink({ month }: { month: string }) {
   return (
     <Link
       href={`/monthly-plan?month=${encodeURIComponent(month)}`}
-      className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      className="inline-flex min-h-10 items-center gap-2 text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
       Ver Plano do Mês
       <ArrowRight className="h-4 w-4" aria-hidden="true" />

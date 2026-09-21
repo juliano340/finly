@@ -222,7 +222,7 @@ function DashboardPageContent() {
 
       <Card className="border-0 shadow-sm sm:hidden">
         <CardContent className="space-y-4 p-4">
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-xs font-medium text-muted-foreground">Caixa e compromissos</p>
               <p className={`mt-1 text-xl font-bold tabular-nums ${available >= 0 ? "text-success" : "text-destructive"}`}>
@@ -288,6 +288,7 @@ function DashboardPageContent() {
                 <Button
                   key={metric.key}
                   size="sm"
+                  className="h-9"
                   variant={evolutionMetric === metric.key ? "default" : "outline"}
                   onClick={() => setEvolutionMetric(metric.key)}
                 >
@@ -334,7 +335,7 @@ function DashboardPageContent() {
               value={selectedCardId}
               onValueChange={(v) => setSelectedCardId(v ?? "all")}
             >
-              <SelectTrigger className="h-9 w-full sm:w-[200px]">
+              <SelectTrigger className="h-10 w-full sm:h-9 sm:w-[200px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -392,7 +393,7 @@ function DashboardPageContent() {
               <CardTitle className="text-base">Transações Recentes</CardTitle>
               <p className="mt-1 text-sm text-muted-foreground">Últimos lançamentos do mês.</p>
             </div>
-            <Link href={`/transactions?month=${month}`} className="text-sm font-medium text-primary hover:underline">Ver todas →</Link>
+            <Link href={`/transactions?month=${month}`} className="inline-flex min-h-10 items-center text-sm font-medium text-primary hover:underline">Ver todas →</Link>
           </div>
         </CardHeader>
         <CardContent>
@@ -469,13 +470,13 @@ function MobileFinanceItem({
         </span>
         <span className="min-w-0 truncate text-xs font-medium text-muted-foreground">{label}</span>
       </div>
-      <p className={`mt-2 truncate text-sm font-bold tabular-nums ${toneClass}`}>
+      <p className={`mt-2 text-sm font-bold leading-tight tabular-nums break-words ${toneClass}`}>
         {loading ? <span className="inline-block h-4 w-20 animate-pulse rounded bg-muted" /> : formatCurrency(value)}
       </p>
       {!loading && detail && (
-        <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
+        <p className="mt-1 flex flex-wrap items-center gap-1 text-[11px] leading-snug text-muted-foreground">
           {detailBadge && <Badge variant="secondary" className="h-4 px-1 text-[10px] font-semibold uppercase tracking-wide">VA</Badge>}
-          <span className="truncate tabular-nums">{detail}</span>
+          <span className="tabular-nums">{detail}</span>
         </p>
       )}
     </div>

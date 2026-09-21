@@ -221,7 +221,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             type="button"
             aria-label="Fechar menu"
             onClick={() => setMobileNavOpen(false)}
-            className="ml-auto rounded-md p-1 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            className="ml-auto flex size-9 items-center justify-center rounded-md text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -242,7 +242,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
               aria-label={mobileNavOpen ? "Fechar menu" : "Abrir menu"}
               aria-expanded={mobileNavOpen}
               onClick={() => setMobileNavOpen((open) => !open)}
-              className="mr-3 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground md:hidden"
+              className="mr-3 flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground md:hidden"
             >
               <Menu className="h-4 w-4" aria-hidden="true" />
             </button>
@@ -262,7 +262,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-4 sm:p-6">
           <div key={pathname} className="dashboard-page-transition">
             {children}
           </div>

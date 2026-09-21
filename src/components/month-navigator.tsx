@@ -62,18 +62,18 @@ export function MonthNavigator({
         </span>
       )}
       <div className="w-14 shrink-0">
-        <Button type="button" variant="ghost" size="sm" className="w-full" disabled={todayDisabled} onClick={() => onMonthChange(todayMonth)}>
+        <Button type="button" variant="ghost" size="sm" className="h-9 w-full" disabled={todayDisabled} onClick={() => onMonthChange(todayMonth)}>
           Hoje
         </Button>
       </div>
-      <div className="flex h-10 items-center gap-1 rounded-lg border bg-background p-1">
-        <Button type="button" variant="ghost" size="icon" className="size-8" aria-label="Mês anterior" aria-keyshortcuts="Control+ArrowLeft Meta+ArrowLeft" title="Mês anterior - Ctrl/Cmd+seta esquerda" disabled={previousDisabled} onClick={() => onMonthChange(previous)}>
+      <div className="flex h-11 items-center gap-1 rounded-lg border bg-background p-1">
+        <Button type="button" variant="ghost" size="icon" className="size-9" aria-label="Mês anterior" aria-keyshortcuts="Control+ArrowLeft Meta+ArrowLeft" title="Mês anterior - Ctrl/Cmd+seta esquerda" disabled={previousDisabled} onClick={() => onMonthChange(previous)}>
           <ChevronLeft aria-hidden="true" className="size-4" />
         </Button>
         {inputLabel ? (
           <input
             aria-label={inputLabel}
-            className="h-8 min-w-36 bg-transparent px-2 text-center text-sm font-medium outline-none"
+            className="h-9 min-w-36 bg-transparent px-2 text-center text-sm font-medium outline-none"
             type="month"
             min={minMonth}
             max={maxMonth}
@@ -84,7 +84,7 @@ export function MonthNavigator({
         ) : (
           <span className="min-w-0 px-2 text-center text-sm font-medium sm:min-w-36">{formatMonth(month)}</span>
         )}
-        <Button type="button" variant="ghost" size="icon" className="size-8" aria-label="Próximo mês" aria-keyshortcuts="Control+ArrowRight Meta+ArrowRight" title="Próximo mês - Ctrl/Cmd+seta direita" disabled={nextDisabled} onClick={() => onMonthChange(next)}>
+        <Button type="button" variant="ghost" size="icon" className="size-9" aria-label="Próximo mês" aria-keyshortcuts="Control+ArrowRight Meta+ArrowRight" title="Próximo mês - Ctrl/Cmd+seta direita" disabled={nextDisabled} onClick={() => onMonthChange(next)}>
           <ChevronRight aria-hidden="true" className="size-4" />
         </Button>
       </div>

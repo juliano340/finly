@@ -30,9 +30,9 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
       {transactions.map((tx) => (
         <div
           key={tx.id}
-          className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 rounded-lg border p-3"
+          className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 rounded-lg border p-3"
         >
-          <div className="flex min-w-0 items-center gap-3">
+          <div className="flex min-w-0 items-start gap-3">
             <div
               className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
                 tx.type === "INCOME" ? "bg-success/10" : "bg-destructive/10"
@@ -45,10 +45,13 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
               )}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium">
+              <p className="text-sm font-medium break-words">
                 {tx.description ?? (tx.type === "INCOME" ? "Receita" : "Despesa")}
               </p>
               <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {new Date(tx.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "UTC" })}
+                </span>
                 <Badge
                   variant="secondary"
                   className="text-xs"
@@ -64,11 +67,8 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
               </div>
             </div>
           </div>
-          <p className="text-xs tabular-nums text-muted-foreground">
-            {new Date(tx.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "UTC" })}
-          </p>
           <p
-            className={`min-w-[92px] text-right text-sm font-semibold tabular-nums ${
+            className={`min-w-0 text-right text-sm font-semibold tabular-nums ${
               tx.type === "INCOME" ? "text-success" : "text-destructive"
             }`}
           >

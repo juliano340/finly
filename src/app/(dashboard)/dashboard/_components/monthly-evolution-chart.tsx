@@ -2,6 +2,7 @@
 
 import { Bar, BarChart, CartesianGrid, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import type { MonthlyEvolutionItem } from "@/features/dashboard/dashboard.service"
+import { useIsNarrow } from "@/hooks/use-is-narrow"
 
 interface MonthlyEvolutionChartProps {
   data: MonthlyEvolutionItem[]
@@ -25,6 +26,7 @@ const metricColors = {
 }
 
 export function MonthlyEvolutionChart({ data, metric }: MonthlyEvolutionChartProps) {
+  const isNarrow = useIsNarrow()
   if (data.length === 0) {
     return (
       <div className="flex h-[280px] items-center justify-center text-sm text-muted-foreground">
@@ -47,16 +49,30 @@ export function MonthlyEvolutionChart({ data, metric }: MonthlyEvolutionChartPro
           labelFormatter={(label) => `Mês: ${label}`}
         />
         <Bar dataKey={metric} name={metricLabels[metric]} fill={metricColors[metric]} radius={[8, 8, 0, 0]}>
-          <LabelList dataKey={metric} position="top" formatter={formatBarLabel} className="fill-foreground text-[10px]" />
+          <LabelList dataKey={metric} content={(props) => <BarTopLabel {...props} compact={isNarrow} />} />
         </Bar>
       </BarChart>
     </ResponsiveContainer>
   )
 }
 
-function formatBarLabel(value: unknown) {
+function BarTopLabel({ x, y, width, value, compact }: { x?: unknown; y?: unknown; width?: unknown; value?: unknown; compact: boolean }) {
+  const label = formatBarLabel(value, compact)
+  if (!label) return null
+  return (
+    <text x={Number(x ?? 0) + Number(width ?? 0) / 2} y={Number(y ?? 0) - 6} textAnchor="middle" className="fill-foreground text-[10px]">
+      {label}
+    </text>
+  )
+}
+
+function formatBarLabel(value: unknown, compact: boolean) {
   const number = Number(value ?? 0)
   if (number <= 0) return ""
-  if (number >= 1000) return `R$ ${(number / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil`
-  return `R$ ${number.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`
+  if (number >= 1000) {
+    const short = `${(number / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil`
+    return compact ? short : `R$ ${short}`
+  }
+  const short = number.toLocaleString("pt-BR", { maximumFractionDigits: 0 })
+  return compact ? short : `R$ ${short}`
 }

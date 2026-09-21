@@ -2,6 +2,7 @@
 
 import { Bar, BarChart, CartesianGrid, LabelList, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import type { CardInvoiceEvolutionCard, CardInvoiceEvolutionMonth } from "@/features/dashboard/dashboard.service"
+import { useIsNarrow } from "@/hooks/use-is-narrow"
 
 interface ChartItem {
   label: string
@@ -29,6 +30,7 @@ interface CardTooltipProps {
 }
 
 export function CardInvoiceEvolutionChart({ data, cards, cardId, color = "#2563EB" }: CardInvoiceEvolutionChartProps) {
+  const isNarrow = useIsNarrow()
   const visibleCards = cardId === "all" ? cards : cards.filter((card) => card.id === cardId)
   const chartData: ChartItem[] = data.map((item) => {
     const values: ChartItem = { label: item.label, value: cardId === "all" ? item.total : item.cards[cardId] ?? 0 }
@@ -55,12 +57,12 @@ export function CardInvoiceEvolutionChart({ data, cards, cardId, color = "#2563E
         {cardId === "all" ? (
           visibleCards.map((card) => (
             <Bar key={card.id} dataKey={card.id} name={card.name} fill={card.color} radius={[8, 8, 0, 0]}>
-              <LabelList dataKey={card.id} position="top" formatter={formatBarLabel} className="fill-foreground text-[10px]" />
+              <LabelList dataKey={card.id} content={(props) => <BarTopLabel {...props} compact={isNarrow} />} />
             </Bar>
           ))
         ) : (
           <Bar dataKey="value" name="Fatura" fill={color} radius={[8, 8, 0, 0]}>
-            <LabelList dataKey="value" position="top" formatter={formatBarLabel} className="fill-foreground text-[10px]" />
+            <LabelList dataKey="value" content={(props) => <BarTopLabel {...props} compact={isNarrow} />} />
           </Bar>
         )}
       </BarChart>
@@ -95,11 +97,25 @@ function formatTooltipCurrency(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 }
 
-function formatBarLabel(value: unknown) {
+function formatBarLabel(value: unknown, compact: boolean) {
   const number = Number(value ?? 0)
   if (number <= 0) return ""
-  if (number >= 1000) return `R$ ${(number / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil`
-  return `R$ ${number.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`
+  if (number >= 1000) {
+    const short = `${(number / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil`
+    return compact ? short : `R$ ${short}`
+  }
+  const short = number.toLocaleString("pt-BR", { maximumFractionDigits: 0 })
+  return compact ? short : `R$ ${short}`
+}
+
+function BarTopLabel({ x, y, width, value, compact }: { x?: unknown; y?: unknown; width?: unknown; value?: unknown; compact: boolean }) {
+  const label = formatBarLabel(value, compact)
+  if (!label) return null
+  return (
+    <text x={Number(x ?? 0) + Number(width ?? 0) / 2} y={Number(y ?? 0) - 6} textAnchor="middle" className="fill-foreground text-[10px]">
+      {label}
+    </text>
+  )
 }
 
 function tooltipValue(value: TooltipPayloadItem["value"]) {
