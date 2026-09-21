@@ -11,6 +11,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  themeColor: "#080B14",
 }
 
 const geistSans = Geist({
@@ -27,6 +28,17 @@ export const metadata: Metadata = {
   title: "Finly — Controle Financeiro",
   description:
     "Gerencie suas finanças pessoais de forma simples e inteligente.",
+  appleWebApp: {
+    capable: true,
+    title: "Finly",
+    statusBarStyle: "default",
+  },
+  icons: {
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  other: {
+    "apple-mobile-web-app-capable": "yes",
+  },
   openGraph: {
     title: "Finly — Controle Financeiro",
     description:

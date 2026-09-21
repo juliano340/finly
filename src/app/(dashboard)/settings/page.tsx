@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator"
 import { Stepper } from "@/components/ui/stepper"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { PwaInstallPrompt } from "@/components/pwa-install-prompt"
 import { getPasswordStrength, PASSWORD_STRENGTH_COLORS, PASSWORD_STRENGTH_LABELS } from "@/lib/password-strength"
 import { formatDate } from "@/lib/utils"
 
@@ -586,6 +587,7 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+          <PwaInstallPrompt />
         </TabsContent>
 
         <TabsContent value="session" className="w-full space-y-4">

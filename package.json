@@ -23,6 +23,7 @@
     "seed:demo": "tsx scripts/seed-demo.ts",
     "seed:demo:reset": "tsx scripts/seed-demo.ts --reset",
     "screenshots": "tsx scripts/take-screenshots.ts",
+    "pwa:icons": "tsx scripts/generate-pwa-icons.ts",
     "og:image": "tsx scripts/generate-og-image.ts",
     "prisma:generate": "prisma generate && prisma generate --schema prisma/schema.sqlite.prisma",
     "db:push:sqlite": "prisma db push --schema prisma/schema.sqlite.prisma",
