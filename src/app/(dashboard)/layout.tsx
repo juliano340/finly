@@ -61,7 +61,7 @@ function isNavItemActive(pathname: string, href: string) {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+    <Suspense fallback={<div className="min-h-dvh bg-background" />}>
       <DashboardLayoutContent>{children}</DashboardLayoutContent>
     </Suspense>
   )
@@ -105,7 +105,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
   if (status === "loading") {
     return (
-      <div className="flex h-screen items-center justify-center bg-muted/30">
+      <div className="flex h-dvh items-center justify-center bg-muted/30">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     )
@@ -173,7 +173,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   )
 
   return (
-    <div className="flex h-screen overflow-hidden bg-muted/30">
+    <div className="flex h-dvh overflow-hidden bg-muted/30">
       {/* Desktop sidebar */}
       <aside
         className={`hidden shrink-0 flex-col overflow-hidden bg-sidebar-background text-sidebar-foreground transition-[width] duration-300 ease-in-out md:flex ${collapsed ? "w-16" : "w-56"}`}
