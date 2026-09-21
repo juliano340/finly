@@ -24,9 +24,17 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.84"
+export const CURRENT_VERSION = "0.2.85"
 
 export const releases = [
+  {
+    version: "0.2.85",
+    date: "2026-09-21",
+    changes: [
+      { type: "feat", description: "O Finly agora pode ser instalado na tela inicial do celular, abrindo em tela cheia como um app: em Ajustes → Aparência, o Android/Chrome mostra o botão Instalar app e o iPhone explica o caminho Compartilhar → Adicionar à Tela de Início." },
+      { type: "feat", description: "O app ganhou ícone próprio na tela inicial (incluindo versão adaptativa para Android) e cor de tema na barra do sistema." },
+    ],
+  },
   {
     version: "0.2.84",
     date: "2026-09-21",

@@ -2,6 +2,13 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.85] - 2026-09-21
+
+### Adicionado
+
+- O Finly agora pode ser instalado na tela inicial do celular, abrindo em tela cheia como um app: em Ajustes → Aparência, o Android/Chrome mostra o botão Instalar app e o iPhone explica o caminho Compartilhar → Adicionar à Tela de Início.
+- O app ganhou ícone próprio na tela inicial (incluindo versão adaptativa para Android) e cor de tema na barra do sistema.
+
 ## [0.2.84] - 2026-09-21
 
 ### Corrigido
