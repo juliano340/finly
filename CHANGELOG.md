@@ -2,6 +2,13 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.84] - 2026-09-21
+
+### Corrigido
+
+- Contas e Benefícios no celular: o saldo bancário fica em um card em destaque e benefícios, contas ativas e contas negativas aparecem em uma linha compacta, sem cortar valores.
+- Os botões Transferir e Nova conta ocupam a largura toda no celular, com área de toque maior, e os itens da lista de contas ganharam espaçamento mais confortável.
+
 ## [0.2.83] - 2026-09-20
 
 ### Corrigido

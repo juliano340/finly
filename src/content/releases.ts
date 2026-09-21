@@ -24,9 +24,17 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.83"
+export const CURRENT_VERSION = "0.2.84"
 
 export const releases = [
+  {
+    version: "0.2.84",
+    date: "2026-09-21",
+    changes: [
+      { type: "fix", description: "Contas e Benefícios no celular: o saldo bancário fica em um card em destaque e benefícios, contas ativas e contas negativas aparecem em uma linha compacta, sem cortar valores." },
+      { type: "fix", description: "Os botões Transferir e Nova conta ocupam a largura toda no celular, com área de toque maior, e os itens da lista de contas ganharam espaçamento mais confortável." },
+    ],
+  },
   {
     version: "0.2.83",
     date: "2026-09-20",
