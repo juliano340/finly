@@ -1,11 +1,10 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { Bell } from "lucide-react"
-import { toast } from "sonner"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { computeDaysUntilDue, deriveStatus, type DueNotificationStatus } from "@/lib/compute-days-until-due"
@@ -49,7 +48,6 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false)
   const [daysAhead, setDaysAhead] = useState(7)
   const [notifications, setNotifications] = useState<DueNotification[]>([])
-  const notified = useRef(false)
 
   // Fetch on mount + on navigation (same as original: [status, pathname])
   useEffect(() => {
@@ -70,15 +68,19 @@ export function NotificationBell() {
     setOpen((v) => !v)
   }
 
-  // Toast on first load
-  useEffect(() => {
-    if (notified.current || notifications.length === 0) return
-    const overdue = notifications.filter((n) => n.status === "OVERDUE").length
-    const dueToday = notifications.filter((n) => n.status === "DUE_TODAY").length
-    if (overdue > 0) toast.warning(`Você tem ${overdue} ${overdue === 1 ? "conta atrasada" : "contas atrasadas"}`)
-    else if (dueToday > 0) toast.info(`Você tem ${dueToday} ${dueToday === 1 ? "conta vencendo hoje" : "contas vencendo hoje"}`)
-    notified.current = true
-  }, [notifications])
+  const overdueCount = notifications.filter((n) => n.status === "OVERDUE").length
+  const dueTodayCount = notifications.filter((n) => n.status === "DUE_TODAY").length
+  const alertLabel =
+    overdueCount > 0
+      ? `${overdueCount} ${overdueCount === 1 ? "atrasada" : "atrasadas"}`
+      : dueTodayCount === 1
+        ? "1 vence hoje"
+        : `${dueTodayCount} vencem hoje`
+  const alertDescription =
+    overdueCount > 0
+      ? `${overdueCount} ${overdueCount === 1 ? "conta atrasada" : "contas atrasadas"}`
+      : `${dueTodayCount} ${dueTodayCount === 1 ? "conta vence hoje" : "contas vencem hoje"}`
+  const hasAlert = overdueCount > 0 || dueTodayCount > 0
 
   return (
     <>
@@ -94,6 +96,32 @@ export function NotificationBell() {
           </span>
         )}
       </button>
+      {hasAlert && (
+        <button
+          type="button"
+          onClick={handleOpen}
+          aria-label={`${alertDescription}. Abrir lembretes`}
+          className={`inline-flex h-8 items-center gap-2 rounded-full border px-2.5 text-xs font-semibold transition-colors ${
+            overdueCount > 0
+              ? "border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20"
+              : "border-warning/40 bg-warning/10 text-warning hover:bg-warning/20"
+          }`}
+        >
+          <span className="relative flex h-2 w-2" aria-hidden="true">
+            <span
+              className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 motion-reduce:animate-none ${
+                overdueCount > 0 ? "bg-destructive" : "bg-warning"
+              }`}
+            />
+            <span
+              className={`relative inline-flex h-2 w-2 rounded-full ${
+                overdueCount > 0 ? "bg-destructive" : "bg-warning"
+              }`}
+            />
+          </span>
+          {alertLabel}
+        </button>
+      )}
       <NotificationsSheet
         open={open}
         onOpenChange={setOpen}
