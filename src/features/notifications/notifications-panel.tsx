@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { Bell, X } from "lucide-react"
+import { Bell } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { computeDaysUntilDue, deriveStatus, type DueNotificationStatus } from "@/lib/compute-days-until-due"
@@ -42,15 +42,13 @@ function fetchNotifications(): Promise<{ daysAhead: number; notifications: DueNo
     .catch(() => ({ daysAhead: 7, notifications: [] }))
 }
 
-const ALERT_AUTO_HIDE_MS = 10_000
-
 export function NotificationBell() {
   const pathname = usePathname()
   const { status } = useSession()
   const [open, setOpen] = useState(false)
   const [daysAhead, setDaysAhead] = useState(7)
   const [notifications, setNotifications] = useState<DueNotification[]>([])
-  const [dismissedLabel, setDismissedLabel] = useState<string | null>(null)
+  const [acknowledgedLabel, setAcknowledgedLabel] = useState<string | null>(null)
 
   // Fetch on mount + on navigation (same as original: [status, pathname])
   useEffect(() => {
@@ -61,7 +59,17 @@ export function NotificationBell() {
     })
   }, [status, pathname])
 
+  const overdueCount = notifications.filter((n) => n.status === "OVERDUE").length
+  const dueTodayCount = notifications.filter((n) => n.status === "DUE_TODAY").length
+  const alertDescription =
+    overdueCount > 0
+      ? `${overdueCount} ${overdueCount === 1 ? "conta atrasada" : "contas atrasadas"}`
+      : `${dueTodayCount} ${dueTodayCount === 1 ? "conta vence hoje" : "contas vencem hoje"}`
+  const hasAlert = overdueCount > 0 || dueTodayCount > 0
+  const showAlert = hasAlert && alertDescription !== acknowledgedLabel
+
   const handleOpen = () => {
+    setAcknowledgedLabel(alertDescription)
     if (!open) {
       fetchNotifications().then((data) => {
         setDaysAhead(data.daysAhead)
@@ -71,80 +79,37 @@ export function NotificationBell() {
     setOpen((v) => !v)
   }
 
-  const overdueCount = notifications.filter((n) => n.status === "OVERDUE").length
-  const dueTodayCount = notifications.filter((n) => n.status === "DUE_TODAY").length
-  const alertLabel =
-    overdueCount > 0
-      ? `${overdueCount} ${overdueCount === 1 ? "atrasada" : "atrasadas"}`
-      : dueTodayCount === 1
-        ? "1 vence hoje"
-        : `${dueTodayCount} vencem hoje`
-  const alertDescription =
-    overdueCount > 0
-      ? `${overdueCount} ${overdueCount === 1 ? "conta atrasada" : "contas atrasadas"}`
-      : `${dueTodayCount} ${dueTodayCount === 1 ? "conta vence hoje" : "contas vencem hoje"}`
-  const hasAlert = overdueCount > 0 || dueTodayCount > 0
-  const showAlert = hasAlert && alertDescription !== dismissedLabel
-
-  useEffect(() => {
-    if (!showAlert) return
-    const timer = setTimeout(() => setDismissedLabel(alertDescription), ALERT_AUTO_HIDE_MS)
-    return () => clearTimeout(timer)
-  }, [showAlert, alertDescription])
-
   return (
     <>
       <button
         type="button"
         onClick={handleOpen}
+        aria-label={showAlert ? `${alertDescription}. Abrir lembretes` : "Abrir lembretes"}
         className="relative flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
       >
-        <Bell className="h-4 w-4" />
+        <Bell
+          className={`h-4 w-4 ${
+            showAlert
+              ? overdueCount > 0
+                ? "animate-pulse text-destructive"
+                : "animate-pulse text-warning"
+              : ""
+          }`}
+        />
         {notifications.length > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+          <span
+            className={`absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold ${
+              showAlert
+                ? overdueCount > 0
+                  ? "bg-destructive text-destructive-foreground"
+                  : "bg-warning text-foreground"
+                : "bg-primary text-primary-foreground"
+            }`}
+          >
             {notifications.length > 9 ? "9+" : notifications.length}
           </span>
         )}
       </button>
-      {showAlert && (
-        <div
-          role="status"
-          className={`fixed left-1/2 top-16 z-40 flex -translate-x-1/2 items-center rounded-full border pl-3 pr-1 shadow-sm ${
-            overdueCount > 0
-              ? "border-destructive/30 bg-destructive/10 text-destructive"
-              : "border-warning/40 bg-warning/10 text-warning"
-          }`}
-        >
-          <button
-            type="button"
-            onClick={handleOpen}
-            aria-label={`${alertDescription}. Abrir lembretes`}
-            className="flex h-8 items-center gap-2 text-xs font-semibold"
-          >
-            <span className="relative flex h-2 w-2" aria-hidden="true">
-              <span
-                className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 motion-reduce:animate-none ${
-                  overdueCount > 0 ? "bg-destructive" : "bg-warning"
-                }`}
-              />
-              <span
-                className={`relative inline-flex h-2 w-2 rounded-full ${
-                  overdueCount > 0 ? "bg-destructive" : "bg-warning"
-                }`}
-              />
-            </span>
-            {alertLabel}
-          </button>
-          <button
-            type="button"
-            onClick={() => setDismissedLabel(alertDescription)}
-            aria-label="Fechar aviso"
-            className="ml-1 flex size-6 items-center justify-center rounded-full opacity-70 transition-opacity hover:opacity-100"
-          >
-            <X className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
-        </div>
-      )}
       <NotificationsSheet
         open={open}
         onOpenChange={setOpen}

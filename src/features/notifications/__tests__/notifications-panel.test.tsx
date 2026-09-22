@@ -50,33 +50,34 @@ describe("NotificationBell", () => {
     mocks.toastInfo.mockClear()
   })
 
-  it("mostra o aviso pulsante de atrasadas sem disparar toast", async () => {
+  it("destaca o sino com contas atrasadas sem disparar toast", async () => {
     vi.stubGlobal("fetch", mockNotifications([isoDaysFromNow(-2), isoDaysFromNow(-1)]))
 
     render(<NotificationBell />)
 
-    expect(await screen.findByText("2 atrasadas")).toBeInTheDocument()
+    expect(await screen.findByRole("button", { name: /2 contas atrasadas/ })).toBeInTheDocument()
     expect(mocks.toastWarning).not.toHaveBeenCalled()
     expect(mocks.toastInfo).not.toHaveBeenCalled()
   })
 
-  it("não mostra o aviso quando só há vencimentos futuros", async () => {
-    vi.stubGlobal("fetch", mockNotifications([isoDaysFromNow(3)]))
-
-    render(<NotificationBell />)
-
-    await waitFor(() => expect(screen.getByText("1")).toBeInTheDocument())
-    expect(screen.queryByText(/atrasada|vence hoje/)).not.toBeInTheDocument()
-  })
-
-  it("pode ser fechado pelo usuário", async () => {
+  it("volta ao normal depois de abrir os lembretes", async () => {
     vi.stubGlobal("fetch", mockNotifications([isoDaysFromNow(-1)]))
     const user = userEvent.setup()
 
     render(<NotificationBell />)
 
-    expect(await screen.findByText("1 atrasada")).toBeInTheDocument()
-    await user.click(screen.getByRole("button", { name: "Fechar aviso" }))
-    expect(screen.queryByText("1 atrasada")).not.toBeInTheDocument()
+    const sino = await screen.findByRole("button", { name: /1 conta atrasada/ })
+    await user.click(sino)
+    await user.keyboard("{Escape}")
+    expect(screen.getByRole("button", { name: "Abrir lembretes" })).toBeInTheDocument()
+  })
+
+  it("não destaca o sino quando só há vencimentos futuros", async () => {
+    vi.stubGlobal("fetch", mockNotifications([isoDaysFromNow(3)]))
+
+    render(<NotificationBell />)
+
+    await waitFor(() => expect(screen.getByText("1")).toBeInTheDocument())
+    expect(screen.getByRole("button", { name: "Abrir lembretes" })).toBeInTheDocument()
   })
 })
