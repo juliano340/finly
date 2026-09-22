@@ -4,62 +4,101 @@ import { useEffect } from "react"
 import { useTheme } from "next-themes"
 import Link from "next/link"
 import { ShowcaseMockup } from "./(marketing)/_components/showcase-mockup"
-import { CURRENT_VERSION } from "@/content/releases"
+import { CURRENT_VERSION, releases } from "@/content/releases"
+
+const GITHUB_URL = "https://github.com/juliano340/finly"
+const TEST_COUNT = 676
 
 const features = [
   {
-    title: "Controle total",
-    desc: "Conecte contas, cartões e investimentos em um só lugar. Acompanhe tudo sem abrir mil apps.",
+    title: "Importação CSV e PDF",
+    desc: "Traga extratos e faturas em CSV ou PDF e categorize em lote — sem digitar tudo de novo.",
     icon: (
       <svg viewBox="0 0 24 24"><path d="M12 2v20M2 12h20" strokeLinecap="round" /></svg>
     ),
   },
   {
-    title: "Gráficos claros",
-    desc: "Visualize sua evolução financeira com gráficos interativos por mês, categoria e tipo.",
-    icon: (
-      <svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-    ),
-  },
-  {
-    title: "Orçamento inteligente",
-    desc: "Defina limites por categoria e receba alertas quando estiver perto de estourar o orçamento.",
-    icon: (
-      <svg viewBox="0 0 24 24"><path d="M12 2v20M2 7h20M2 17h20" strokeLinecap="round" /></svg>
-    ),
-  },
-  {
-    title: "Metas e prazos",
-    desc: "Acompanhe consórcios, parcelamentos e economias com prazos visuais e progresso em tempo real.",
-    icon: (
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" strokeLinecap="round" /><path d="M12 6v6l4 2" strokeLinecap="round" /></svg>
-    ),
-  },
-  {
-    title: "Múltiplas contas",
-    desc: "Nubank, Itaú, Caixa, Inter — tenha todos os saldos consolidados e veja seu patrimônio total.",
+    title: "Contas, cartões e transferências",
+    desc: "Saldo por conta, faturas de cartão e transferências entre contas, tudo no mesmo lugar.",
     icon: (
       <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" strokeLinecap="round" /><path d="M9 12h6M12 9v6" strokeLinecap="round" /></svg>
     ),
   },
   {
+    title: "Custos fixos",
+    desc: "Assinaturas e contas recorrentes com lembrete de vencimento e marcação de pagamento.",
+    icon: (
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" strokeLinecap="round" /><path d="M12 6v6l4 2" strokeLinecap="round" /></svg>
+    ),
+  },
+  {
+    title: "Orçamentos e plano mensal",
+    desc: "Limite por categoria e um plano para o mês, com previsto e realizado lado a lado.",
+    icon: (
+      <svg viewBox="0 0 24 24"><path d="M12 2v20M2 7h20M2 17h20" strokeLinecap="round" /></svg>
+    ),
+  },
+  {
+    title: "Fechamento mensal",
+    desc: "Feche o mês, guarde o resultado e acompanhe a evolução de receitas e despesas.",
+    icon: (
+      <svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+    ),
+  },
+  {
     title: "100% gratuito",
-    desc: "Sem planos escondidos, sem limite de transações. Use de graça para sempre, sem surpresas.",
+    desc: "Sem plano pago e sem limite de transações — todos os recursos liberados.",
     icon: (
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" strokeLinecap="round" strokeLinejoin="round" /><path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" /></svg>
     ),
   },
 ]
 
-const stats = [
-  { value: "100", suffix: "%", label: "gratuito — sem taxas" },
-  { value: "12", suffix: "+", label: "Contas consolidadas" },
-  { value: "99", suffix: "%", label: "disponibilidade" },
-  { value: "1", suffix: "", label: "Minuto para começar" },
+const engineering = [
+  {
+    tag: "prisma · sqlite + postgres",
+    title: "Schema duplo SQLite/PostgreSQL",
+    desc: "O mesmo schema Prisma roda em SQLite no desenvolvimento e Postgres em produção, com migrações versionadas.",
+  },
+  {
+    tag: "tenant-isolation",
+    title: "Multi-tenant de verdade",
+    desc: "Toda consulta é isolada por usuário — há teste dedicado para garantir que um login nunca enxergue dados de outro.",
+  },
+  {
+    tag: "decimal(19,2)",
+    title: "Dinheiro sem float",
+    desc: "Valores monetários são Decimal(19,2) de ponta a ponta, com arredondamento explícito.",
+  },
+  {
+    tag: "auth.js · rate-limit",
+    title: "Segurança por rota",
+    desc: "Auth.js com guardas em cada rota, rate limiting em produção e segredos verificados no CI.",
+  },
+  {
+    tag: "ci · typecheck + lint + tests",
+    title: "CI que valida tudo",
+    desc: "Cada push roda typecheck, lint, testes automatizados e build — nada entra quebrado.",
+  },
+  {
+    tag: "docs/adr",
+    title: "6 ADRs públicas",
+    desc: "Decisões de arquitetura registradas em docs/adr, do schema duplo à precisão monetária.",
+  },
 ]
 
-const footerColumns = [
+const stats = [
+  { value: 100, suffix: "%", label: "gratuito, sem plano pago" },
+  { value: releases.length, suffix: "", label: "releases publicadas" },
+  { value: TEST_COUNT, suffix: "", label: "testes automatizados" },
+  { value: 0, suffix: "", label: "erros de TypeScript no CI" },
+]
+
+type FooterLink = { label: string; href: string; external?: boolean }
+
+const footerColumns: { title: string; links: FooterLink[] }[] = [
   { title: "Produto", links: [{ label: "Recursos", href: "#recursos" }, { label: "Changelog", href: "/changelog" }] },
+  { title: "Código", links: [{ label: "GitHub", href: GITHUB_URL, external: true }, { label: "ADRs", href: `${GITHUB_URL}/tree/master/docs/adr`, external: true }] },
   { title: "Legal", links: [{ label: "Termos de uso", href: "/termos-de-uso" }, { label: "Privacidade", href: "/privacidade" }] },
 ]
 
@@ -90,12 +129,13 @@ export default function HomePage() {
             counted = true
             document.querySelectorAll(".stat-value[data-count]").forEach((el) => {
               const target = parseInt(el.getAttribute("data-count") ?? "0", 10)
+              const suffix = el.getAttribute("data-suffix") ?? ""
               let current = 0
               const step = Math.max(1, Math.floor(target / 40))
               const timer = setInterval(() => {
                 current += step
                 if (current >= target) { current = target; clearInterval(timer) }
-                el.textContent = current === 100 ? "100" : (target === 1 ? String(current) : current + (target >= 12 ? "+" : "%"))
+                el.textContent = `${current}${suffix}`
               }, 30)
             })
           }
@@ -428,6 +468,10 @@ export default function HomePage() {
         }
         .feature-card p { font-size: 14px; color: var(--muted); line-height: 1.6; }
 
+        /* ─── Por dentro ─── */
+        .eng-tag { font: 500 11px/1 var(--font-mono); color: var(--accent); margin-bottom: 12px; }
+        .eng-actions { text-align: center; margin-top: 40px; }
+
         /* ─── Stats ─── */
         .stats { padding: 100px 0; position: relative; }
         .stats::before, .stats::after {
@@ -540,6 +584,7 @@ export default function HomePage() {
           <nav className="nav">
             <a href="#recursos">Recursos</a>
             <a href="#showcase">Produto</a>
+            <a href="#por-dentro">Por dentro</a>
             <a href="#numeros">Números</a>
             <Link href="/changelog" className="nav-changelog"><span className="nav-changelog-dot" />Novidades<span className="nav-changelog-version">v{CURRENT_VERSION}</span></Link>
           </nav>
@@ -558,12 +603,12 @@ export default function HomePage() {
         <div className="container">
           <div className="hero-grid">
             <div>
-              <div className="hero-badge reveal visible">Finanças pessoais</div>
+              <div className="hero-badge reveal visible">Projeto pessoal, em evolução</div>
               <h1 className="reveal visible">
-                Suas finanças.<br />
-                <span className="highlight">Em foco.</span>
+                Nasceu para resolver<br />
+                <span className="highlight">as minhas finanças.</span>
               </h1>
-              <p className="reveal visible reveal-delay-1">Acompanhe gastos, organize receitas e veja exatamente onde seu dinheiro está indo — tudo em um só lugar, do seu jeito.</p>
+              <p className="reveal visible reveal-delay-1">Construí o Finly para organizar o meu próprio dinheiro — e sigo evoluindo ele release a release, em público. Se resolve o meu mês, pode resolver o seu.</p>
               <div className="hero-actions reveal visible reveal-delay-2">
                 <Link href="/register" className="btn btn-primary btn-lg">Criar conta grátis</Link>
                 <a href="#showcase" className="btn btn-outline btn-lg">Ver como funciona</a>
@@ -571,11 +616,11 @@ export default function HomePage() {
               <div className="hero-meta reveal visible reveal-delay-3">
                 <div className="hero-meta-item">
                   <svg viewBox="0 0 14 14"><path d="M7 1v12M1 7h12" /></svg>
-                  Grátis para sempre
+                  Grátis, sem plano pago
                 </div>
                 <div className="hero-meta-item">
                   <svg viewBox="0 0 14 14"><path d="M11 3.5l-5 7L3 7.5" /></svg>
-                  Sem cartão de crédito
+                  Código aberto no GitHub
                 </div>
               </div>
             </div>
@@ -615,8 +660,8 @@ export default function HomePage() {
                       <div className="mockup-card-value red">R$ 3.240</div>
                     </div>
                     <div className="mockup-card">
-                      <div className="mockup-card-label">Investido</div>
-                      <div className="mockup-card-value green">R$ 24.750</div>
+                      <div className="mockup-card-label">Faturas</div>
+                      <div className="mockup-card-value red">R$ 1.890</div>
                     </div>
                   </div>
                   <div className="mockup-transactions">
@@ -650,7 +695,7 @@ export default function HomePage() {
           <div className="section-header reveal">
             <div className="section-tag">Produto</div>
             <h2>Veja seu painel financeiro</h2>
-            <p>Dashboard completo com resumo mensal, contas, cartões, investimentos e orçamento por categoria.</p>
+            <p>Dashboard com resumo do mês, contas, cartões e orçamento por categoria.</p>
           </div>
           <div className="showcase-frame reveal reveal-delay-1">
             <ShowcaseMockup />
@@ -691,10 +736,35 @@ export default function HomePage() {
           <div className="stats-grid">
             {stats.map((s, i) => (
               <div key={s.label} className={`reveal reveal-delay-${i + 1}`}>
-                <div className="stat-value" data-count={s.value}>0</div>
+                <div className="stat-value" data-count={s.value} data-suffix={s.suffix}>0</div>
                 <div className="stat-label">{s.label}</div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <div className="gradient-divider" />
+
+      {/* ─── POR DENTRO ─── */}
+      <section className="features" id="por-dentro">
+        <div className="container">
+          <div className="section-header reveal">
+            <div className="section-tag">Engenharia</div>
+            <h2>Por dentro do Finly</h2>
+            <p>Caso de estudo para devs: as decisões técnicas por trás do app — tudo aberto no GitHub.</p>
+          </div>
+          <div className="features-grid">
+            {engineering.map((item, i) => (
+              <div key={item.title} className={`reveal reveal-delay-${(i % 3) + 1} feature-card`}>
+                <div className="eng-tag">{item.tag}</div>
+                <h3>{item.title}</h3>
+                <p>{item.desc}</p>
+              </div>
+            ))}
+          </div>
+          <div className="eng-actions reveal">
+            <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="btn btn-outline btn-lg">Ver o código no GitHub →</a>
           </div>
         </div>
       </section>
@@ -721,13 +791,17 @@ export default function HomePage() {
                 <span className="logo-icon"></span>
                 Finly
               </Link>
-              <p>Gerenciador financeiro pessoal simples e poderoso para quem quer cuidar do próprio dinheiro.</p>
+              <p>Gerenciador financeiro pessoal, aberto no GitHub — feito para organizar o mês a mês.</p>
             </div>
             {footerColumns.map((col, idx) => (
               <div key={col.title} className={`footer-col reveal reveal-delay-${idx + 1}`}>
                 <h4>{col.title}</h4>
                 {col.links.map((link) => (
-                  <Link key={link.label} href={link.href}>{link.label}</Link>
+                  link.external ? (
+                    <a key={link.label} href={link.href} target="_blank" rel="noopener noreferrer">{link.label}</a>
+                  ) : (
+                    <Link key={link.label} href={link.href}>{link.label}</Link>
+                  )
                 ))}
               </div>
             ))}

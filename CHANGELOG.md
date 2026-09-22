@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.87] - 2026-09-22
+
+### Adicionado
+
+- Landing reescrita com copy honesta em primeira pessoa, recursos reais e seção de engenharia com link para o GitHub.
+
 ## [0.2.86] - 2026-09-21
 
 ### Corrigido
