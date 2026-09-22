@@ -36,6 +36,11 @@ test.describe("Autenticação", () => {
     await page.waitForURL("**/dashboard**", { timeout: 20000 })
     await expect(page.locator("h1")).toContainText("Dashboard")
 
+    // Usuário autenticado que acessa a landing é redirecionado ao dashboard
+    await page.goto("/")
+    await page.waitForURL("**/dashboard**", { timeout: 20000 })
+    await expect(page).toHaveURL(/dashboard/)
+
     await page.getByRole("button", { name: "Sair" }).click()
     await expect(page.getByRole("heading", { name: "Sair da conta" })).toBeVisible()
     await page.getByRole("button", { name: "Sair" }).last().click()
