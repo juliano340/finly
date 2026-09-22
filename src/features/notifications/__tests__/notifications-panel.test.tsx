@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { NotificationBell } from "../notifications-panel"
 
@@ -66,5 +67,16 @@ describe("NotificationBell", () => {
 
     await waitFor(() => expect(screen.getByText("1")).toBeInTheDocument())
     expect(screen.queryByText(/atrasada|vence hoje/)).not.toBeInTheDocument()
+  })
+
+  it("pode ser fechado pelo usuário", async () => {
+    vi.stubGlobal("fetch", mockNotifications([isoDaysFromNow(-1)]))
+    const user = userEvent.setup()
+
+    render(<NotificationBell />)
+
+    expect(await screen.findByText("1 atrasada")).toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Fechar aviso" }))
+    expect(screen.queryByText("1 atrasada")).not.toBeInTheDocument()
   })
 })

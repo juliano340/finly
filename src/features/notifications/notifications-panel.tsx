@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { Bell } from "lucide-react"
+import { Bell, X } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { computeDaysUntilDue, deriveStatus, type DueNotificationStatus } from "@/lib/compute-days-until-due"
@@ -42,12 +42,15 @@ function fetchNotifications(): Promise<{ daysAhead: number; notifications: DueNo
     .catch(() => ({ daysAhead: 7, notifications: [] }))
 }
 
+const ALERT_AUTO_HIDE_MS = 10_000
+
 export function NotificationBell() {
   const pathname = usePathname()
   const { status } = useSession()
   const [open, setOpen] = useState(false)
   const [daysAhead, setDaysAhead] = useState(7)
   const [notifications, setNotifications] = useState<DueNotification[]>([])
+  const [dismissedLabel, setDismissedLabel] = useState<string | null>(null)
 
   // Fetch on mount + on navigation (same as original: [status, pathname])
   useEffect(() => {
@@ -81,6 +84,13 @@ export function NotificationBell() {
       ? `${overdueCount} ${overdueCount === 1 ? "conta atrasada" : "contas atrasadas"}`
       : `${dueTodayCount} ${dueTodayCount === 1 ? "conta vence hoje" : "contas vencem hoje"}`
   const hasAlert = overdueCount > 0 || dueTodayCount > 0
+  const showAlert = hasAlert && alertDescription !== dismissedLabel
+
+  useEffect(() => {
+    if (!showAlert) return
+    const timer = setTimeout(() => setDismissedLabel(alertDescription), ALERT_AUTO_HIDE_MS)
+    return () => clearTimeout(timer)
+  }, [showAlert, alertDescription])
 
   return (
     <>
@@ -96,31 +106,44 @@ export function NotificationBell() {
           </span>
         )}
       </button>
-      {hasAlert && (
-        <button
-          type="button"
-          onClick={handleOpen}
-          aria-label={`${alertDescription}. Abrir lembretes`}
-          className={`inline-flex h-8 items-center gap-2 rounded-full border px-2.5 text-xs font-semibold transition-colors ${
+      {showAlert && (
+        <div
+          role="status"
+          className={`fixed left-1/2 top-16 z-40 flex -translate-x-1/2 items-center rounded-full border pl-3 pr-1 shadow-sm ${
             overdueCount > 0
-              ? "border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20"
-              : "border-warning/40 bg-warning/10 text-warning hover:bg-warning/20"
+              ? "border-destructive/30 bg-destructive/10 text-destructive"
+              : "border-warning/40 bg-warning/10 text-warning"
           }`}
         >
-          <span className="relative flex h-2 w-2" aria-hidden="true">
-            <span
-              className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 motion-reduce:animate-none ${
-                overdueCount > 0 ? "bg-destructive" : "bg-warning"
-              }`}
-            />
-            <span
-              className={`relative inline-flex h-2 w-2 rounded-full ${
-                overdueCount > 0 ? "bg-destructive" : "bg-warning"
-              }`}
-            />
-          </span>
-          {alertLabel}
-        </button>
+          <button
+            type="button"
+            onClick={handleOpen}
+            aria-label={`${alertDescription}. Abrir lembretes`}
+            className="flex h-8 items-center gap-2 text-xs font-semibold"
+          >
+            <span className="relative flex h-2 w-2" aria-hidden="true">
+              <span
+                className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 motion-reduce:animate-none ${
+                  overdueCount > 0 ? "bg-destructive" : "bg-warning"
+                }`}
+              />
+              <span
+                className={`relative inline-flex h-2 w-2 rounded-full ${
+                  overdueCount > 0 ? "bg-destructive" : "bg-warning"
+                }`}
+              />
+            </span>
+            {alertLabel}
+          </button>
+          <button
+            type="button"
+            onClick={() => setDismissedLabel(alertDescription)}
+            aria-label="Fechar aviso"
+            className="ml-1 flex size-6 items-center justify-center rounded-full opacity-70 transition-opacity hover:opacity-100"
+          >
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        </div>
       )}
       <NotificationsSheet
         open={open}
