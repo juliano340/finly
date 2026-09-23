@@ -102,19 +102,22 @@ export function DailySpendingChart({ month, type, categoryId }: DailySpendingCha
           icon={<ArrowUp className="h-4 w-4" />}
           tone="success"
           label="Receitas do mês"
-          value={summary ? formatCurrency(summary.income) : "—"}
+          value={summary ? formatCurrency(summary.income) : ""}
+          loading={loading}
         />
         <SummaryCard
           icon={<ArrowDown className="h-4 w-4" />}
           tone="destructive"
           label="Despesas do mês"
-          value={summary ? formatCurrency(summary.expense) : "—"}
+          value={summary ? formatCurrency(summary.expense) : ""}
+          loading={loading}
         />
         <SummaryCard
           icon={<Wallet className="h-4 w-4" />}
           tone={result >= 0 ? "success" : "destructive"}
           label="Resultado do mês"
-          value={summary ? formatCurrency(result) : "—"}
+          value={summary ? formatCurrency(result) : ""}
+          loading={loading}
         />
       </div>
 
@@ -135,9 +138,7 @@ export function DailySpendingChart({ month, type, categoryId }: DailySpendingCha
         </div>
 
         {loading ? (
-          <div className="flex h-[140px] items-center justify-center text-sm text-muted-foreground">
-            Carregando…
-          </div>
+          <div className="h-[140px] animate-pulse rounded-lg bg-muted" aria-hidden="true" />
         ) : hasData && summary ? (
           <ResponsiveContainer width="100%" height={140}>
             <BarChart data={summary.days} margin={{ top: 16, right: 8, left: 0, bottom: 0 }}>
@@ -232,11 +233,13 @@ function SummaryCard({
   tone,
   label,
   value,
+  loading,
 }: {
   icon: React.ReactNode
   tone: "success" | "destructive"
   label: string
   value: string
+  loading: boolean
 }) {
   return (
     <div className="rounded-xl border bg-card p-3">
@@ -255,7 +258,11 @@ function SummaryCard({
           tone === "success" ? "text-success" : "text-destructive"
         }`}
       >
-        {value}
+        {loading ? (
+          <span className="inline-block h-4 w-20 animate-pulse rounded bg-muted" aria-hidden="true" />
+        ) : (
+          value
+        )}
       </p>
     </div>
   )

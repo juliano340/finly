@@ -68,7 +68,13 @@ export function TransactionTable({
         itemLabel="transação"
         onConfirmDelete={onConfirmBatchDelete}
         onClearSelection={onClearSelection}
-        defaultContent={<span className="text-sm text-muted-foreground">{total} {total === 1 ? "item" : "itens"}</span>}
+        defaultContent={
+          loading ? (
+            <span className="inline-block h-4 w-14 animate-pulse rounded bg-muted" aria-hidden="true" />
+          ) : (
+            <span className="text-sm text-muted-foreground">{total} {total === 1 ? "item" : "itens"}</span>
+          )
+        }
       />
       <table className="w-full text-sm">
         <thead>

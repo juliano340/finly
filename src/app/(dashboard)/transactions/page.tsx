@@ -19,6 +19,7 @@ import { MonthNavigator, getCurrentMonth } from "@/components/month-navigator"
 import { useMonthParam } from "@/hooks/use-month-param"
 import { formatMonth } from "@/lib/months"
 import { TransactionRow } from "./_components/transaction-row"
+import { TransactionRowSkeleton } from "./_components/transaction-row-skeleton"
 import { TransactionTable } from "./_components/transaction-table"
 import { DailySpendingChart } from "./_components/daily-spending-chart"
 import { TransactionForm } from "./_components/transaction-form"
@@ -193,7 +194,14 @@ export default function TransactionsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Transações</h1>
           <p className="text-sm text-muted-foreground sm:text-base">
-            Avulsas, receitas e ajustes · {total} {total === 1 ? "item" : "itens"}
+            Avulsas, receitas e ajustes ·{" "}
+            {loading ? (
+              <span className="inline-block h-4 w-12 animate-pulse rounded bg-muted align-middle" aria-hidden="true" />
+            ) : (
+              <>
+                {total} {total === 1 ? "item" : "itens"}
+              </>
+            )}
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
@@ -216,7 +224,13 @@ export default function TransactionsPage() {
             </span>
             <span className="text-xs font-medium text-muted-foreground">Receitas</span>
           </div>
-          <p className="mt-2 truncate text-sm font-bold text-success">{formatCurrency(filteredIncome)}</p>
+          <p className="mt-2 truncate text-sm font-bold text-success">
+            {loading ? (
+              <span className="inline-block h-4 w-20 animate-pulse rounded bg-muted" aria-hidden="true" />
+            ) : (
+              formatCurrency(filteredIncome)
+            )}
+          </p>
         </div>
         <div className="rounded-xl border bg-card p-3">
           <div className="flex items-center gap-2">
@@ -225,7 +239,13 @@ export default function TransactionsPage() {
             </span>
             <span className="text-xs font-medium text-muted-foreground">Despesas</span>
           </div>
-          <p className="mt-2 truncate text-sm font-bold text-destructive">{formatCurrency(filteredExpense)}</p>
+          <p className="mt-2 truncate text-sm font-bold text-destructive">
+            {loading ? (
+              <span className="inline-block h-4 w-20 animate-pulse rounded bg-muted" aria-hidden="true" />
+            ) : (
+              formatCurrency(filteredExpense)
+            )}
+          </p>
         </div>
       </div>
 
@@ -295,7 +315,9 @@ export default function TransactionsPage() {
 
       {/* Cards — Mobile */}
       <div className="space-y-3 md:hidden">
-        {transactions.length === 0 ? (
+        {loading ? (
+          Array.from({ length: 5 }).map((_, index) => <TransactionRowSkeleton key={`skeleton-${index}`} />)
+        ) : transactions.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-20">
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
               <Wallet className="h-6 w-6 text-muted-foreground" />
@@ -322,7 +344,7 @@ export default function TransactionsPage() {
         )}
 
         {/* Paginação — Mobile */}
-        {totalPages > 1 && (
+        {!loading && totalPages > 1 && (
           <div className="flex items-center justify-center gap-2 pt-2">
             <Button
               variant="outline"
