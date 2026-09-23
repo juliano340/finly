@@ -24,9 +24,18 @@ export function resolveReleaseDate(date: string, today = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-export const CURRENT_VERSION = "0.2.87"
+export const CURRENT_VERSION = "0.2.88"
 
 export const releases = [
+  {
+    version: "0.2.88",
+    date: "2026-09-22",
+    changes: [
+      { type: "feat", description: "Usuário logado que acessa a home vai direto para o dashboard." },
+      { type: "feat", description: "O sino de lembretes fica destacado até ser aberto e o aviso de vencimento não usa mais toast." },
+      { type: "feat", description: "Transações ganharam resumo do mês e gráfico de compras por dia no desktop." },
+    ],
+  },
   {
     version: "0.2.87",
     date: "2026-09-22",

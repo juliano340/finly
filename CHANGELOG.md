@@ -2,6 +2,14 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.88] - 2026-09-22
+
+### Adicionado
+
+- Usuário logado que acessa a home vai direto para o dashboard.
+- O sino de lembretes fica destacado até ser aberto e o aviso de vencimento não usa mais toast.
+- Transações ganharam resumo do mês e gráfico de compras por dia no desktop.
+
 ## [0.2.87] - 2026-09-22
 
 ### Adicionado
