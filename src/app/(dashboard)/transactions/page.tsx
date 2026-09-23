@@ -20,6 +20,7 @@ import { useMonthParam } from "@/hooks/use-month-param"
 import { formatMonth } from "@/lib/months"
 import { TransactionRow } from "./_components/transaction-row"
 import { TransactionTable } from "./_components/transaction-table"
+import { DailySpendingChart } from "./_components/daily-spending-chart"
 import { TransactionForm } from "./_components/transaction-form"
 import { DeleteDialog } from "./_components/delete-dialog"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -268,6 +269,8 @@ export default function TransactionsPage() {
           </SelectContent>
         </Select>
       </div>
+
+      <DailySpendingChart month={month} type={filters.type} categoryId={filters.categoryId} />
 
       {/* Tabela — Desktop */}
       <TransactionTable

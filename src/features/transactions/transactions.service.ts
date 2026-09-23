@@ -3,7 +3,7 @@ import type { PrismaClient } from "@/generated/prisma/client"
 import type { TransactionInput } from "./transactions.schema"
 import type { TransactionWithRelations } from "./transactions.types"
 import { validateExpenseLimit } from "@/features/bank-accounts/bank-accounts.service"
-import { moneyToNumber, type MoneyValue } from "@/lib/money"
+import { moneyToNumber, sumMoney, type MoneyValue } from "@/lib/money"
 import { syncCalculatedInvoiceAmount } from "@/features/card-invoices/card-invoices.service"
 
 const includeRelations = {
@@ -66,6 +66,63 @@ export async function getTransactions(
       amount: moneyToNumber(transaction.amount),
     })),
     total,
+  }
+}
+
+export interface TransactionDailySummary {
+  days: { day: number; date: string; total: number; count: number }[]
+  total: number
+  count: number
+}
+
+export async function getTransactionDailySummary(
+  userId: string,
+  filters: { month?: string; type?: "INCOME" | "EXPENSE"; categoryId?: string },
+  client?: PrismaClient
+): Promise<TransactionDailySummary> {
+  const db = client ?? defaultPrisma
+
+  const where: Record<string, unknown> = { userId, status: "ACTIVE" }
+  if (filters.type) where.type = filters.type
+  if (filters.categoryId) where.categoryId = filters.categoryId
+
+  let daysInMonth = 0
+  if (filters.month) {
+    const [year, month] = filters.month.split("-").map(Number)
+    where.date = {
+      gte: new Date(year, month - 1, 1),
+      lt: new Date(year, month, 1),
+    }
+    daysInMonth = new Date(year, month, 0).getDate()
+  }
+
+  const transactions = await db.transaction.findMany({
+    where,
+    select: { date: true, amount: true },
+  })
+
+  const buckets = new Map<number, { total: number; count: number }>()
+  for (const transaction of transactions) {
+    const day = transaction.date.getDate()
+    const bucket = buckets.get(day) ?? { total: 0, count: 0 }
+    bucket.total = sumMoney([bucket.total, transaction.amount])
+    bucket.count += 1
+    buckets.set(day, bucket)
+  }
+
+  return {
+    days: Array.from({ length: daysInMonth }, (_, index) => {
+      const day = index + 1
+      const bucket = buckets.get(day) ?? { total: 0, count: 0 }
+      return {
+        day,
+        date: filters.month ? `${filters.month}-${String(day).padStart(2, "0")}` : String(day),
+        total: bucket.total,
+        count: bucket.count,
+      }
+    }),
+    total: sumMoney(transactions.map((transaction) => transaction.amount)),
+    count: transactions.length,
   }
 }
 
