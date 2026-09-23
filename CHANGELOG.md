@@ -2,6 +2,12 @@
 
 Todas as mudanças relevantes do Finly são registradas neste arquivo.
 
+## [0.2.89] - 2026-09-22
+
+### Adicionado
+
+- Transações mostram skeleton de carregamento no mobile e no desktop.
+
 ## [0.2.88] - 2026-09-22
 
 ### Adicionado
