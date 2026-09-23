@@ -81,6 +81,8 @@ describe("Transactions Daily Summary", () => {
     expect(summary.days[9]).toMatchObject({ day: 10, total: 30, count: 1 })
     expect(summary.total).toBe(180)
     expect(summary.count).toBe(3)
+    expect(summary.income).toBe(500)
+    expect(summary.expense).toBe(180)
   })
 
   it("filtra por categoria", async () => {
@@ -94,6 +96,8 @@ describe("Transactions Daily Summary", () => {
     expect(summary.count).toBe(2)
     expect(summary.days[2]).toMatchObject({ day: 3, total: 150, count: 2 })
     expect(summary.days[9]).toMatchObject({ day: 10, total: 0, count: 0 })
+    expect(summary.income).toBe(0)
+    expect(summary.expense).toBe(150)
   })
 
   it("resume receitas quando o tipo é INCOME", async () => {
@@ -106,6 +110,16 @@ describe("Transactions Daily Summary", () => {
     expect(summary.total).toBe(500)
     expect(summary.count).toBe(1)
     expect(summary.days[2]).toMatchObject({ day: 3, total: 500, count: 1 })
+    expect(summary.income).toBe(500)
+    expect(summary.expense).toBe(180)
+  })
+
+  it("assume despesas quando o tipo não é informado", async () => {
+    const summary = await getTransactionDailySummary(userAId, { month: "2026-09" }, testPrisma)
+
+    expect(summary.total).toBe(180)
+    expect(summary.count).toBe(3)
+    expect(summary.days[2]).toMatchObject({ day: 3, total: 150, count: 2 })
   })
 
   it("não mistura transações de outro usuário", async () => {
@@ -117,5 +131,7 @@ describe("Transactions Daily Summary", () => {
 
     expect(summary.days[2]).toMatchObject({ day: 3, total: 150, count: 2 })
     expect(summary.total).toBe(180)
+    expect(summary.expense).toBe(180)
+    expect(summary.income).toBe(500)
   })
 })
